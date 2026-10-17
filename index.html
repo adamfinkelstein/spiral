@@ -13,6 +13,8 @@
   .crop { width: calc(400px * 2 / 3); height: 400px; overflow: hidden; border: 1px solid #333; background: #000; }
   .crop canvas { display: block; width: 400px; height: 400px; margin-left: calc(-400px / 3); }
   #spiral { cursor: crosshair; }
+  .left { display: flex; flex-direction: column; gap: 14px; }
+  #profile { display: block; width: calc(2 * (400px * 2 / 3 + 2px) + 16px); height: 200px; border: 1px solid #333; background: #000; box-sizing: border-box; }
   .side { width: 330px; }
   .controls { display: grid; grid-template-columns: 120px 1fr 40px; gap: 6px 8px; align-items: center; margin-top: 14px; }
   .controls input[type=range] { width: 100%; }
@@ -24,6 +26,8 @@
 </head>
 <body>
 <div class="row">
+<div class="left">
+<div class="row">
   <figure>
     <figcaption>Image (drag to move center)</figcaption>
     <div class="crop"><canvas id="spiral" width="512" height="512"></canvas></div>
@@ -32,6 +36,12 @@
     <figcaption>log |FFT|</figcaption>
     <div class="crop"><canvas id="fft" width="512" height="512"></canvas></div>
   </figure>
+</div>
+  <figure>
+    <figcaption>Radial profile of log |FFT|: mean brightness vs. distance from center</figcaption>
+    <canvas id="profile"></canvas>
+  </figure>
+</div>
 <div class="side">
 <a class="button" href="explain.html" target="_blank">Explain Controls</a>
 <div class="controls">

@@ -99,6 +99,32 @@ curved arcs coming in from the edges and corners of the right panel
   so you can check the transform against them.</dd>
 </dl>
 
+<h2>Radial profile plot</h2>
+<p>The plot below the two panels averages the Fourier transform around
+circles centered on zero frequency. Every pixel of the right panel is put
+into a bin by its distance from the center, rounded to the nearest whole
+number, and the plot shows the average brightness of each bin. Brightness is
+the log magnitude scaled so the brightest point (other than zero frequency)
+is 1, which is what the right panel shows at contrast 1; the contrast slider
+does not affect the plot. Bright rings in the transform show up as peaks.
+With <b>Show 1/spacing ring</b> on, red dashed lines mark where those peaks
+are expected. Beyond radius 256 (the shaded part) the circles only pass
+through the corners of the transform, so those bins average fewer
+pixels.</p>
+
+<p>The <span style="color:#ff4040">red curve</span> is a harmonic-sum
+score that turns the repeated peaks into a single peak. Rings spaced
+<i>s</i> pixels apart produce peaks at radii <i>k</i>&middot;512/<i>s</i>
+for <i>k</i> = 1, 2, 3, &hellip; For each candidate first-peak radius
+&rho;, the score adds up, over all its multiples <i>k</i>&rho; up to radius
+256, how far the profile there rises above the points halfway to the
+neighbouring multiples, then divides by the square root of the number of
+terms. Only the true &rho; lines up with every peak, so the score has one
+clear maximum there. The curve is plotted at x = &rho; and scaled to fill
+the plot. The text in the corner gives the maximum's radius and the spacing
+it implies, 512 / &rho;, which should match the ring spacing slider.
+Candidates cover spacings from about 3 to 64 px.</p>
+
 <p><a href="index.html">Back to the app</a></p>
 
 </body>

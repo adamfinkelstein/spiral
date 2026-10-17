@@ -172,6 +172,21 @@ function fft2d() {
 const mag = new Float64Array(N * N);
 const fftImage = fctx.createImageData(N, N);
 
+// Radial profile: every FFT pixel is assigned to the bin round(r), r being its
+// distance from DC; the profile is the mean normalized log magnitude per bin.
+// Bins past N/2 only cover the corners, so they hold fewer pixels.
+const NBINS = Math.round(Math.SQRT2 * N / 2) + 1; // corner pixel is the farthest
+const binOf = new Uint16Array(N * N);
+const binCount = new Uint32Array(NBINS);
+for (let y = 0; y < N; y++) {
+  for (let x = 0; x < N; x++) {
+    const b = Math.round(Math.hypot(x - N / 2, y - N / 2));
+    binOf[y * N + x] = b;
+    binCount[b]++;
+  }
+}
+const profile = new Float64Array(NBINS);
+
 function computeFFT(p) {
   let mean = 0;
   for (let i = 0; i < N * N; i++) {
@@ -208,6 +223,11 @@ function computeFFT(p) {
 
   const d = fftImage.data;
   const scale = max > 0 ? 1 / max : 0;
+
+  profile.fill(0);
+  for (let i = 0; i < N * N; i++) profile[binOf[i]] += mag[i] * scale;
+  for (let b = 0; b < NBINS; b++) profile[b] /= binCount[b];
+
   for (let i = 0; i < N * N; i++) {
     const v = Math.min(1, Math.pow(mag[i] * scale, 1 / p.gain));
     const c = Math.round(v * 255);
@@ -226,6 +246,141 @@ function computeFFT(p) {
       fctx.stroke();
     }
   }
+}
+
+// ---------- Harmonic sum ----------
+
+// Rings with spacing s put peaks in the profile at k * rho1, rho1 = N / s.
+// For each candidate fundamental rho1, add up over harmonics k = 1..K of
+//   profile(k rho1) - (profile((k - 1/2) rho1) + profile((k + 1/2) rho1)) / 2,
+// i.e. peak height above the troughs halfway to its neighbours. Subtracting
+// the troughs removes the slowly varying background and keeps rho1 / 2 and
+// 2 rho1 from scoring as high as the true rho1. The sum is divided by
+// sqrt(K): a plain average lets a multiple of rho1 that hits one or two strong
+// harmonics win, while a plain sum lets tiny rho1 win by piling up many small
+// ripples (tested over spirals/rings, widths 2-8, spacings 3-60). Only radii
+// up to N/2 are
+// used (beyond that the bins only cover the FFT's corners).
+const H_RMAX = N / 2;
+const H_MIN = N / 64, H_MAX = H_RMAX / 1.5, H_STEP = 0.05; // spacing 64 .. ~3 px
+const H_COUNT = Math.floor((H_MAX - H_MIN) / H_STEP) + 1;
+const hScore = new Float64Array(H_COUNT);
+const hRho = i => H_MIN + i * H_STEP;
+let hBest = { rho: NaN, spacing: NaN };
+
+function profileAt(r) { // linear interpolation between bins
+  const i = Math.floor(r), f = r - i;
+  return profile[i] * (1 - f) + profile[i + 1] * f;
+}
+
+function computeHarmonicScore() {
+  let bi = 0;
+  for (let i = 0; i < H_COUNT; i++) {
+    const rho = hRho(i);
+    let sum = 0, K = 0;
+    for (let k = 1; (k + 0.5) * rho <= H_RMAX; k++, K++) {
+      sum += profileAt(k * rho) - 0.5 * (profileAt((k - 0.5) * rho) + profileAt((k + 0.5) * rho));
+    }
+    hScore[i] = sum / Math.sqrt(K);
+    if (hScore[i] > hScore[bi]) bi = i;
+  }
+  // parabolic refinement of the maximum between samples
+  let rho = hRho(bi);
+  if (bi > 0 && bi < H_COUNT - 1) {
+    const a = hScore[bi - 1], b = hScore[bi], c = hScore[bi + 1];
+    const den = a - 2 * b + c;
+    if (den < 0) rho += (0.5 * (a - c) / den) * H_STEP;
+  }
+  hBest = { rho, spacing: N / rho };
+}
+
+// ---------- Radial profile plot ----------
+
+const plotCanvas = document.getElementById('profile');
+const pctx = plotCanvas.getContext('2d');
+
+function drawProfile(p) {
+  // Match the canvas's backing store to its CSS size for crisp lines.
+  const dpr = window.devicePixelRatio || 1;
+  const W = plotCanvas.clientWidth, H = plotCanvas.clientHeight;
+  if (plotCanvas.width !== Math.round(W * dpr) || plotCanvas.height !== Math.round(H * dpr)) {
+    plotCanvas.width = Math.round(W * dpr);
+    plotCanvas.height = Math.round(H * dpr);
+  }
+  const ctx = pctx;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+
+  const L = 40, R = 10, T = 10, B = 30; // margins
+  const pw = W - L - R, ph = H - T - B;
+  const rMax = NBINS - 1;
+  const X = r => L + (r / rMax) * pw;
+  const Y = v => T + (1 - v) * ph;
+
+  // Past N/2 the bins only include the corners of the FFT image.
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fillRect(X(N / 2), T, X(rMax) - X(N / 2), ph);
+
+  ctx.font = '11px system-ui, sans-serif';
+  ctx.strokeStyle = '#333';
+  ctx.fillStyle = '#888';
+  ctx.lineWidth = 1;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  for (let r = 0; r <= rMax; r += 50) {
+    ctx.beginPath(); ctx.moveTo(X(r), T); ctx.lineTo(X(r), T + ph); ctx.stroke();
+    ctx.fillText(r, X(r), T + ph + 4);
+  }
+  ctx.fillText('radius (FFT bins)', L + pw / 2, T + ph + 16);
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  for (let v = 0; v <= 1; v += 0.25) {
+    ctx.beginPath(); ctx.moveTo(L, Y(v)); ctx.lineTo(L + pw, Y(v)); ctx.stroke();
+    ctx.fillText(v.toFixed(2), L - 4, Y(v));
+  }
+
+  if (p.showRing) {
+    ctx.strokeStyle = 'rgba(255,60,60,0.8)';
+    ctx.setLineDash([4, 3]);
+    for (let k = 1; (k * N) / p.spacing <= rMax; k++) {
+      const x = X((k * N) / p.spacing);
+      ctx.beginPath(); ctx.moveTo(x, T); ctx.lineTo(x, T + ph); ctx.stroke();
+    }
+    ctx.setLineDash([]);
+  }
+
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  for (let r = 0; r <= rMax; r++) {
+    const x = X(r), y = Y(Math.min(1, profile[r]));
+    if (r === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // Harmonic score vs. fundamental radius, scaled to fill the plot height.
+  let lo = Infinity, hi = -Infinity;
+  for (const v of hScore) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
+  const sy = v => Y(hi > lo ? (v - lo) / (hi - lo) : 0);
+  ctx.strokeStyle = '#ff4040';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  for (let i = 0; i < H_COUNT; i++) {
+    const x = X(hRho(i)), y = sy(hScore[i]);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  ctx.fillStyle = '#ff4040';
+  ctx.beginPath();
+  ctx.arc(X(hBest.rho), sy(hi), 3, 0, 2 * Math.PI);
+  ctx.fill();
+  ctx.font = '12px system-ui, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'top';
+  ctx.fillText(`harmonic sum peak: radius ${hBest.rho.toFixed(2)} → spacing ${hBest.spacing.toFixed(2)} px`, L + pw - 6, T + 4);
+  ctx.fillStyle = '#ddd';
+  ctx.fillText('mean log |FFT|', L + pw - 6, T + 20);
 }
 
 // ---------- Rendering ----------
@@ -268,6 +423,8 @@ function render() {
 
     computeFFT(p);
     drawCrosshair(fctx);
+    computeHarmonicScore();
+    drawProfile(p);
   });
 }
 
@@ -312,4 +469,5 @@ window.addEventListener('keydown', e => {
 spiralCanvas.addEventListener('dblclick', () => { center.x = center.y = N / 2; render(); });
 
 for (const id of ids) el[id].addEventListener('input', render);
+window.addEventListener('resize', render);
 render();

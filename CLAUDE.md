@@ -27,6 +27,14 @@ no dependencies — open `index.html` directly (`open index.html`).
   harmonics above Nyquist that alias into arcs at the FFT's edges/corners.
   With erf edges, ~2–3 px transition removes them. Unchecking "Smooth line
   edges" gives binary (aliased) pixels for comparison.
+- The radial profile plot (`drawProfile`) bins FFT pixels by round(distance
+  from DC) using tables built once (`binOf`, `binCount`) and plots the mean
+  of `mag / max` per bin, i.e. independent of the contrast slider.
+- `computeHarmonicScore` estimates ring spacing from the profile: for each
+  candidate fundamental radius rho, sum over harmonics of (peak minus the
+  mean of the half-way troughs), divided by sqrt(K). That normalization was
+  chosen by testing: a plain average picks a higher harmonic, a plain sum
+  picks tiny rho. Plotted in red on the profile plot with x = rho.
 - Overlays (red center handle, blue crosshair, 1/spacing rings) are drawn only
   on the visible canvases, never into `img`, so they don't affect the FFT.
 
