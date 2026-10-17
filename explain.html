@@ -85,6 +85,13 @@ a fraction of a pixel, and the spiral is drawn exactly there.</p>
   <dt>Edge transition (px)</dt>
   <dd>How wide the fade is, from 10% to 90% brightness. Only used with smooth
   edges.</dd>
+  <dt>Blur sigma (px)</dt>
+  <dd>Blurs the finished image with a Gaussian of this standard deviation
+  before the Fourier transform (0 = no blur). The left panel shows the
+  blurred image. Unlike smooth edges, which keep sharp detail from being
+  drawn in the first place, blurring afterwards cannot undo aliasing that
+  is already in the pixels: it dims the whole outer part of the spectrum,
+  real content and aliased arcs alike.</dd>
 </dl>
 <p>Why this matters: sharp edges contain frequencies higher than the 512 grid
 can represent. In the Fourier transform those wrap around and show up as

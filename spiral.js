@@ -13,7 +13,7 @@ const octx = off.getContext('2d', { willReadFrequently: true });
 const center = { x: N / 2, y: N / 2 };
 const HANDLE_R = 7;
 
-const ids = ['spacing', 'rStart', 'rEnd', 'rotation', 'aspect', 'lineWidth', 'softness', 'gain', 'isSpiral', 'smooth', 'removeDC', 'window', 'showRing'];
+const ids = ['spacing', 'rStart', 'rEnd', 'rotation', 'aspect', 'lineWidth', 'softness', 'blur', 'gain', 'isSpiral', 'smooth', 'removeDC', 'window', 'showRing'];
 const el = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
 
 function params() {
@@ -25,6 +25,7 @@ function params() {
     aspect: +el.aspect.value,
     lineWidth: +el.lineWidth.value,
     softness: +el.softness.value,
+    blur: +el.blur.value,
     smooth: el.smooth.checked,
     spiral: el.isSpiral.checked,
     gain: +el.gain.value,
@@ -103,6 +104,8 @@ function renderSpiral(p) {
     }
   }
 
+  if (p.blur > 0) gaussianBlur(img, p.blur);
+
   const d = spiralImage.data;
   for (let i = 0; i < N * N; i++) {
     const c = Math.round(img[i] * 255);
@@ -110,6 +113,28 @@ function renderSpiral(p) {
     d[i * 4 + 3] = 255;
   }
   octx.putImageData(spiralImage, 0, 0);
+}
+
+// Separable Gaussian blur of the N×N image in place (rows, then columns).
+// Wraps around at the edges, matching the FFT's view of the image as
+// periodic, so the blur multiplies the spectrum by the kernel's DFT.
+const blurTmp = new Float32Array(N);
+function gaussianBlur(a, sigma) {
+  const R = Math.ceil(3 * sigma);
+  const k = new Float32Array(2 * R + 1);
+  let sum = 0;
+  for (let i = -R; i <= R; i++) sum += k[i + R] = Math.exp(-(i * i) / (2 * sigma * sigma));
+  for (let i = 0; i < k.length; i++) k[i] /= sum;
+  const pass = (base, stride) => {
+    for (let i = 0; i < N; i++) {
+      let v = 0;
+      for (let j = -R; j <= R; j++) v += k[j + R] * a[base + (((i + j) % N + N) % N) * stride];
+      blurTmp[i] = v;
+    }
+    for (let i = 0; i < N; i++) a[base + i * stride] = blurTmp[i];
+  };
+  for (let y = 0; y < N; y++) pass(y * N, 1);
+  for (let x = 0; x < N; x++) pass(x, N);
 }
 
 // ---------- FFT ----------
@@ -406,7 +431,7 @@ function render() {
   requestAnimationFrame(() => {
     pending = false;
     const p = params();
-    for (const id of ['spacing', 'rStart', 'rEnd', 'rotation', 'aspect', 'lineWidth', 'softness', 'gain']) {
+    for (const id of ['spacing', 'rStart', 'rEnd', 'rotation', 'aspect', 'lineWidth', 'softness', 'blur', 'gain']) {
       el[id].nextElementSibling.textContent = el[id].value;
     }
     document.getElementById('centerOut').textContent =
