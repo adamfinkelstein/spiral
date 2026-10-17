@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spiral FFT Controls</title>
+<style>
+  body { margin: 0 auto; padding: 16px; max-width: 760px; background: #111; color: #ddd; font: 15px/1.5 system-ui, sans-serif; }
+  a { color: #7ab0ff; }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  h2 { font-size: 17px; margin-top: 28px; border-bottom: 1px solid #333; padding-bottom: 4px; }
+  dt { font-weight: 600; margin-top: 12px; }
+  dd { margin-left: 20px; color: #bbb; }
+  code { background: #222; padding: 1px 4px; border-radius: 3px; }
+  .src { color: #aaa; }
+</style>
+</head>
+<body>
+
+<h1>Spiral FFT: controls</h1>
+<p class="src">Source code: <a href="https://github.com/adamfinkelstein/spiral">github.com/adamfinkelstein/spiral</a></p>
+
+<p>The left panel shows a white spiral (or set of concentric rings) on black,
+computed on a 512&times;512 grid. The right panel shows the 2D Fourier
+transform of that image: the log of its magnitude, with zero frequency at the
+center. Both panels show only their right two-thirds, since the images are
+nearly symmetric; the full image is still drawn and transformed. The blue
+lines mark the center of each canvas.</p>
+
+<h2>Moving the center</h2>
+<dl>
+  <dt>Drag in the left image</dt>
+  <dd>Moves the center of the spiral (the red dot). The drag is relative to
+  where you click, so you can grab anywhere. Hold <b>Shift</b> while dragging
+  for 10&times; finer movement.</dd>
+  <dt>Arrow keys</dt>
+  <dd>Nudge the center by 1 pixel, or 0.1 pixel with <b>Shift</b>.</dd>
+  <dt>Double-click</dt>
+  <dd>Returns the center to the middle of the canvas.</dd>
+</dl>
+<p>Distances are in pixels of the 512&times;512 image. The center can sit at
+a fraction of a pixel, and the spiral is drawn exactly there.</p>
+
+<h2>Shape</h2>
+<dl>
+  <dt>Ring spacing (px)</dt>
+  <dd>Distance between successive turns of the spiral, or between rings. The
+  spiral follows r = b&theta; with b = spacing / 2&pi;, so the radius grows by
+  one spacing per turn.</dd>
+  <dt>Start radius (px)</dt>
+  <dd>Radius where the spiral begins. In rings mode, the smallest ring drawn
+  has at least this radius.</dd>
+  <dt>End radius (px)</dt>
+  <dd>Radius where the spiral ends. In rings mode, the largest ring drawn has
+  at most this radius.</dd>
+  <dt>Rotation (deg)</dt>
+  <dd>Rotates the spiral about its center. Has no effect (and is greyed out)
+  in rings mode.</dd>
+  <dt>Line width (px)</dt>
+  <dd>Width of the line, measured where it is at half brightness.</dd>
+  <dt>Rings/spiral</dt>
+  <dd>Checked: a spiral. Unchecked: concentric circles at radii that are
+  multiples of the ring spacing, kept only if they fall between the start and
+  end radii.</dd>
+</dl>
+
+<h2>Line edges</h2>
+<dl>
+  <dt>Smooth line edges</dt>
+  <dd>Checked: each line edge fades smoothly from white to black, following a
+  Gaussian blur (erf) profile. Unchecked: every pixel is either fully on or
+  fully off, depending on whether its center falls inside a line.</dd>
+  <dt>Edge transition (px)</dt>
+  <dd>How wide the fade is, from 10% to 90% brightness. Only used with smooth
+  edges.</dd>
+</dl>
+<p>Why this matters: sharp edges contain frequencies higher than the 512 grid
+can represent. In the Fourier transform those wrap around and show up as
+curved arcs coming in from the edges and corners of the right panel
+(aliasing). A smooth transition of about 2&ndash;3 px removes them.</p>
+
+<h2>Fourier transform</h2>
+<dl>
+  <dt>FFT contrast</dt>
+  <dd>Brightness curve for the right panel. Values above 1 brighten faint
+  detail; values below 1 emphasize only the strongest parts. The display is
+  scaled to the brightest value other than the zero-frequency point.</dd>
+  <dt>Subtract mean</dt>
+  <dd>Subtracts the image's average brightness before transforming, which
+  removes the very bright spot at the center of the spectrum.</dd>
+  <dt>Hann window</dt>
+  <dd>Fades the image smoothly to black toward its borders before
+  transforming. This suppresses the cross-shaped streaks that appear when the
+  image has content near its edges, because the transform treats the image as
+  repeating.</dd>
+  <dt>Show 1/spacing ring</dt>
+  <dd>Draws red circles on the spectrum at radius 512 / spacing and its
+  multiples. These are where the energy from evenly spaced rings should land,
+  so you can check the transform against them.</dd>
+</dl>
+
+<p><a href="index.html">Back to the app</a></p>
+
+</body>
+</html>

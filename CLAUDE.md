@@ -10,6 +10,8 @@ no dependencies — open `index.html` directly (`open index.html`).
   live in their `value` / `checked` attributes).
 - `spiral.js` — everything else: per-pixel spiral rendering, radix-2 FFT,
   display, and mouse/keyboard interaction.
+- `explain.html` — plain-HTML help page describing each control, opened by the
+  "Explain Controls" button. Keep it in sync when controls change.
 
 ## Key design points
 
