@@ -287,8 +287,11 @@ function computeFFT(p) {
 // 2 rho1 from scoring as high as the true rho1. The sum is divided by
 // sqrt(K): a plain average lets a multiple of rho1 that hits one or two strong
 // harmonics win, while a plain sum lets tiny rho1 win by piling up many small
-// ripples (tested over spirals/rings, widths 2-8, spacings 3-60). Only radii
-// up to N/2 are
+// ripples (tested over spirals/rings, widths 2-8, spacings 3-60). The profile
+// is first smoothed with a Gaussian of H_BLUR bins, which removes fringe
+// ripple and speckle (mostly hurting the trough samples) and cut the rms error
+// for rings about 3x; much wider (3 bins) merges the peaks of large spacings.
+// Only radii up to N/2 are
 // used (beyond that the bins only cover the FFT's corners).
 const H_RMAX = N / 2;
 const H_MIN = N / 64, H_MAX = H_RMAX / 1.5, H_STEP = 0.05; // spacing 64 .. ~3 px
@@ -296,13 +299,26 @@ const H_COUNT = Math.floor((H_MAX - H_MIN) / H_STEP) + 1;
 const hScore = new Float64Array(H_COUNT);
 const hRho = i => H_MIN + i * H_STEP;
 let hBest = { rho: NaN, spacing: NaN };
+const H_BLUR = 1.5;
+const smoothProfile = new Float64Array(NBINS);
 
-function profileAt(r) { // linear interpolation between bins
+function profileAt(r) { // linear interpolation between bins of the smoothed profile
   const i = Math.floor(r), f = r - i;
-  return profile[i] * (1 - f) + profile[i + 1] * f;
+  return smoothProfile[i] * (1 - f) + smoothProfile[i + 1] * f;
 }
 
 function computeHarmonicScore() {
+  const R = Math.ceil(3 * H_BLUR);
+  for (let i = 0; i < NBINS; i++) { // Gaussian blur, clamped at the ends
+    let v = 0, w = 0;
+    for (let j = -R; j <= R; j++) {
+      const g = Math.exp(-(j * j) / (2 * H_BLUR * H_BLUR));
+      v += g * profile[Math.min(NBINS - 1, Math.max(0, i + j))];
+      w += g;
+    }
+    smoothProfile[i] = v / w;
+  }
+
   let bi = 0;
   for (let i = 0; i < H_COUNT; i++) {
     const rho = hRho(i);
@@ -326,6 +342,7 @@ function computeHarmonicScore() {
 // ---------- Radial profile plot ----------
 
 const plotCanvas = document.getElementById('profile');
+const PURPLE = '#b78cff';
 const pctx = plotCanvas.getContext('2d');
 
 function drawProfile(p) {
@@ -340,7 +357,7 @@ function drawProfile(p) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, W, H);
 
-  const L = 40, R = 10, T = 10, B = 30; // margins
+  const L = 40, R = 10, T = 24, B = 30; // margins (top holds the spacing axis)
   const pw = W - L - R, ph = H - T - B;
   const rMax = NBINS - 1;
   const X = r => L + (r / rMax) * pw;
@@ -378,6 +395,23 @@ function drawProfile(p) {
     ctx.setLineDash([]);
   }
 
+  // Purple bar: estimated spacing on its own 0..SP_MAX px scale (top axis),
+  // drawn behind the curves.
+  const SP_MAX = 64;
+  const SX = sp => L + (sp / SP_MAX) * pw;
+  ctx.fillStyle = 'rgba(160,90,255,0.55)';
+  if (isFinite(hBest.spacing)) ctx.fillRect(L, T + 2, SX(Math.min(SP_MAX, hBest.spacing)) - L, 12);
+  ctx.fillStyle = PURPLE;
+  ctx.strokeStyle = PURPLE;
+  ctx.lineWidth = 1;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  for (let sp = 0; sp <= SP_MAX; sp += 8) {
+    ctx.beginPath(); ctx.moveTo(SX(sp), T - 3); ctx.lineTo(SX(sp), T); ctx.stroke();
+    if (sp === SP_MAX) { ctx.textAlign = 'right'; ctx.fillText(`${sp} px`, SX(sp), T - 4); }
+    else ctx.fillText(sp, SX(sp), T - 4);
+  }
+
   ctx.strokeStyle = '#fff';
   ctx.lineWidth = 1.5;
   ctx.beginPath();
@@ -407,9 +441,14 @@ function drawProfile(p) {
   ctx.font = '12px system-ui, sans-serif';
   ctx.textAlign = 'right';
   ctx.textBaseline = 'top';
-  ctx.fillText(`harmonic sum peak: radius ${hBest.rho.toFixed(2)} → spacing ${hBest.spacing.toFixed(2)} px`, L + pw - 6, T + 4);
+  // red "radius → " followed by the purple spacing, right-aligned together
+  const spText = `spacing ${hBest.spacing.toFixed(2)} px`;
+  const right = L + pw - 6, ty = T + 18;
+  ctx.fillText(`harmonic sum peak: radius ${hBest.rho.toFixed(2)} → `, right - ctx.measureText(spText).width, ty);
+  ctx.fillStyle = PURPLE;
+  ctx.fillText(spText, right, ty);
   ctx.fillStyle = '#ddd';
-  ctx.fillText('mean log |FFT|', L + pw - 6, T + 20);
+  ctx.fillText('mean log |FFT|', L + pw - 6, T + 34);
 }
 
 // ---------- Rendering ----------

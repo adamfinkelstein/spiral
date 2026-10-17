@@ -11,7 +11,7 @@ no dependencies — open `index.html` directly (`open index.html`).
 - `spiral.js` — everything else: per-pixel spiral rendering, radix-2 FFT,
   display, and mouse/keyboard interaction.
 - `explain.html` — plain-HTML help page describing each control, opened by the
-  "Explain Controls" button. Keep it in sync when controls change.
+  "Explain" button. Keep it in sync when controls change.
 
 ## Key design points
 
@@ -34,7 +34,9 @@ no dependencies — open `index.html` directly (`open index.html`).
   candidate fundamental radius rho, sum over harmonics of (peak minus the
   mean of the half-way troughs), divided by sqrt(K). That normalization was
   chosen by testing: a plain average picks a higher harmonic, a plain sum
-  picks tiny rho. Plotted in red on the profile plot with x = rho.
+  picks tiny rho. The profile is blurred first (fixed `H_BLUR` = 1.5 bins;
+  ~3x lower rms error for rings, 3 bins breaks large spacings). Plotted in
+  red on the profile plot with x = rho.
 - Overlays (red center handle, blue crosshair, 1/spacing rings) are drawn only
   on the visible canvases, never into `img`, so they don't affect the FFT.
 
@@ -55,4 +57,10 @@ No Node on this machine. Syntax-check with JavaScriptCore:
 For logic/perf checks, `jsc` can run `spiral.js` with a small stub of
 `document` / canvas contexts prepended, then call `renderSpiral(params())` and
 `computeFFT(params())` and print `img` / `mag`. Stubs won't catch DOM issues
-(like duplicate ids), so confirm UI changes in a real browser.
+(like duplicate ids). To see the real page, take a headless Chrome screenshot:
+
+```sh
+"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new \
+  --disable-gpu --hide-scrollbars --window-size=1000,720 \
+  --screenshot=/path/to/shot.png "file://$PWD/index.html"
+```

@@ -13,6 +13,9 @@
   dd { margin-left: 20px; color: #bbb; }
   code { background: #222; padding: 1px 4px; border-radius: 3px; }
   .src { color: #aaa; }
+  h3 { font-size: 15px; margin: 20px 0 6px; color: #eee; }
+  .eq { margin: 10px 0 10px 24px; font-family: "Times New Roman", serif; font-size: 17px; color: #eee; }
+  li { color: #bbb; margin: 4px 0; }
 </style>
 </head>
 <body>
@@ -119,30 +122,98 @@ curved arcs coming in from the edges and corners of the right panel
 </dl>
 
 <h2>Radial profile plot</h2>
-<p>The plot below the two panels averages the Fourier transform around
-circles centered on zero frequency. Every pixel of the right panel is put
-into a bin by its distance from the center, rounded to the nearest whole
-number, and the plot shows the average brightness of each bin. Brightness is
-the log magnitude scaled so the brightest point (other than zero frequency)
-is 1, which is what the right panel shows at contrast 1; the contrast slider
-does not affect the plot. Bright rings in the transform show up as peaks.
-With <b>Show 1/spacing</b> on, red dashed lines mark where those peaks
-are expected. Beyond radius 256 (the shaded part) the circles only pass
-through the corners of the transform, so those bins average fewer
-pixels.</p>
+<p>The plot below the two panels turns the 2D Fourier transform into two
+curves, both plotted against radius &rho;: the distance from zero frequency
+in the right panel, measured in FFT bins (pixels of the 512&times;512
+transform).</p>
 
-<p>The <span style="color:#ff4040">red curve</span> is a harmonic-sum
-score that turns the repeated peaks into a single peak. Rings spaced
-<i>s</i> pixels apart produce peaks at radii <i>k</i>&middot;512/<i>s</i>
-for <i>k</i> = 1, 2, 3, &hellip; For each candidate first-peak radius
-&rho;, the score adds up, over all its multiples <i>k</i>&rho; up to radius
-256, how far the profile there rises above the points halfway to the
-neighbouring multiples, then divides by the square root of the number of
-terms. Only the true &rho; lines up with every peak, so the score has one
-clear maximum there. The curve is plotted at x = &rho; and scaled to fill
-the plot. The text in the corner gives the maximum's radius and the spacing
-it implies, 512 / &rho;, which should match the ring spacing slider.
-Candidates cover spacings from about 3 to 64 px.</p>
+<h3>Where the peaks come from</h3>
+<p>A point at radius &rho; in the transform is a pattern that repeats
+&rho; times across the 512-pixel image, so its period is 512&nbsp;/&nbsp;&rho;
+pixels. Rings spaced <i>s</i> pixels apart therefore put their main bright
+ring at</p>
+<p class="eq">&rho;<sub>1</sub> = 512 / <i>s</i></p>
+<p>Because each line is a narrow bright band rather than a smooth wave, the
+transform also has fainter rings at the multiples (harmonics)
+<i>k</i>&rho;<sub>1</sub>, <i>k</i> = 2, 3, &hellip; With spacing 10, for
+example, they are at 51.2, 102.4, 153.6, &hellip; With <b>Show 1/spacing</b>
+on, red dashed lines mark these expected positions.</p>
+
+<h3>White curve: radial profile</h3>
+<p>Let <i>L</i>(<i>u</i>,<i>v</i>) be the brightness of the right panel at
+contrast 1: the log magnitude log(1&nbsp;+&nbsp;|<i>F</i>|), divided by its
+largest value away from zero frequency so it runs from 0 to 1. Each pixel is
+assigned to the bin given by its distance from the center, rounded to a whole
+number, and the white curve is the mean of each bin:</p>
+<p class="eq"><i>P</i>(<i>r</i>) = (1 / <i>n<sub>r</sub></i>)
+&sum; <i>L</i>(<i>u</i>,<i>v</i>) &nbsp; over all pixels with
+round(&radic;(<i>u</i><sup>2</sup>&nbsp;+&nbsp;<i>v</i><sup>2</sup>)) = <i>r</i></p>
+<p>where <i>n<sub>r</sub></i> is the number of pixels in bin <i>r</i>
+(roughly 2&pi;<i>r</i>). Bright rings show up as peaks at
+<i>k</i>&rho;<sub>1</sub>. Beyond radius 256 (the shaded part) the circles
+only pass through the corners of the transform, so those bins hold fewer
+pixels. The contrast slider does not affect the plot.</p>
+
+<h3><span style="color:#ff4040">Red curve</span>: harmonic-sum score</h3>
+<p>The white curve's repeated peaks are turned into a single peak. For each
+candidate first-peak radius &rho;, the score checks every multiple
+<i>k</i>&rho; and measures how far the profile there rises above the points
+halfway to the neighbouring multiples:</p>
+<p class="eq"><i>S</i>(&rho;) = (1 / &radic;<i>K</i>) &sum;<sub><i>k</i>=1..<i>K</i></sub>
+[ <i>P&#771;</i>(<i>k</i>&rho;) &minus; &frac12;
+<i>P&#771;</i>((<i>k</i>&minus;&frac12;)&rho;) &minus; &frac12;
+<i>P&#771;</i>((<i>k</i>+&frac12;)&rho;) ]</p>
+<p>Here <i>P&#771;</i> is the smoothed profile (see below), read between bins
+by linear interpolation, and <i>K</i> is the number of multiples that fit:
+(<i>K</i>&nbsp;+&nbsp;&frac12;)&rho;&nbsp;&le;&nbsp;256.</p>
+<ul>
+  <li><b>Only the true &rho;<sub>1</sub> scores high.</b> At
+  &rho;&nbsp;=&nbsp;&rho;<sub>1</sub> every term is a peak minus two troughs,
+  so all terms are positive. At &rho;<sub>1</sub>/2, every other term samples
+  a trough. At 2&rho;<sub>1</sub>, the halfway points land on peaks. Both
+  give lower scores.</li>
+  <li><b>Subtracting the halfway points</b> removes the slowly varying
+  background of the profile, which falls steadily with radius.</li>
+  <li><b>Dividing by &radic;<i>K</i></b> is a compromise found by testing.
+  Dividing by <i>K</i> (an average) let a multiple of &rho;<sub>1</sub> that
+  hits only one or two strong harmonics win. Not dividing at all let very
+  small &rho; win by adding up many small ripples.</li>
+</ul>
+<p>The red curve is plotted at x&nbsp;=&nbsp;&rho;, scaled to fill the plot
+height. Candidates cover &rho; from 8 to about 171, i.e. spacings from 64
+down to about 3 px.</p>
+
+<h3>From the peak to the spacing</h3>
+<p>The score is computed for &rho; in steps of &Delta;&nbsp;=&nbsp;0.05 and
+the highest sample <i>S<sub>i</sub></i> is found. A parabola is then fit
+through it and its two neighbours to place the peak between samples:</p>
+<p class="eq">&rho;* = &rho;<sub><i>i</i></sub> + &Delta; &middot;
+&frac12;(<i>S</i><sub><i>i</i>&minus;1</sub> &minus; <i>S</i><sub><i>i</i>+1</sub>) /
+(<i>S</i><sub><i>i</i>&minus;1</sub> &minus; 2<i>S<sub>i</sub></i> + <i>S</i><sub><i>i</i>+1</sub>)</p>
+<p>and the estimated spacing is</p>
+<p class="eq"><i>s</i>* = 512 / &rho;*</p>
+<p>The text in the plot's corner reports both numbers, and <i>s</i>*
+should match the ring spacing slider. The
+<span style="color:#b78cff">purple bar</span> along the top of the plot
+shows <i>s</i>* graphically: it extends from the left edge to <i>s</i>* on
+its own scale, 0 to 64 px, labelled in purple across the top. Because &rho;* uses every harmonic, not
+just the first peak, it is much more precise than reading one peak off the
+plot. In tests over spirals and rings, spacings 6&ndash;60 and small center
+offsets, the estimate was typically within 0.2&ndash;0.25% of the true
+spacing, and always within 0.5%.</p>
+
+<h3>Smoothing before scoring</h3>
+<p>Before the score is computed, the profile is blurred with a 1D Gaussian of
+standard deviation 1.5 bins, giving <i>P&#771;</i>. The white curve on the plot
+is still the unblurred <i>P</i>. The raw profile has small ripples: speckle,
+and fringes around each peak caused by the spiral starting and stopping at
+fixed radii (about 512&nbsp;/&nbsp;(end&nbsp;&minus;&nbsp;start radius) bins
+apart). These mostly corrupt the trough samples, where the background is low,
+and make the estimate jitter as parameters change. The blur removes them while
+leaving the peaks in place. In testing it cut the rms error for rings about
+3&times; (0.65% to 0.21%) and slightly improved spirals. Blurring much more
+does not help: at 3 bins, the peaks for large spacings (only about 8 bins
+apart at spacing 60) merge, and the estimate fails.</p>
 
 <p><a href="index.html">Back to the app</a></p>
 

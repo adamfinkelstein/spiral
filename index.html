@@ -14,7 +14,7 @@
   .crop canvas { display: block; width: 400px; height: 400px; margin-left: calc(-400px / 3); }
   #spiral { cursor: crosshair; }
   .left { display: flex; flex-direction: column; gap: 14px; }
-  #profile { display: block; width: calc(2 * (400px * 2 / 3 + 2px) + 16px); height: 200px; border: 1px solid #333; background: #000; box-sizing: border-box; }
+  #profile { display: block; width: calc(2 * (400px * 2 / 3 + 2px) + 16px); height: 215px; border: 1px solid #333; background: #000; box-sizing: border-box; }
   .side { width: 330px; }
   .controls { display: grid; grid-template-columns: 120px 1fr 40px; gap: 6px 8px; align-items: center; margin-top: 14px; }
   .controls input[type=range] { width: 100%; }
@@ -43,7 +43,7 @@
   </figure>
 </div>
 <div class="side">
-<a class="button" href="explain.html" target="_blank">Explain Controls</a><button class="button" id="defaults" type="button">Defaults</button>
+<a class="button" href="explain.html" target="_blank">Explain</a><button class="button" id="defaults" type="button">Defaults</button>
 <div class="controls">
   <label for="spacing">Ring spacing (px)</label>
   <input id="spacing" type="range" min="2" max="64" step="0.1" value="10"><output for="spacing"></output>
