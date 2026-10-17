@@ -13,7 +13,7 @@ const octx = off.getContext('2d', { willReadFrequently: true });
 const center = { x: N / 2, y: N / 2 };
 const HANDLE_R = 7;
 
-const ids = ['spacing', 'rStart', 'rEnd', 'rotation', 'lineWidth', 'softness', 'gain', 'isSpiral', 'smooth', 'removeDC', 'window', 'showRing'];
+const ids = ['spacing', 'rStart', 'rEnd', 'rotation', 'aspect', 'lineWidth', 'softness', 'gain', 'isSpiral', 'smooth', 'removeDC', 'window', 'showRing'];
 const el = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
 
 function params() {
@@ -22,6 +22,7 @@ function params() {
     rStart: +el.rStart.value,
     rEnd: +el.rEnd.value,
     rotation: (+el.rotation.value * Math.PI) / 180,
+    aspect: +el.aspect.value,
     lineWidth: +el.lineWidth.value,
     softness: +el.softness.value,
     smooth: el.smooth.checked,
@@ -40,6 +41,9 @@ function params() {
 // Rendered per pixel from the distance to the nearest arms.
 // In rings mode, draws concentric circles at radii n * spacing within
 // [rStart, rEnd] instead (rotation has no effect).
+// Aspect scales the whole drawing about the center by `aspect` in x and
+// 1/aspect in y, preserving area (distances are measured in unscaled
+// coordinates, so line widths scale too, as if the finished image were resized).
 //
 // Smooth edges: brightness across a line is Φ(d + w/2) - Φ(d - w/2), where Φ
 // is the Gaussian CDF (erf) whose 10%-90% rise is `softness` px, i.e. a
@@ -71,9 +75,9 @@ function renderSpiral(p) {
   const sig = p.smooth ? x => 0.5 * (1 + erf(x * c)) : x => (x >= 0 ? 1 : 0);
 
   for (let y = 0; y < N; y++) {
-    const dy = y + 0.5 - center.y;
+    const dy = (y + 0.5 - center.y) * p.aspect;
     for (let x = 0; x < N; x++) {
-      const dx = x + 0.5 - center.x;
+      const dx = (x + 0.5 - center.x) / p.aspect;
       const r = Math.hypot(dx, dy);
       // u is fractional arm index; spiral arm n passes radius b * (phi + 2πn),
       // ring n has radius n * spacing.
@@ -402,7 +406,7 @@ function render() {
   requestAnimationFrame(() => {
     pending = false;
     const p = params();
-    for (const id of ['spacing', 'rStart', 'rEnd', 'rotation', 'lineWidth', 'softness', 'gain']) {
+    for (const id of ['spacing', 'rStart', 'rEnd', 'rotation', 'aspect', 'lineWidth', 'softness', 'gain']) {
       el[id].nextElementSibling.textContent = el[id].value;
     }
     document.getElementById('centerOut').textContent =
@@ -467,6 +471,17 @@ window.addEventListener('keydown', e => {
 });
 
 spiralCanvas.addEventListener('dblclick', () => { center.x = center.y = N / 2; render(); });
+
+// Reset every control to the value/checked state written in index.html, and
+// recenter.
+document.getElementById('defaults').addEventListener('click', () => {
+  for (const id of ids) {
+    if (el[id].type === 'checkbox') el[id].checked = el[id].defaultChecked;
+    else el[id].value = el[id].defaultValue;
+  }
+  center.x = center.y = N / 2;
+  render();
+});
 
 for (const id of ids) el[id].addEventListener('input', render);
 window.addEventListener('resize', render);
