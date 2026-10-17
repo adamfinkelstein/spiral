@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spiral FFT</title>
+<style>
+  body { margin: 0; padding: 16px; background: #111; color: #ddd; font: 14px system-ui, sans-serif; }
+  .row { display: flex; gap: 16px; align-items: flex-start; }
+  figure { margin: 0; }
+  figcaption { margin-bottom: 4px; color: #aaa; }
+  /* Canvases are 512x512 internally, displayed at 400x400. Since the images
+     are (nearly) symmetric, only the right 2/3 of each is shown. */
+  .crop { width: calc(400px * 2 / 3); height: 400px; overflow: hidden; border: 1px solid #333; background: #000; }
+  .crop canvas { display: block; width: 400px; height: 400px; margin-left: calc(-400px / 3); }
+  #spiral { cursor: crosshair; }
+  .side { width: 330px; }
+  .controls { display: grid; grid-template-columns: 120px 1fr 40px; gap: 6px 8px; align-items: center; margin-top: 20px; }
+  .controls input[type=range] { width: 100%; }
+  .controls output { font-variant-numeric: tabular-nums; }
+  .hint { color: #888; margin-top: 12px; line-height: 1.4; }
+</style>
+</head>
+<body>
+<div class="row">
+  <figure>
+    <figcaption>Image (drag to move center)</figcaption>
+    <div class="crop"><canvas id="spiral" width="512" height="512"></canvas></div>
+  </figure>
+  <figure>
+    <figcaption>log |FFT|</figcaption>
+    <div class="crop"><canvas id="fft" width="512" height="512"></canvas></div>
+  </figure>
+<div class="side">
+<div class="controls">
+  <label for="spacing">Ring spacing (px)</label>
+  <input id="spacing" type="range" min="2" max="64" step="0.1" value="10"><output for="spacing"></output>
+
+  <label for="rStart">Start radius (px)</label>
+  <input id="rStart" type="range" min="0" max="250" step="1" value="50"><output for="rStart"></output>
+
+  <label for="rEnd">End radius (px)</label>
+  <input id="rEnd" type="range" min="0" max="250" step="1" value="200"><output for="rEnd"></output>
+
+  <label for="rotation">Rotation (deg)</label>
+  <input id="rotation" type="range" min="0" max="360" step="1" value="0"><output for="rotation"></output>
+
+  <label for="lineWidth">Line width (px)</label>
+  <input id="lineWidth" type="range" min="0.5" max="10" step="0.1" value="4"><output for="lineWidth"></output>
+
+  <label for="softness">Edge transition (px)</label>
+  <input id="softness" type="range" min="0" max="6" step="0.1" value="2"><output for="softness"></output>
+
+  <label for="gain">FFT contrast</label>
+  <input id="gain" type="range" min="0.2" max="4" step="0.05" value="1"><output for="gain"></output>
+
+  <label for="isSpiral">Rings/spiral</label>
+  <input id="isSpiral" type="checkbox" checked><span></span>
+
+  <label for="smooth">Smooth line edges</label>
+  <input id="smooth" type="checkbox" checked><span></span>
+
+  <label for="removeDC">Subtract mean</label>
+  <input id="removeDC" type="checkbox" checked><span></span>
+
+  <label for="window">Hann window</label>
+  <input id="window" type="checkbox" checked><span></span>
+
+  <label for="showRing">Show 1/spacing ring</label>
+  <input id="showRing" type="checkbox"><span></span>
+</div>
+<p class="hint">Center: <span id="centerOut"></span> — drag anywhere in the image to move it (hold Shift for 10× finer). Arrow keys nudge 1 px (Shift: 0.1 px). Double-click to recenter.</p>
+</div>
+</div>
+
+<script src="spiral.js"></script>
+</body>
+</html>
