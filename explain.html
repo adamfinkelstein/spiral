@@ -59,9 +59,10 @@ a fraction of a pixel, and the spiral is drawn exactly there.</p>
   <dt>End radius (px)</dt>
   <dd>Radius where the spiral ends. In rings mode, the largest ring drawn has
   at most this radius.</dd>
-  <dt>Rotation (deg)</dt>
-  <dd>Rotates the spiral about its center. Has no effect (and is greyed out)
-  in rings mode.</dd>
+  <dt>Phase (deg)</dt>
+  <dd>Phase of the spiral, i.e. the angle at which its arms cross a given
+  radius; changing it rotates the spiral about its center. Has no effect (and
+  is greyed out) in rings mode.</dd>
   <dt>Aspect (x, 1/y)</dt>
   <dd>Scales the whole drawing about its center by the aspect value
   horizontally (0.95 to 1.05; 1 = no change) and by 1 / aspect vertically, so
@@ -215,7 +216,7 @@ leaving the peaks in place. In testing it cut the rms error for rings about
 does not help: at 3 bins, the peaks for large spacings (only about 8 bins
 apart at spacing 60) merge, and the estimate fails.</p>
 
-<p><a href="index.html">Back to the app</a></p>
+<p><a href="spacing.html">Back to the app</a></p>
 
 </body>
 </html>

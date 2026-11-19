@@ -1,4 +1,3 @@
-const N = 512;
 
 const spiralCanvas = document.getElementById('spiral');
 const fftCanvas = document.getElementById('fft');
@@ -13,7 +12,7 @@ const octx = off.getContext('2d', { willReadFrequently: true });
 const center = { x: N / 2, y: N / 2 };
 const HANDLE_R = 7;
 
-const ids = ['spacing', 'rStart', 'rEnd', 'rotation', 'aspect', 'lineWidth', 'softness', 'blur', 'gain', 'isSpiral', 'smooth', 'removeDC', 'window', 'showRing'];
+const ids = ['spacing', 'rStart', 'rEnd', 'phase', 'aspect', 'lineWidth', 'softness', 'blur', 'gain', 'isSpiral', 'smooth', 'removeDC', 'window', 'showRing'];
 const el = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
 
 function params() {
@@ -21,7 +20,7 @@ function params() {
     spacing: +el.spacing.value,
     rStart: +el.rStart.value,
     rEnd: +el.rEnd.value,
-    rotation: (+el.rotation.value * Math.PI) / 180,
+    phase: (+el.phase.value * Math.PI) / 180,
     aspect: +el.aspect.value,
     lineWidth: +el.lineWidth.value,
     softness: +el.softness.value,
@@ -37,105 +36,9 @@ function params() {
 
 // ---------- Spiral ----------
 
-// Archimedean spiral r = b * theta, with b = spacing / (2π) so that
-// successive rings are `spacing` pixels apart, for r in [rStart, rEnd].
-// Rendered per pixel from the distance to the nearest arms.
-// In rings mode, draws concentric circles at radii n * spacing within
-// [rStart, rEnd] instead (rotation has no effect).
-// Aspect scales the whole drawing about the center by `aspect` in x and
-// 1/aspect in y, preserving area (distances are measured in unscaled
-// coordinates, so line widths scale too, as if the finished image were resized).
-//
-// Smooth edges: brightness across a line is Φ(d + w/2) - Φ(d - w/2), where Φ
-// is the Gaussian CDF (erf) whose 10%-90% rise is `softness` px, i.e. a
-// sharp-edged line blurred by a Gaussian. Its spectrum falls off as a
-// Gaussian, so harmonics above Nyquist (which alias) are negligible. Line ends
-// get the same falloff along the arc.
-// Otherwise: binary on/off pixels (aliased).
-// Writes 0..1 values into `img`.
+// Rendering (renderSpiral, gaussianBlur, N) lives in render.js.
 const img = new Float32Array(N * N);
 const spiralImage = octx.createImageData(N, N);
-
-// erf, Abramowitz & Stegun 7.1.26 (|error| < 1.5e-7)
-function erf(x) {
-  const s = x < 0 ? -1 : 1;
-  x = Math.abs(x);
-  const t = 1 / (1 + 0.3275911 * x);
-  const y = 1 - ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
-  return s * y;
-}
-
-function renderSpiral(p) {
-  const S = p.spacing;
-  const b = S / (2 * Math.PI);
-  const r0 = Math.min(p.rStart, p.rEnd);
-  const r1 = Math.max(p.rStart, p.rEnd);
-  const halfW = p.lineWidth / 2;
-  const sigma = Math.max(p.softness, 0.01) / 2.5631; // 10-90% width = 2.5631 σ
-  const c = 1 / (sigma * Math.SQRT2);
-  const sig = p.smooth ? x => 0.5 * (1 + erf(x * c)) : x => (x >= 0 ? 1 : 0);
-
-  for (let y = 0; y < N; y++) {
-    const dy = (y + 0.5 - center.y) * p.aspect;
-    for (let x = 0; x < N; x++) {
-      const dx = (x + 0.5 - center.x) / p.aspect;
-      const r = Math.hypot(dx, dy);
-      // u is fractional arm index; spiral arm n passes radius b * (phi + 2πn),
-      // ring n has radius n * spacing.
-      const phi = p.spiral ? Math.atan2(dy, dx) - p.rotation : 0;
-      const u = (r / b - phi) / (2 * Math.PI);
-      const n0 = Math.round(u);
-      const perp = p.spiral ? r / Math.sqrt(r * r + b * b) : 1; // radial → perpendicular distance
-      let v = 0;
-      for (let n = n0 - 1; n <= n0 + 1; n++) {
-        const d = S * (u - n); // signed radial distance to arm n
-        const ra = r - d;      // radius of arm n at this angle
-        if (ra < 0 || (!p.spiral && n <= 0)) continue; // no zero-radius ring
-        const dp = d * perp;
-        const prof = sig(dp + halfW) - sig(dp - halfW);
-        if (prof < 1e-7) continue;
-        // spiral: arc length (approx) from each end; rings: keep whole rings in range
-        const cap = p.spiral
-          ? sig((ra * ra - r0 * r0) / (2 * b)) * sig((r1 * r1 - ra * ra) / (2 * b))
-          : (ra >= r0 - 1e-6 && ra <= r1 + 1e-6 ? 1 : 0);
-        v += prof * cap;
-      }
-      img[y * N + x] = Math.min(1, v);
-    }
-  }
-
-  if (p.blur > 0) gaussianBlur(img, p.blur);
-
-  const d = spiralImage.data;
-  for (let i = 0; i < N * N; i++) {
-    const c = Math.round(img[i] * 255);
-    d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = c;
-    d[i * 4 + 3] = 255;
-  }
-  octx.putImageData(spiralImage, 0, 0);
-}
-
-// Separable Gaussian blur of the N×N image in place (rows, then columns).
-// Wraps around at the edges, matching the FFT's view of the image as
-// periodic, so the blur multiplies the spectrum by the kernel's DFT.
-const blurTmp = new Float32Array(N);
-function gaussianBlur(a, sigma) {
-  const R = Math.ceil(3 * sigma);
-  const k = new Float32Array(2 * R + 1);
-  let sum = 0;
-  for (let i = -R; i <= R; i++) sum += k[i + R] = Math.exp(-(i * i) / (2 * sigma * sigma));
-  for (let i = 0; i < k.length; i++) k[i] /= sum;
-  const pass = (base, stride) => {
-    for (let i = 0; i < N; i++) {
-      let v = 0;
-      for (let j = -R; j <= R; j++) v += k[j + R] * a[base + (((i + j) % N + N) % N) * stride];
-      blurTmp[i] = v;
-    }
-    for (let i = 0; i < N; i++) a[base + i * stride] = blurTmp[i];
-  };
-  for (let y = 0; y < N; y++) pass(y * N, 1);
-  for (let x = 0; x < N; x++) pass(x, N);
-}
 
 // ---------- FFT ----------
 
@@ -470,15 +373,17 @@ function render() {
   requestAnimationFrame(() => {
     pending = false;
     const p = params();
-    for (const id of ['spacing', 'rStart', 'rEnd', 'rotation', 'aspect', 'lineWidth', 'softness', 'blur', 'gain']) {
+    for (const id of ['spacing', 'rStart', 'rEnd', 'phase', 'aspect', 'lineWidth', 'softness', 'blur', 'gain']) {
       el[id].nextElementSibling.textContent = el[id].value;
     }
     document.getElementById('centerOut').textContent =
       `(${center.x.toFixed(1)}, ${center.y.toFixed(1)})`;
 
     el.softness.disabled = !p.smooth;
-    el.rotation.disabled = !p.spiral;
-    renderSpiral(p);
+    el.phase.disabled = !p.spiral;
+    renderSpiral(p, center, img);
+    toImageData(img, spiralImage);
+    octx.putImageData(spiralImage, 0, 0);
     sctx.drawImage(off, 0, 0);
     drawCrosshair(sctx);
     sctx.beginPath();
@@ -536,7 +441,7 @@ window.addEventListener('keydown', e => {
 
 spiralCanvas.addEventListener('dblclick', () => { center.x = center.y = N / 2; render(); });
 
-// Reset every control to the value/checked state written in index.html, and
+// Reset every control to the value/checked state written in spacing.html, and
 // recenter.
 document.getElementById('defaults').addEventListener('click', () => {
   for (const id of ids) {

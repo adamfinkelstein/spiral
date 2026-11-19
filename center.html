@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spiral: center and phase from chunks</title>
+<style>
+  body { margin: 0; padding: 16px; background: #111; color: #ddd; font: 14px system-ui, sans-serif; }
+  .row { display: flex; gap: 16px; align-items: flex-start; }
+  figure { margin: 0; }
+  figcaption { margin-bottom: 4px; color: #aaa; }
+  /* Canvases are 512x512 internally, displayed at 400x400. */
+  canvas.view { display: block; width: 400px; height: 400px; border: 1px solid #333; background: #000; }
+  #truth { cursor: crosshair; }
+  .side { width: 330px; }
+  .controls { display: grid; grid-template-columns: 120px 1fr 40px; gap: 6px 8px; align-items: center; margin-top: 14px; }
+  .controls input[type=range] { width: 100%; }
+  .controls output { font-variant-numeric: tabular-nums; }
+  .controls h4 { grid-column: 1 / -1; margin: 10px 0 0; color: #aaa; font-weight: 600; }
+  .hint { color: #888; margin-top: 12px; line-height: 1.4; }
+  .button { display: inline-block; margin-top: 18px; margin-right: 6px; padding: 5px 12px; border: 1px solid #555; border-radius: 4px; background: #222; color: #ddd; text-decoration: none; font: inherit; cursor: pointer; }
+  .button:hover { background: #333; border-color: #777; }
+</style>
+</head>
+<body>
+<div class="row">
+  <figure>
+    <figcaption>True spiral (drag to move center; chunks highlighted)</figcaption>
+    <canvas id="truth" class="view" width="512" height="512"></canvas>
+  </figure>
+  <figure>
+    <figcaption>Recovered pixels: random chunks only</figcaption>
+    <canvas id="chunks" class="view" width="512" height="512"></canvas>
+  </figure>
+<div class="side">
+<a class="button" href="index.html">&larr; Experiments</a><button class="button" id="defaults" type="button">Defaults</button><button class="button" id="reseed" type="button">New chunks</button>
+<div class="controls">
+  <h4>Spiral</h4>
+  <label for="spacing">Ring spacing (px)</label>
+  <input id="spacing" type="range" min="2" max="64" step="0.1" value="10"><output for="spacing"></output>
+
+  <label for="rStart">Start radius (px)</label>
+  <input id="rStart" type="range" min="0" max="250" step="1" value="50"><output for="rStart"></output>
+
+  <label for="rEnd">End radius (px)</label>
+  <input id="rEnd" type="range" min="0" max="250" step="1" value="200"><output for="rEnd"></output>
+
+  <label for="phase">Phase (deg)</label>
+  <input id="phase" type="range" min="0" max="360" step="1" value="0"><output for="phase"></output>
+
+  <label for="aspect">Aspect (x, 1/y)</label>
+  <input id="aspect" type="range" min="0.95" max="1.05" step="0.001" value="1"><output for="aspect"></output>
+
+  <label for="lineWidth">Line width (px)</label>
+  <input id="lineWidth" type="range" min="0.5" max="10" step="0.1" value="4"><output for="lineWidth"></output>
+
+  <label for="softness">Edge transition (px)</label>
+  <input id="softness" type="range" min="0" max="6" step="0.1" value="2"><output for="softness"></output>
+
+  <label for="blur">Blur sigma (px)</label>
+  <input id="blur" type="range" min="0" max="4" step="0.1" value="0"><output for="blur"></output>
+
+  <label for="isSpiral">Rings/spiral</label>
+  <input id="isSpiral" type="checkbox" checked><span></span>
+
+  <label for="smooth">Smooth line edges</label>
+  <input id="smooth" type="checkbox" checked><span></span>
+
+  <h4>Chunks</h4>
+  <label for="nChunks">Number of chunks</label>
+  <input id="nChunks" type="range" min="1" max="30" step="1" value="6"><output for="nChunks"></output>
+
+  <label for="chunkLen">Chunk length (px)</label>
+  <input id="chunkLen" type="range" min="5" max="400" step="1" value="60"><output for="chunkLen"></output>
+
+  <label for="highlight">Highlight on left</label>
+  <input id="highlight" type="checkbox" checked><span></span>
+
+  <label for="showCenter">True center on right</label>
+  <input id="showCenter" type="checkbox" checked><span></span>
+</div>
+<p class="hint">Center: <span id="centerOut"></span> — drag in the left image to move it (hold Shift for 10× finer). Arrow keys nudge 1 px (Shift: 0.1 px). Double-click to recenter.</p>
+<p class="hint">Each chunk is a piece of the curve of the given arc length, placed uniformly at random along the whole spiral (or along all the rings together). The chunks stay put as you change the other controls; <b>New chunks</b> draws a new random set (<span id="seedOut"></span>).</p>
+</div>
+</div>
+
+<script src="render.js"></script>
+<script src="center.js"></script>
+</body>
+</html>
