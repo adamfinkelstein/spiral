@@ -1,32 +1,41 @@
 # spiral
 
-Small browser experiments on images of an Archimedean spiral (or concentric
-rings). Open `index.html` in a browser — no build step — and pick an
-experiment.
+Small browser experiments on images of an Archimedean spiral (r = bθ, with
+ring spacing 2πb). Open `index.html` in a browser — no build step, no
+dependencies — and pick an experiment.
 
 Live version: https://adamfinkelstein.github.io/spiral/ (deployed automatically
 by GitHub Actions on every push to `main`).
 
 ## Ring spacing (`spacing.html`)
 
-- Left: the spiral, rendered per pixel on a 512×512 grid (white on black).
-  Drag to move its center (Shift for finer control, arrow keys to nudge,
-  double-click to recenter).
+Estimate the ring spacing from the 2D Fourier transform.
+
+- Left: the spiral (or concentric rings), rendered per pixel on a 512×512
+  grid. Drag to move its center (Shift for finer control, arrow keys to
+  nudge, double-click to recenter).
 - Right: log |FFT| of that image, zero frequency at the center.
 - Below: radial profile of the FFT and a harmonic-sum estimate of the ring
   spacing.
-- Controls for ring spacing, start/end radius, phase, aspect, line width, edge
-  softness (Gaussian-blurred edges, which suppress aliasing in the FFT) and
-  blur, plus rings/spiral, smooth edges, mean subtraction, Hann window and an
-  overlay of the expected 1/spacing rings.
-
-Both canvases show only their right two-thirds, since the images are nearly
-symmetric.
+- Controls for ring spacing, start/end radius, phase, aspect, line width (up
+  to the spacing), edge softness (Gaussian-blurred edges, which suppress
+  aliasing in the FFT) and blur, plus rings/spiral, smooth edges, mean
+  subtraction, Hann window and an overlay of the expected 1/spacing rings.
+- "Explain" opens a description of every control.
 
 ## Center and phase (`center.html`)
 
-- Left: the true spiral, with the chosen chunks highlighted.
-- Right: only the pixels in a few random chunks of the curve (set number and
-  arc length; "New chunks" draws a new random set), as if only parts of the
-  spiral were recovered. Groundwork for estimating the center and phase from
-  partial data, given the ring spacing.
+Given the ring spacing, estimate the spiral's center and phase from only a
+few pieces ("chunks") of it.
+
+- The true spiral, with random chunks of random angular extent highlighted;
+  only the chunk pixels, plus optional noise, are given to the estimator.
+- Estimation: denoising blur → hysteresis thresholding → connected
+  components → a robust (Tukey) fit of center and phase for each component,
+  starting from a shared median estimate → a RANSAC-style combination of all
+  agreeing chunks into one spiral.
+- Shows each component in its own color with its center estimate and
+  uncertainty ellipse, the combined estimate, a table of estimates and
+  errors against the truth, and the fit-cost landscape for a selected chunk.
+- Controls for the spiral, the chunks (count, maximum extent), noise,
+  spacing error, and each estimation step; the page describes each.

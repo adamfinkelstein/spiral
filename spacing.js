@@ -372,6 +372,9 @@ function render() {
   pending = true;
   requestAnimationFrame(() => {
     pending = false;
+    // Line width can't usefully exceed the ring spacing: its slider runs from
+    // 0 to the current spacing (the browser clamps the value if needed).
+    el.lineWidth.max = el.spacing.value;
     const p = params();
     for (const id of ['spacing', 'rStart', 'rEnd', 'phase', 'aspect', 'lineWidth', 'softness', 'blur', 'gain']) {
       el[id].nextElementSibling.textContent = el[id].value;

@@ -5,14 +5,25 @@
 <title>Spiral: center and phase from chunks</title>
 <style>
   body { margin: 0; padding: 16px; background: #111; color: #ddd; font: 14px system-ui, sans-serif; }
-  .row { display: flex; gap: 16px; align-items: flex-start; }
+  .row { display: flex; gap: 28px; align-items: flex-start; }
+  #fits tr.more td { text-align: left; color: #888; cursor: default; }
   figure { margin: 0; }
   figcaption { margin-bottom: 4px; color: #aaa; }
   /* Canvases are 512x512 internally, displayed at 400x400. */
   canvas.view { display: block; width: 400px; height: 400px; border: 1px solid #333; background: #000; }
   #truth { cursor: crosshair; }
-  .side { width: 330px; }
-  .controls { display: grid; grid-template-columns: 120px 1fr 40px; gap: 6px 8px; align-items: center; margin-top: 14px; }
+  #chunks { cursor: pointer; }
+  .left { display: flex; flex-direction: column; gap: 18px; width: 620px; flex: none; }
+  #fits { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+  #fits th { text-align: right; color: #aaa; font-weight: 500; padding: 2px 4px; border-bottom: 1px solid #333; }
+  #fits td { text-align: right; padding: 2px 4px; cursor: pointer; white-space: nowrap; }
+  #fits tr.sel td { background: #2a2a2a; }
+  #fits .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: -1px; }
+  #fits .d { color: #888; }
+  #fits tr.drop td { opacity: 0.4; }
+  .note { color: #888; font-size: 12px; margin: 6px 0 0; max-width: 600px; line-height: 1.4; }
+  .side { width: 460px; position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow-y: auto; }
+  .controls { display: grid; grid-template-columns: 150px 1fr 52px; gap: 8px 10px; align-items: center; margin-top: 14px; }
   .controls input[type=range] { width: 100%; }
   .controls output { font-variant-numeric: tabular-nums; }
   .controls h4 { grid-column: 1 / -1; margin: 10px 0 0; color: #aaa; font-weight: 600; }
@@ -23,14 +34,36 @@
 </head>
 <body>
 <div class="row">
+<div class="left">
   <figure>
     <figcaption>True spiral (drag to move center; chunks highlighted)</figcaption>
     <canvas id="truth" class="view" width="512" height="512"></canvas>
   </figure>
   <figure>
-    <figcaption>Recovered pixels: random chunks only</figcaption>
+    <figcaption>Connected components and per-chunk center estimates (click to select)</figcaption>
     <canvas id="chunks" class="view" width="512" height="512"></canvas>
+    <p class="note">White squares: shared starting centers (hollow: median of circle
+    fits, filled: median of first-round spiral fits). Yellow ring and ellipse: combined estimate; dimmed chunks and hollow dots: chunks that
+    disagree with it. <span id="startOut"></span></p>
+    <p class="note" id="comboOut"></p>
   </figure>
+  <figure>
+    <figcaption>Per-chunk estimates, ranked by component size in pixels (<span class="d">grey: error vs. truth</span>)</figcaption>
+    <table id="fits"></table>
+    <p class="note">θ is the spiral parameter (r = bθ, radians) at the chunk's ends.
+    Ellipses are 2σ, estimated as if pixels were independent samples, so only
+    their shape is reliable. Click a row to select that chunk.</p>
+  </figure>
+  <figure>
+    <figcaption>Fit cost for the selected chunk vs. candidate center</figcaption>
+    <canvas id="cost" class="view" width="512" height="512"></canvas>
+    <p class="note">Brightness (log scale, bright = low): the fit's loss for this chunk
+    if the center were at that point, with the phase solved at each point; the
+    robust (Tukey) loss, or RMS distance to the nearest arm without it.
+    <span style="color:#f55">+</span> true center, filled dot: fit, hollow dot: corrected circle fit,
+    white squares: shared starts, yellow ring: combined estimate, white &times;: best grid point. <span id="costOut"></span></p>
+  </figure>
+</div>
 <div class="side">
 <a class="button" href="index.html">&larr; Experiments</a><button class="button" id="defaults" type="button">Defaults</button><button class="button" id="reseed" type="button">New chunks</button>
 <div class="controls">
@@ -51,7 +84,7 @@
   <input id="aspect" type="range" min="0.95" max="1.05" step="0.001" value="1"><output for="aspect"></output>
 
   <label for="lineWidth">Line width (px)</label>
-  <input id="lineWidth" type="range" min="0.5" max="10" step="0.1" value="4"><output for="lineWidth"></output>
+  <input id="lineWidth" type="range" min="0" max="10" step="0.1" value="4"><output for="lineWidth"></output>
 
   <label for="softness">Edge transition (px)</label>
   <input id="softness" type="range" min="0" max="6" step="0.1" value="2"><output for="softness"></output>
@@ -59,31 +92,113 @@
   <label for="blur">Blur sigma (px)</label>
   <input id="blur" type="range" min="0" max="4" step="0.1" value="0"><output for="blur"></output>
 
-  <label for="isSpiral">Rings/spiral</label>
-  <input id="isSpiral" type="checkbox" checked><span></span>
-
   <label for="smooth">Smooth line edges</label>
   <input id="smooth" type="checkbox" checked><span></span>
 
   <h4>Chunks</h4>
   <label for="nChunks">Number of chunks</label>
-  <input id="nChunks" type="range" min="1" max="30" step="1" value="6"><output for="nChunks"></output>
+  <input id="nChunks" type="range" min="1" max="30" step="1" value="10"><output for="nChunks"></output>
 
-  <label for="chunkLen">Chunk length (px)</label>
-  <input id="chunkLen" type="range" min="5" max="400" step="1" value="60"><output for="chunkLen"></output>
+  <label for="maxExtent">Max extent (deg)</label>
+  <input id="maxExtent" type="range" min="0" max="360" step="1" value="180"><output for="maxExtent"></output>
 
   <label for="highlight">Highlight on left</label>
   <input id="highlight" type="checkbox" checked><span></span>
 
   <label for="showCenter">True center on right</label>
   <input id="showCenter" type="checkbox" checked><span></span>
+
+  <h4>Estimation</h4>
+  <label for="spacingErr">Spacing error (%)</label>
+  <input id="spacingErr" type="range" min="-1" max="1" step="0.01" value="0"><output for="spacingErr"></output>
+
+  <label for="noise">Noise sigma</label>
+  <input id="noise" type="range" min="0" max="1" step="0.01" value="0"><output for="noise"></output>
+
+  <label for="denoise">Denoise blur σ (px)</label>
+  <input id="denoise" type="range" min="0" max="3" step="0.1" value="1"><output for="denoise"></output>
+
+  <label for="thresh">High threshold</label>
+  <input id="thresh" type="range" min="0.05" max="0.95" step="0.05" value="0.5"><output for="thresh"></output>
+
+  <label for="threshLo">Low threshold</label>
+  <input id="threshLo" type="range" min="0.05" max="0.95" step="0.05" value="0.4"><output for="threshLo"></output>
+
+  <label for="minArea">Min component (px)</label>
+  <input id="minArea" type="range" min="1" max="200" step="1" value="20"><output for="minArea"></output>
+
+  <label for="minExtent">Min extent (deg)</label>
+  <input id="minExtent" type="range" min="0" max="180" step="1" value="30"><output for="minExtent"></output>
+
+  <label for="refine">Spiral refinement</label>
+  <input id="refine" type="checkbox" checked><span></span>
+
+  <label for="shared">Shared start (median)</label>
+  <input id="shared" type="checkbox" checked><span></span>
+
+  <label for="robust">Robust loss</label>
+  <input id="robust" type="checkbox" checked><span></span>
+
+  <label for="cutoff">Outlier cutoff (× spacing)</label>
+  <input id="cutoff" type="range" min="0.1" max="0.5" step="0.01" value="0.5"><output for="cutoff"></output>
+
+  <label for="minInlier">Min inlier fraction</label>
+  <input id="minInlier" type="range" min="0" max="1" step="0.05" value="0.65"><output for="minInlier"></output>
+
+  <label for="combine">Combine chunks</label>
+  <input id="combine" type="checkbox" checked><span></span>
+
+  <label for="tau">Agreement τ</label>
+  <input id="tau" type="range" min="0.005" max="0.2" step="0.005" value="0.04"><output for="tau"></output>
+
+  <label for="showEst">Show estimates</label>
+  <input id="showEst" type="checkbox" checked><span></span>
+
+  <label for="showEll">Show 2σ ellipses</label>
+  <input id="showEll" type="checkbox" checked><span></span>
 </div>
 <p class="hint">Center: <span id="centerOut"></span> — drag in the left image to move it (hold Shift for 10× finer). Arrow keys nudge 1 px (Shift: 0.1 px). Double-click to recenter.</p>
-<p class="hint">Each chunk is a piece of the curve of the given arc length, placed uniformly at random along the whole spiral (or along all the rings together). The chunks stay put as you change the other controls; <b>New chunks</b> draws a new random set (<span id="seedOut"></span>).</p>
+<p class="hint">The fits assume the ring spacing is known: <b>Spacing error</b> makes
+them use the true spacing × (1 + error), here <span id="assumedOut"></span> px, to test how
+sensitive they are to an imperfect spacing estimate.</p>
+<p class="hint"><b>Noise sigma</b> adds Gaussian noise (in units of full white) to the chunk image before thresholding, so some line pixels drop out and some background pixels join the components.</p>
+<p class="hint">Estimation: blur the noisy chunk image a little (<b>Denoise blur</b>),
+then hysteresis thresholding as in Canny edge detection: components start at
+pixels above the <b>High threshold</b> and extend through 8-connected pixels above
+the <b>Low threshold</b>. Small components are dropped, and each is grown by 2 px
+into its soft edges. Each is then fit using grey levels as weights: a circle fit
+first (Kåsa, then geometric, then its center shifted to correct for the spiral's
+≈ b = spacing/2π sideways offset), then center and phase of a spiral with the known
+spacing (Levenberg–Marquardt on the perpendicular distance to the nearest arm).
+Unchecking <b>Spiral refinement</b> keeps the circle fit's center.</p>
+<p class="hint"><b>Shared start</b>: instead of each chunk starting from its own
+circle fit, (1) the corrected circle fits of chunks reaching <b>Min extent</b> vote, and
+the median of their x and of their y is the start for every chunk's spiral fit;
+(2) the median of the kept spiral fits' centers is then the start for a second,
+final round.</p>
+<p class="hint"><b>Combine chunks</b> fits one spiral to all kept chunks,
+RANSAC-style over chunks. Hypotheses are each chunk's own fit and a joint fit
+of every pair of chunks (sampled if there are more than 20 chunks). A chunk
+agrees with a hypothesis if its loss with that center and phase is within
+<b>Agreement τ</b> of its loss under its own fit (Δ in the table): a genuine
+chunk that slid along its flat valley still fits the true spiral almost as
+well. The hypothesis whose disagreements cost least (each capped at τ, weighted
+by pixels) wins; then one center and phase are fitted to all agreeing chunks,
+repeating until the set of agreeing chunks is stable.</p>
+<p class="hint"><b>Robust loss</b> uses Tukey's biweight, reweighting each round:
+pixels farther from their arm than the <b>Outlier cutoff</b> add a fixed maximum
+loss but no pull, so they can't drag the fit, and moving the curve off the
+pixels makes the loss larger, not smaller. Inliers are pixels within half the
+cutoff of their arm; <b>inl%</b> is their (weighted) fraction, and fits below
+<b>Min inlier fraction</b> are discarded. Pixels scattered at random would
+score about the cutoff as a fraction of spacing (50% at 0.5), so this mainly
+rejects noise blobs.</p>
+<p class="hint">Each chunk is a piece of the spiral covering a random angle between 0 and <b>Max extent</b>, placed uniformly at random (by arc length) along the whole spiral. Components smaller than <b>Min component</b> pixels are dropped before fitting; fits whose estimated extent is below <b>Min extent</b> (or with too few inliers, or whose center lands within one spacing of the chunk itself) are discarded (grey, no estimate drawn, faded in the table). The chunks stay put as you change the other controls; <b>New chunks</b> draws a new random set, and new noise (<span id="seedOut"></span>).</p>
 </div>
 </div>
 
 <script src="render.js"></script>
+<script src="chunkfit.js"></script>
 <script src="center.js"></script>
 </body>
 </html>
