@@ -31,6 +31,33 @@ work from `file://`. Deployed to GitHub Pages on every push to `main`.
 Controls and their defaults live in the HTML `value` / `checked` attributes;
 each page's `ids` list and `params()` read them, and "Defaults" resets to them.
 
+## Radius offsets (both pages)
+
+`p.offsets` (sliders off20/40/60/80, −1..1 × spacing): the curve is
+r(θ) = bθ + δ(θ), δ piecewise linear in θ with knots at 20/40/60/80% of the
+way from start to end radius (0 at both ends): continuous, kinks in slope —
+a model of a real, imperfect spiral. `makeOffset` in render.js; renderSpiral
+searches two arms each side when offsets are on, and uses the arm's local
+slope for the perpendicular distance. Chunks and end caps stay on the ideal θ
+(`weight` and caps get the ideal radius). With all offsets 0 the image is
+bit-identical to before. "Truth" on the center page is still the ideal
+spiral's center and phase.
+
+Note the local spacing changes by Δoffset over 20% of the θ range, i.e. over
+0.2 × (number of turns) turns, so the same offsets distort a spiral with
+fewer turns (larger spacing) much more.
+
+Robustness (8 random offset sets, uniform in ±amp at each knot):
+- Spacing estimate, spacing 10 (15 turns): ±0.1 → 0.4% median error,
+  ±0.25 → 1.1%, ±0.5 → 15% (breaks), ±1 → 40%. Spacing 20 (7.5 turns): ±0.1
+  → 2% median but up to 70%, ±0.25 → ~70% (wrong peak). Rings similar.
+- Center page (noise 0.3): center stays good (start 2 median 0.02 → 0.19 px
+  from ±0 to ±1; combined 0.04 → 0.69 px). Phase isn't well defined for an
+  offset spiral (local phase shifts by 2π·δ/spacing): combined phase error
+  ±0.1 → 10°, ±0.25 → 33°, ±1 → 76°. RANSAC then rejects chunks whose local
+  phase differs (agreeing 52/52 → 25/51 at ±1), and the shared-phase joint
+  fit ends up worse for the center than start 2.
+
 ## Spacing page: key design points
 
 - `N = 512` is the internal resolution of all canvases and the FFT size. The
@@ -54,6 +81,66 @@ each page's `ids` list and `params()` read them, and "Defaults" resets to them.
   rho). The profile is blurred first (`H_BLUR` = 1.5 bins; ~3× lower rms error
   for rings, 3 bins breaks large spacings). Tested error ~0.2–0.65% rms.
 - Overlays are drawn only on the visible canvases, never into `img`.
+- Gradient-line center (checkbox, off by default; `gradientCenter`): blur
+  σ 1, Sobel; lines along the gradients, binned by orientation (64 bins over
+  180°); keep the strongest "Lines per orientation" (150) per bin above a
+  global floor (70th percentile of magnitude), weight = magnitude − floor.
+  RANSAC over pairs (`ransacCenter`): first line ∝ weight, partner bin ∝
+  count · sin²(angle), uniform within the bin; each candidate is spiral-
+  corrected (lines shifted by b·(−sin α, cos α) about it; not for rings) and
+  scored by Σ w·min(d², 2²) over a subset of lines; the best is refined by the
+  weighted intersection of its inliers (3×). Then the tangential-blur loop
+  (`tangentialBlur`, σ 3 px): blur along circles about the current center
+  (a gather along the local tangent, bilinear, step shrinks near the center),
+  recompute lines and center, until it moves < 1 px (≤ 5 rounds; ~1 px is
+  plenty for 1/r weighting). Groundwork
+  for weighting every turn equally (1/r about this center) before the FFT.
+  Tests (off-center spirals, 3 positions): clean 0.02–0.05 px; noise σ 0.3 /
+  0.6 / 1.0: without tangential blur ~4–8 / 8.5 / 20–27 px, with it ~0.3–0.5 /
+  1.8–1.9 / 3.6–4.7 px (the tangential blur is the big win; RANSAC alone ≈ the
+  Hough vote it replaced). Speed (headless Chromium): first RANSAC 600
+  candidates × 1500 scoring lines, later rounds 150 × 1000 (they start
+  close); the spiral correction uses vector math, no trig.
+  Per later round: tangential blur ~60 ms, gradients + lines ~40 ms, RANSAC
+  ~12 ms (was ~210 ms at 600 × 3000); ~0.6 s total with 5 rounds (was ~1.6 s).
+  Accuracy about the same (noise 0.3: median 0.6–0.8 px, was 0.3–0.5; noise
+  1.0: 2.3–3.8 px, was 3.6–4.7). Under noise the loop still usually runs all
+  5 rounds: the estimate keeps moving by > 0.2 px.
+- "Advanced peak search" (checkbox, default on; `computeHarmonicScore({
+  advanced, vMin, target })`): search only spacings within ×0.5–2 of the
+  target spacing (the true spacing stands in for a device's nominal one;
+  dashed lines on the plot), coarse to fine down to "Expected spacing
+  variation" (default 10%), and warn when the answer is at the window's edge.
+  Off: the original single sharp stage over all spacings. Benchmark
+  (spiral, 10 offset sets, median/max %): spacing 20, offsets ±0.1: original
+  2.1/70 → advanced 0.55/1.1; ±0.25: 70/71 → 2.5/12. Perfect spiral costs
+  0.3–1%. Beyond ~±30% local variation it still fails, but within ×0.5–2;
+  such failures land on strong local peaks inside the window, so the edge
+  warning rarely fires and is not a reliable failure detector.
+- Turn weighting (select: none / 1/√r / 1/r; `evenWeight(src, c, spacing,
+  ex)`): multiply the image by max(r, 2·spacing)^−ex about the gradient-line
+  center (computed even if not shown), normalized to mean 1, before the FFT
+  (`computeFFT(p, src)`). Estimated vs true center gave identical results.
+  Test (advanced, vMin 10%, 10 offset sets, off-center spiral; median / max
+  %): 1/r makes mild offsets worse (±0.1: 0.37 → 0.87, 0.42 → 1.57) but cuts
+  the worst cases; 1/√r keeps the medians about as good as none (sometimes
+  better: spacing 10 ±0.25 0.80 → 0.48; noise 0.3 1.35 → 0.85) and cuts the
+  worst cases most (spacing 20 ±0.25: max 11.6 → 4.0, with noise 10.9 → 3.7;
+  spacing 10 ±0.5: 14.6 → 8.2, with noise 24 → 12.8). Spacing 20 ±0.5 stays
+  ~16% / 35% for all. Default: 1/√r (the center costs ~0.2–0.4 s per frame).
+- Coarse to fine (`vMin`, "Expected spacing variation" slider): stages smooth the profile in log radius (σ = v/2), use harmonics
+  k ≤ 1/(4v), halve v each stage from max(0.3, 3·vMin) and search within ±v
+  of the previous answer; the final stage is at vMin (0 → the sharp score).
+  In advanced mode the coarse stages always run first, even at vMin = 0,
+  which removes most wrong-peak failures at no cost for a perfect spiral. With radius offsets,
+  refining past the real variation locks onto one region's spacing (e.g.
+  spacing 20, offsets ±0.25: 0.9% at v = 0.3 → 9.9% at v = 0), so vMin
+  should match the expected variation. Benchmarks (10 offset sets, median /
+  max error): spacing 20, offsets ±0.1 (local ±13%): vMin 0 → 2.1/5.8%,
+  10% → 0.55/1.1%; offsets ±0.25 (±33%): 0 → 9.9/12%, 15% → 1.6/2.9%.
+  Cost on a perfect spiral: up to ~1% at vMin 15% (spacing 20), ~0.0–0.5%
+  otherwise. Beyond ~±33% local variation nothing works well; the FFT's
+  pixel-weighted mean spacing itself then differs from the target.
 
 ## Center page: pipeline
 

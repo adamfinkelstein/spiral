@@ -63,6 +63,14 @@ a fraction of a pixel, and the spiral is drawn exactly there.</p>
   <dd>Phase of the spiral, i.e. the angle at which its arms cross a given
   radius; changing it rotates the spiral about its center. Has no effect (and
   is greyed out) in rings mode.</dd>
+  <dt>Offset at 20%, 40%, 60%, 80% (× spacing)</dt>
+  <dd>Real spirals are never perfect. These bend the curve away from the
+  ideal r = b&theta;: the radius is shifted by the given amount (in ring
+  spacings, &minus;1 to 1) at 20%, 40%, 60% and 80% of the way (by &theta;)
+  from the start to the end radius, by 0 at both ends, and linearly in
+  between, so the curve stays continuous but its slope has kinks. In rings
+  mode each ring is shifted by the offset at its radius. Use them to test how
+  well the spacing estimate holds up when the curve isn't a perfect spiral.</dd>
   <dt>Aspect (x, 1/y)</dt>
   <dd>Scales the whole drawing about its center by the aspect value
   horizontally (0.95 to 1.05; 1 = no change) and by 1 / aspect vertically, so
@@ -75,6 +83,55 @@ a fraction of a pixel, and the spiral is drawn exactly there.</p>
   <dt>Line width (px)</dt>
   <dd>Width of the line, measured where it is at half brightness. The slider runs from 0 to the current ring spacing (wider lines would
   merge into a solid disc); lowering the spacing shrinks the width if needed.</dd>
+  <dt>Advanced peak search</dt>
+  <dd>On (default): the spacing estimate searches only between half and twice
+  the target spacing (here the true spacing, standing in for a device's
+  nominal spacing; dashed red lines on the plot), works coarse to fine down to
+  the expected variation below, and warns when its answer lands on the edge
+  of that range. Off: the original single search for sharp peaks over all
+  spacings.</dd>
+  <dt>Expected spacing variation (&plusmn;%)</dt>
+  <dd>How much the ring spacing may vary along the spiral (e.g. the device's
+  tolerance). The spacing estimate searches coarse to fine: it first scores
+  broad bands around each harmonic (wide enough for spacings varying by about
+  &plusmn;30%), then repeatedly halves the band width, searching only near the
+  previous answer, and stops at this variation. At 0 it refines all the way
+  to sharp peaks (best for a perfect spiral). Refining past the real variation
+  makes the estimate lock onto one region's spacing instead of the average,
+  so set this to about the variation you expect (default 10%). Only used with
+  Advanced peak search. The steps are listed under the plot.</dd>
+  <dt>Noise sigma</dt>
+  <dd>Adds Gaussian noise (standard deviation in units of full white; a fixed
+  random pattern) to the image after it is drawn and blurred, so both the
+  Fourier transform and the gradient-vote center see a noisy image.</dd>
+  <dt>Gradient-line center</dt>
+  <dd>Estimates the spiral's center from the image alone, as groundwork for
+  weighting every turn equally before the FFT. The image is blurred slightly
+  and its gradient computed everywhere; on a ring's edge the gradient points
+  across the ring, so the line along it passes (nearly) through the center.
+  Lines are grouped by orientation, and in each group only the strongest
+  (<b>Lines per orientation</b>) above an overall <b>Strength floor</b> are
+  kept, so every direction gets an equal say. RANSAC then picks pairs of
+  lines (favouring nearly perpendicular pairs), takes their intersection as a
+  candidate center, and keeps the candidate most lines pass close to; it is
+  refined by intersecting those lines (green pixels). On a spiral each line
+  misses the center by b = spacing/2&pi; sideways, which is corrected using the
+  ring spacing. Then, to resist noise, the image is blurred along circles
+  around that center (<b>Tangential blur</b>, along the rings rather than
+  across them) and the estimate repeated until it settles (earlier estimates:
+  green circles). The error against the true center is shown under the
+  controls. <b>Show blurred image</b> replaces the left image with the blurred
+  image the final lines came from (the last round's tangential blur); the
+  Fourier transform still uses the unblurred image.</dd>
+  <dt>Turn weighting</dt>
+  <dd>In the Fourier transform every turn counts in proportion to its length,
+  so the outer turns dominate the spacing estimate ("by length"). "1/r" multiplies the image by 1/r around the spiral's center
+  (found by the gradient-line method, using its settings above) before the
+  transform, so every turn counts equally; "1/&radic;r" (the default) is halfway between.
+  The weight stops growing inside twice the ring spacing from the center,
+  where there are no rings and it would amplify noise. In tests 1/&radic;r was
+  the best compromise: about as precise as no weighting, with far fewer bad
+  failures when the spacing varies along the spiral.</dd>
   <dt>Rings/spiral</dt>
   <dd>Checked: a spiral. Unchecked: concentric circles at radii that are
   multiples of the ring spacing, kept only if they fall between the start and

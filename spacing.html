@@ -60,6 +60,18 @@
   <label for="aspect">Aspect (x, 1/y)</label>
   <input id="aspect" type="range" min="0.95" max="1.05" step="0.001" value="1"><output for="aspect"></output>
 
+  <label for="off20">Offset at 20% (× spacing)</label>
+  <input id="off20" type="range" min="-1" max="1" step="0.05" value="0"><output for="off20"></output>
+
+  <label for="off40">Offset at 40% (× spacing)</label>
+  <input id="off40" type="range" min="-1" max="1" step="0.05" value="0"><output for="off40"></output>
+
+  <label for="off60">Offset at 60% (× spacing)</label>
+  <input id="off60" type="range" min="-1" max="1" step="0.05" value="0"><output for="off60"></output>
+
+  <label for="off80">Offset at 80% (× spacing)</label>
+  <input id="off80" type="range" min="-1" max="1" step="0.05" value="0"><output for="off80"></output>
+
   <label for="lineWidth">Line width (px)</label>
   <input id="lineWidth" type="range" min="0" max="10" step="0.1" value="4"><output for="lineWidth"></output>
 
@@ -69,8 +81,35 @@
   <label for="blur">Blur sigma (px)</label>
   <input id="blur" type="range" min="0" max="4" step="0.1" value="0"><output for="blur"></output>
 
+  <label for="noise">Noise sigma</label>
+  <input id="noise" type="range" min="0" max="1" step="0.01" value="0"><output for="noise"></output>
+
   <label for="gain">FFT contrast</label>
   <input id="gain" type="range" min="0.2" max="4" step="0.05" value="1"><output for="gain"></output>
+
+  <label for="advanced">Advanced peak search</label>
+  <input id="advanced" type="checkbox" checked><span></span>
+
+  <label for="hVar">Expected spacing variation (±%)</label>
+  <input id="hVar" type="range" min="0" max="30" step="1" value="10"><output for="hVar"></output>
+
+  <label for="gradVote">Gradient-line center</label>
+  <input id="gradVote" type="checkbox"><span></span>
+
+  <label for="gvPerBin">Lines per orientation</label>
+  <input id="gvPerBin" type="range" min="10" max="1000" step="10" value="150"><output for="gvPerBin"></output>
+
+  <label for="gvFloor">Strength floor (percentile)</label>
+  <input id="gvFloor" type="range" min="0" max="99" step="1" value="70"><output for="gvFloor"></output>
+
+  <label for="gvTang">Tangential blur σ (px)</label>
+  <input id="gvTang" type="range" min="0" max="8" step="0.5" value="3"><output for="gvTang"></output>
+
+  <label for="gvShow">Show blurred image</label>
+  <input id="gvShow" type="checkbox" checked><span></span>
+
+  <label for="evenW">Turn weighting</label>
+  <select id="evenW"><option value="0">by length (none)</option><option value="0.5" selected>1/√r (halfway)</option><option value="1">1/r (equal turns)</option></select><span></span>
 
   <label for="isSpiral">Rings/spiral</label>
   <input id="isSpiral" type="checkbox" checked><span></span>
@@ -87,6 +126,7 @@
   <label for="showRing">Show 1/spacing</label>
   <input id="showRing" type="checkbox"><span></span>
 </div>
+<p class="hint" id="gvOut"></p>
 <p class="hint">Center: <span id="centerOut"></span> — drag anywhere in the image to move it (hold Shift for 10× finer). Arrow keys nudge 1 px (Shift: 0.1 px). Double-click to recenter.</p>
 </div>
 </div>

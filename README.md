@@ -17,10 +17,17 @@ Estimate the ring spacing from the 2D Fourier transform.
 - Right: log |FFT| of that image, zero frequency at the center.
 - Below: radial profile of the FFT and a harmonic-sum estimate of the ring
   spacing.
-- Controls for ring spacing, start/end radius, phase, aspect, line width (up
-  to the spacing), edge softness (Gaussian-blurred edges, which suppress
-  aliasing in the FFT) and blur, plus rings/spiral, smooth edges, mean
+- Controls for ring spacing, start/end radius, phase, aspect, radius offsets
+  (an imperfect spiral whose local spacing varies), line width (up to the
+  spacing), edge softness (Gaussian-blurred edges, which suppress aliasing in
+  the FFT), blur and noise, plus rings/spiral, smooth edges, mean
   subtraction, Hann window and an overlay of the expected 1/spacing rings.
+- Advanced peak search (default): searches only ×0.5–2 of the target
+  spacing, coarse to fine down to an expected spacing variation.
+- Gradient-line center: estimates the spiral's center from image gradients
+  (RANSAC over pairs of lines, with blur along the rings to resist noise),
+  used to weight turns (default 1/√r) before the FFT so outer turns don't
+  dominate.
 - "Explain" opens a description of every control.
 
 ## Center and phase (`center.html`)
@@ -37,5 +44,6 @@ few pieces ("chunks") of it.
 - Shows each component in its own color with its center estimate and
   uncertainty ellipse, the combined estimate, a table of estimates and
   errors against the truth, and the fit-cost landscape for a selected chunk.
-- Controls for the spiral, the chunks (count, maximum extent), noise,
+- Controls for the spiral (including radius offsets), the chunks (count,
+  maximum extent), noise,
   spacing error, and each estimation step; the page describes each.

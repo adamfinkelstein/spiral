@@ -35,10 +35,39 @@ function edgeStep(p) {
   return p.smooth ? x => 0.5 * (1 + erf(x * c)) : x => (x >= 0 ? 1 : 0);
 }
 
+// Radius offset (p.offsets, optional): the curve is r(θ) = bθ + δ(θ), where
+// δ is piecewise linear in θ, in units of ring spacing: 0 at the start radius,
+// p.offsets[0..3] at 20%, 40%, 60%, 80% of the way (by θ) from start to end
+// radius, and 0 at the end radius. Continuous in value, with kinks in slope:
+// a model of a real, slightly imperfect spiral. (Rings: ring n is offset by
+// δ at θ = n·spacing / b.) Returns null when all offsets are 0.
+function makeOffset(p) {
+  const o = p.offsets;
+  if (!o || o.every(v => v === 0)) return null;
+  const S = p.spacing, b = S / (2 * Math.PI);
+  const t0 = Math.min(p.rStart, p.rEnd) / b, L = Math.max(p.rStart, p.rEnd) / b - t0;
+  if (!(L > 0)) return null;
+  const vals = [0, ...o, 0].map(v => v * S); // px at t = 0, 0.2, ..., 1
+  const seg = th => { const t = (th - t0) / L; return t <= 0 || t >= 1 ? -1 : Math.min(4, Math.floor(t / 0.2)); };
+  return {
+    off(th) { // px
+      const i = seg(th);
+      if (i < 0) return 0;
+      const f = ((th - t0) / L - 0.2 * i) / 0.2;
+      return vals[i] + f * (vals[i + 1] - vals[i]);
+    },
+    slope(th) { // dδ/dθ, px per radian
+      const i = seg(th);
+      return i < 0 ? 0 : (vals[i + 1] - vals[i]) / (0.2 * L);
+    },
+  };
+}
+
 // Writes 0..1 values into `out` (Float32Array N*N), then applies p.blur.
 // `center` is {x, y} in pixels (fractional allowed). p.phase is in radians.
 // Optional `weight(n, ra, ang)` multiplies each arm's contribution: n is the
-// arm (or ring) index, ra the arm's radius at this pixel's angle, ang the
+// arm (or ring) index, ra the arm's ideal radius bθ at this pixel's angle
+// (without the radius offset, so chunks stay put in θ), ang the
 // pixel's angle atan2(dy, dx) in unscaled coordinates. Used by center.html to
 // keep only chunks of the curve.
 function renderSpiral(p, center, out, weight) {
@@ -48,6 +77,8 @@ function renderSpiral(p, center, out, weight) {
   const r1 = Math.max(p.rStart, p.rEnd);
   const halfW = p.lineWidth / 2;
   const sig = edgeStep(p);
+  const ofs = makeOffset(p);
+  const reach = ofs ? 2 : 1; // offsets up to ±1 spacing: check two arms each side
 
   for (let y = 0; y < N; y++) {
     const dy = (y + 0.5 - center.y) * p.aspect;
@@ -62,11 +93,19 @@ function renderSpiral(p, center, out, weight) {
       const n0 = Math.round(u);
       const perp = p.spiral ? r / Math.sqrt(r * r + b * b) : 1; // radial → perpendicular distance
       let v = 0;
-      for (let n = n0 - 1; n <= n0 + 1; n++) {
-        const d = S * (u - n); // signed radial distance to arm n
-        const ra = r - d;      // radius of arm n at this angle
+      for (let n = n0 - reach; n <= n0 + reach; n++) {
+        let d = S * (u - n); // signed radial distance to arm n
+        const ra = r - d;    // ideal radius of arm n at this angle
         if (ra < 0 || (!p.spiral && n <= 0)) continue; // no zero-radius ring
-        const dp = d * perp;
+        let dp;
+        if (ofs) { // offset arm: shift it, and use its local slope for the perpendicular
+          const th = ra / b;
+          d -= ofs.off(th);
+          const sl = b + ofs.slope(th);
+          dp = d * (p.spiral ? r / Math.sqrt(r * r + sl * sl) : 1);
+        } else {
+          dp = d * perp;
+        }
         const prof = sig(dp + halfW) - sig(dp - halfW);
         if (prof < 1e-7) continue;
         // spiral: arc length (approx) from each end; rings: keep whole rings in range

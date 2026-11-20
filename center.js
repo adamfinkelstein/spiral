@@ -16,7 +16,7 @@ const HANDLE_R = 7;
 const MAX_CHUNKS = 30; // must match the nChunks slider's max
 const MAX_ROWS = 20;   // rows shown in the estimates table
 
-const ids = ['spacing', 'rStart', 'rEnd', 'phase', 'aspect', 'lineWidth', 'softness', 'blur', 'smooth', 'nChunks', 'maxExtent', 'highlight', 'showCenter', 'spacingErr', 'noise', 'denoise', 'thresh', 'threshLo', 'minArea', 'minExtent', 'refine', 'shared', 'robust', 'cutoff', 'minInlier', 'combine', 'tau', 'showEst', 'showEll'];
+const ids = ['spacing', 'rStart', 'rEnd', 'phase', 'aspect', 'off20', 'off40', 'off60', 'off80', 'lineWidth', 'softness', 'blur', 'smooth', 'nChunks', 'maxExtent', 'highlight', 'showCenter', 'spacingErr', 'noise', 'denoise', 'thresh', 'threshLo', 'minArea', 'minExtent', 'refine', 'shared', 'robust', 'cutoff', 'minInlier', 'combine', 'tau', 'showEst', 'showEll'];
 const el = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
 
 function params() {
@@ -26,6 +26,7 @@ function params() {
     rEnd: +el.rEnd.value,
     phase: (+el.phase.value * Math.PI) / 180,
     aspect: +el.aspect.value,
+    offsets: [+el.off20.value, +el.off40.value, +el.off60.value, +el.off80.value],
     lineWidth: +el.lineWidth.value,
     softness: +el.softness.value,
     blur: +el.blur.value,
@@ -253,7 +254,7 @@ function render() {
     // 0 to the current spacing (the browser clamps the value if needed).
     el.lineWidth.max = el.spacing.value;
     const p = params();
-    for (const id of ['spacing', 'rStart', 'rEnd', 'phase', 'aspect', 'lineWidth', 'softness', 'blur', 'nChunks', 'maxExtent', 'spacingErr', 'noise', 'denoise', 'thresh', 'threshLo', 'minArea', 'minExtent', 'cutoff', 'minInlier', 'tau']) {
+    for (const id of ['spacing', 'rStart', 'rEnd', 'phase', 'aspect', 'off20', 'off40', 'off60', 'off80', 'lineWidth', 'softness', 'blur', 'nChunks', 'maxExtent', 'spacingErr', 'noise', 'denoise', 'thresh', 'threshLo', 'minArea', 'minExtent', 'cutoff', 'minInlier', 'tau']) {
       el[id].nextElementSibling.textContent = el[id].value;
     }
     document.getElementById('centerOut').textContent = `(${center.x.toFixed(1)}, ${center.y.toFixed(1)})`;
