@@ -16,10 +16,12 @@ work from `file://`. Deployed to GitHub Pages on every push to `main`.
   harmonic-sum spacing estimate below.
 - `explain.html` — help page for `spacing.html` controls ("Explain"
   button). Keep it in sync when its controls change.
-- `procedure.html` + `procedure/*.png` — the spacing (and center) method
-  step by step: inputs, each step with parameters, what was tried, result
-  tables, limits ("Procedure" button; linked from explain.html and
-  index.html). Figures were rendered from the app in headless Chromium
+- `procedure.html` + `procedure/*.png` — both methods step by step, in two
+  parts: Part 1 (spacing page: spacing and rough center) and Part 2 (center
+  page: center and phase from chunks, incl. options under evaluation and
+  next steps toward real cards). Inputs, each step with parameters, what was
+  tried, result tables, limits ("Procedure" buttons on both pages; linked
+  from explain.html and index.html). Figures were rendered from the app in headless Chromium
   (canvas data → PNG, 384 px). Update it when the method or defaults change.
 - `center.html` / `center.js` — center/phase experiment (spiral only, no
   rings mode: `params()` sets `spiral: true` for render.js). One left column:
@@ -198,6 +200,18 @@ Robustness (8 random offset sets, uniform in ±amp at each knot):
    chunk, loss vs. candidate center on a 128² grid, phase solved per point.
 
 ## Center page: what the experiments showed
+
+- Chunk model (select; `combineChunks` opts.model): 'shared' (default),
+  'phase' (A: shared center, each chunk its own phase), 'local' (B: also its
+  own spacing, penalty (b − b0)²/(tol·b0)², "Spacing tolerance" ±10%;
+  `fitLocal` = linear regression of r on the unwrapped angle for a fixed
+  center; `fitJointLocal` alternates that with LM over the center). Test
+  (noise 0.3, 6 sets, offsets 0/±0.25/±0.5, chunks around or one quadrant):
+  A accepts all genuine chunks and beats 'shared' whenever offsets are
+  present; B is worse everywhere (center 0.35–0.72 px; local spacings off
+  3–13%) — the penalty is swamped by correlated pixels. Start 2 (median of
+  per-chunk fits) was the best center whenever offsets are present
+  (0.10–0.25 px).
 
 - Tangential blur before components ("Tangential blur σ", default 3 px, 0 = off): the
   gradient-line center from the raw noisy image, then after the denoise blur

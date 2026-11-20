@@ -66,7 +66,7 @@
   </figure>
 </div>
 <div class="side">
-<a class="button" href="index.html">&larr; Experiments</a><button class="button" id="defaults" type="button">Defaults</button><button class="button" id="reseed" type="button">New chunks</button>
+<a class="button" href="index.html">&larr; Experiments</a><a class="button" href="procedure.html#part2" target="_blank">Procedure</a><button class="button" id="defaults" type="button">Defaults</button><button class="button" id="reseed" type="button">New chunks</button>
 <div class="controls">
   <h4>Spiral</h4>
   <label for="spacing">Ring spacing (px)</label>
@@ -167,6 +167,12 @@
   <label for="tau">Agreement τ</label>
   <input id="tau" type="range" min="0.005" max="0.2" step="0.005" value="0.04"><output for="tau"></output>
 
+  <label for="chunkModel">Chunk model</label>
+  <select id="chunkModel"><option value="shared" selected>shared spacing &amp; phase</option><option value="phase">own phase per chunk</option><option value="local">own phase &amp; spacing</option></select><span></span>
+
+  <label for="spTol">Spacing tolerance (±%)</label>
+  <input id="spTol" type="range" min="1" max="30" step="1" value="10"><output for="spTol"></output>
+
   <label for="showEst">Show estimates</label>
   <input id="showEst" type="checkbox" checked><span></span>
 
@@ -206,6 +212,14 @@ chunk that slid along its flat valley still fits the true spiral almost as
 well. The hypothesis whose disagreements cost least (each capped at τ, weighted
 by pixels) wins; then one center and phase are fitted to all agreeing chunks,
 repeating until the set of agreeing chunks is stable.</p>
+<p class="hint"><b>Chunk model</b>: how much the combined spiral is shared.
+<i>Shared spacing &amp; phase</i>: one perfect spiral for all chunks. <i>Own
+phase per chunk</i>: only the center is shared; each chunk may sit slightly in
+or out from the ideal curve. <i>Own phase &amp; spacing</i>: each chunk also has
+its own spacing, held near the nominal one by <b>Spacing tolerance</b> (long
+chunks set their own, short ones stay near nominal), as in a real, imperfect
+spiral; the table's <b>local s</b> column shows it, with its error against the
+true local spacing in grey.</p>
 <p class="hint"><b>Robust loss</b> uses Tukey's biweight, reweighting each round:
 pixels farther from their arm than the <b>Outlier cutoff</b> add a fixed maximum
 loss but no pull, so they can't drag the fit, and moving the curve off the

@@ -16,7 +16,7 @@ const HANDLE_R = 7;
 const MAX_CHUNKS = 30; // must match the nChunks slider's max
 const MAX_ROWS = 20;   // rows shown in the estimates table
 
-const ids = ['spacing', 'rStart', 'rEnd', 'phase', 'aspect', 'off20', 'off40', 'off60', 'off80', 'lineWidth', 'softness', 'blur', 'smooth', 'nChunks', 'maxExtent', 'highlight', 'showCenter', 'spacingErr', 'noise', 'denoise', 'tangBlur', 'thresh', 'threshLo', 'minArea', 'minExtent', 'refine', 'shared', 'robust', 'cutoff', 'minInlier', 'combine', 'tau', 'showEst', 'showEll'];
+const ids = ['spacing', 'rStart', 'rEnd', 'phase', 'aspect', 'off20', 'off40', 'off60', 'off80', 'lineWidth', 'softness', 'blur', 'smooth', 'nChunks', 'maxExtent', 'highlight', 'showCenter', 'spacingErr', 'noise', 'denoise', 'tangBlur', 'thresh', 'threshLo', 'minArea', 'minExtent', 'refine', 'shared', 'robust', 'cutoff', 'minInlier', 'combine', 'tau', 'chunkModel', 'spTol', 'showEst', 'showEll'];
 const el = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
 
 function params() {
@@ -45,6 +45,8 @@ function params() {
     shared: el.shared.checked,
     combine: el.combine.checked,
     tau: +el.tau.value,
+    chunkModel: el.chunkModel.value,
+    spTol: +el.spTol.value / 100,
     robust: el.robust.checked,
     cutoff: +el.cutoff.value,
     minInlier: +el.minInlier.value,
@@ -257,13 +259,15 @@ function render() {
     // 0 to the current spacing (the browser clamps the value if needed).
     el.lineWidth.max = el.spacing.value;
     const p = params();
-    for (const id of ['spacing', 'rStart', 'rEnd', 'phase', 'aspect', 'off20', 'off40', 'off60', 'off80', 'lineWidth', 'softness', 'blur', 'nChunks', 'maxExtent', 'spacingErr', 'noise', 'denoise', 'tangBlur', 'thresh', 'threshLo', 'minArea', 'minExtent', 'cutoff', 'minInlier', 'tau']) {
+    for (const id of ['spacing', 'rStart', 'rEnd', 'phase', 'aspect', 'off20', 'off40', 'off60', 'off80', 'lineWidth', 'softness', 'blur', 'nChunks', 'maxExtent', 'spacingErr', 'noise', 'denoise', 'tangBlur', 'thresh', 'threshLo', 'minArea', 'minExtent', 'cutoff', 'minInlier', 'tau', 'spTol']) {
       el[id].nextElementSibling.textContent = el[id].value;
     }
     document.getElementById('centerOut').textContent = `(${center.x.toFixed(1)}, ${center.y.toFixed(1)})`;
     document.getElementById('seedOut').textContent = `set #${seed}`;
     el.softness.disabled = !p.smooth;
     el.showEll.disabled = !p.showEst;
+    el.spTol.disabled = !p.combine || p.chunkModel !== 'local';
+    el.chunkModel.disabled = !p.combine;
 
     renderSpiral(p, center, full);
     renderSpiral(p, center, part, makeChunkWeight(p));
@@ -312,13 +316,15 @@ function render() {
         `, ${Math.hypot(starts[1].x - center.x, starts[1].y - center.y).toFixed(2)} px from truth.`
       : (p.shared && p.refine ? 'Shared start: no circle fit reaches Min extent; each chunk starts from its own circle fit.' : 'Each chunk starts from its own circle fit.');
     // Combine the kept chunks into one spiral (RANSAC over chunks).
-    const combo = p.combine ? combineChunks(noisy, comps, fits, pFit, { cutoff: p.cutoff, tau: p.tau }) : null;
+    const combo = p.combine ? combineChunks(noisy, comps, fits, pFit, { cutoff: p.cutoff, tau: p.tau, model: p.chunkModel, tol: p.spTol }) : null;
     lastCombo = combo;
     const co = document.getElementById('comboOut');
     co.innerHTML = !p.combine ? '' : !combo ? 'Combined: no kept chunks.'
       : `<b style="color:#ffd400">Combined</b>: (${combo.x.toFixed(2)}, ${combo.y.toFixed(2)}), ` +
-        `${Math.hypot(combo.x - center.x, combo.y - center.y).toFixed(2)} px from truth; phase ${deg(combo.phase).toFixed(1)}° ` +
-        `(error ${deg(wrapPi(combo.phase - p.phase)).toFixed(1)}°); ${combo.nIn} of ${combo.nKept} kept chunks agree ` +
+        `${Math.hypot(combo.x - center.x, combo.y - center.y).toFixed(2)} px from truth; ` +
+        (combo.phase === null ? `each chunk with its own phase${p.chunkModel === 'local' ? ' and spacing' : ''}; `
+          : `phase ${deg(combo.phase).toFixed(1)}° (error ${deg(wrapPi(combo.phase - p.phase)).toFixed(1)}°); `) +
+        `${combo.nIn} of ${combo.nKept} kept chunks agree ` +
         `(${combo.nHyp} hypotheses).`;
     const sel = pickComponent(label, comps);
     lastComps = comps;
@@ -401,6 +407,7 @@ function drawCost(p, comps, fits, colors, sel, fitOpts) {
 }
 
 function drawTable(p, fits, colors, sel, combo) {
+  const ofsTrue = makeOffset(p), bTrue = p.spacing / (2 * Math.PI); // true local spacing = 2π(b + δ'(θ))
   // Components are numbered by size (labelComponents), so this is largest
   // first; at most MAX_ROWS (keeping the selected one).
   let order = fits.map((f, k) => k);
@@ -409,7 +416,7 @@ function drawTable(p, fits, colors, sel, combo) {
   const rows = order.map(k => {
     const f = fits[k];
     const sw = `<span class="sw" style="background:${css(colors[k])}"></span> ${k + 1}`;
-    if (!f.ok) return `<tr data-k="${k}"${k === sel ? ' class="sel"' : ''}><td>${sw}</td><td>${f.nCore}</td><td colspan="8" style="text-align:left">${f.reason}</td></tr>`;
+    if (!f.ok) return `<tr data-k="${k}"${k === sel ? ' class="sel"' : ''}><td>${sw}</td><td>${f.nCore}</td><td colspan="9" style="text-align:left">${f.reason}</td></tr>`;
     const t = f.truth(center.x, center.y, p.phase, p.spacing);
     const err = Math.hypot(f.x - center.x, f.y - center.y);
     const ph = `${fmt(deg(f.phase), 1)} <span class="d">${fmt(deg(wrapPi(f.phase - p.phase)), 1)}</span>`;
@@ -418,11 +425,12 @@ function drawTable(p, fits, colors, sel, combo) {
       `<td>${fmt(err, 2)}</td><td>${ph}</td>` +
       `<td>${fmt(f.thetaMin)} <span class="d">${fmt(f.thetaMin - t.thetaMin)}</span></td>` +
       `<td>${fmt(f.thetaMax)} <span class="d">${fmt(f.thetaMax - t.thetaMax)}</span></td>` +
-      `<td>${combo && combo.delta.has(k) ? `${fmt(combo.delta.get(k), 3)} ${combo.inlier.get(k) ? '✓' : '<span style="color:#f66">✗</span>'}` : '–'}</td></tr>`;
+      `<td>${combo && combo.delta.has(k) ? `${fmt(combo.delta.get(k), 3)} ${combo.inlier.get(k) ? '✓' : '<span style="color:#f66">✗</span>'}` : '–'}</td>` +
+      `<td>${combo && combo.local && combo.local.has(k) ? (() => { const tl = 2 * Math.PI * (bTrue + (ofsTrue ? ofsTrue.slope((t.thetaMin + t.thetaMax) / 2) : 0)); const ls = combo.local.get(k).spacing; return `${fmt(ls)} <span class="d">${fmt(ls - tl)}</span>`; })() : '–'}</td></tr>`;
   });
   document.getElementById('fits').innerHTML =
-    '<tr><th>#</th><th>px</th><th>inl%</th><th>r</th><th>extent°</th><th>center err</th><th>phase°</th><th>θ min</th><th>θ max</th><th>agree Δ</th></tr>' + rows.join('') +
-    (hidden ? `<tr class="more"><td colspan="10">… ${hidden} smaller component${hidden > 1 ? 's' : ''} not shown</td></tr>` : '');
+    '<tr><th>#</th><th>px</th><th>inl%</th><th>r</th><th>extent°</th><th>center err</th><th>phase°</th><th>θ min</th><th>θ max</th><th>agree Δ</th><th>local s</th></tr>' + rows.join('') +
+    (hidden ? `<tr class="more"><td colspan="11">… ${hidden} smaller component${hidden > 1 ? 's' : ''} not shown</td></tr>` : '');
 }
 
 // ---------- Interaction ----------
@@ -490,6 +498,7 @@ document.getElementById('reseed').addEventListener('click', () => {
 document.getElementById('defaults').addEventListener('click', () => {
   for (const id of ids) {
     if (el[id].type === 'checkbox') el[id].checked = el[id].defaultChecked;
+    else if (el[id].tagName === 'SELECT') for (const o of el[id].options) o.selected = o.defaultSelected;
     else el[id].value = el[id].defaultValue;
   }
   center.x = center.y = N / 2;

@@ -465,6 +465,99 @@ function fitJoint(ds, start, S, cut, rounds = 8, iters = 20) {
   return { x: q[0], y: q[1], ph: q[2], cov };
 }
 
+// ---------- Per-chunk local spirals (chunk models A and B) ----------
+
+// A chunk's own local spiral about a fixed center (cx, cy): r = b (u − φ),
+// u = α + 2πn the unwrapped angle (α measured about a reference direction
+// towards the chunk, n the pixel's arm). With the arms assigned this is
+// linear in (b, c = −bφ): r = b·u + c, a weighted linear regression. Tukey
+// weights (cutoff `cut`) and arms are refreshed for `iters` rounds.
+// tol > 0 (model B): b is free but held near b0 by a penalty (b − b0)²/(tol·b0)²
+// (residuals in px, unit noise), so long chunks set their own spacing and
+// short ones stay near the nominal one. tol = 0 (model A): b = b0, only φ.
+// Returns { b, ph, loss, ref, arm } (loss: normalized Tukey, nearest arm).
+function fitLocal(d, cx, cy, b0, tol, cut, iters = 3) {
+  const m = d.m, R = new Float64Array(m), A = new Float64Array(m), arm = new Int32Array(m);
+  const ref = Math.atan2(d.my - cy, d.mx - cx);
+  let s = 0, cc = 0;
+  for (let k = 0; k < m; k++) {
+    R[k] = Math.hypot(d.X[k] - cx, d.Y[k] - cy);
+    A[k] = ref + wrapPi(Math.atan2(d.Y[k] - cy, d.X[k] - cx) - ref);
+    const a = A[k] - R[k] / b0; s += d.W[k] * Math.sin(a); cc += d.W[k] * Math.cos(a);
+  }
+  let b = b0, ph = Math.atan2(s, cc);
+  for (let it = 0; it < iters; it++) {
+    let s00 = 0, s01 = 0, s11 = 0, t0 = 0, t1 = 0;
+    for (let k = 0; k < m; k++) {
+      const n = Math.round((R[k] / b - (A[k] - ph)) / TAU);
+      arm[k] = n;
+      const u = A[k] + TAU * n, e = R[k] - b * (u - ph), w = d.W[k] * tukeyW(e, cut);
+      s00 += w * u * u; s01 += w * u; s11 += w; t0 += w * u * R[k]; t1 += w * R[k];
+    }
+    if (!(s11 > 0)) break;
+    let c0;
+    if (tol > 0) {
+      const lam = 1 / (tol * b0) ** 2, a00 = s00 + lam, r0 = t0 + lam * b0;
+      const det = a00 * s11 - s01 * s01;
+      if (!(Math.abs(det) > 1e-12)) break;
+      b = (r0 * s11 - s01 * t1) / det; c0 = (a00 * t1 - s01 * r0) / det;
+      if (!(b > 0.2 * b0 && b < 5 * b0)) { b = b0; c0 = (t1 - b0 * s01) / s11; }
+    } else {
+      c0 = (t1 - b0 * s01) / s11;
+    }
+    ph = -c0 / b;
+  }
+  const S = TAU * b;
+  let acc = 0;
+  for (let k = 0; k < m; k++) {
+    let e = R[k] - b * (A[k] - ph);
+    e = (e - S * Math.round(e / S)) * R[k] / Math.sqrt(R[k] * R[k] + b * b);
+    acc += d.W[k] * lossNorm(e, cut);
+  }
+  return { b, ph, loss: acc / d.sw, ref, arm };
+}
+
+// Shared center, each chunk its own local spiral (fitLocal): alternate between
+// the chunks' local fits for the current center and LM over the center alone
+// with those held fixed, until the center stops moving.
+function fitJointLocal(ds, start, b0, tol, cut, rounds = 12) {
+  let c = [start.x, start.y], locs = null, A = null, e0 = null;
+  const build = locs => { // residual function over all chunks for the center
+    return q => {
+      let n = 0;
+      for (const d of ds) n += d.m;
+      const e = new Float64Array(n);
+      let o = 0;
+      ds.forEach((d, i) => {
+        const L = locs[i];
+        for (let k = 0; k < d.m; k++, o++) {
+          const dx = d.X[k] - q[0], dy = d.Y[k] - q[1], r = Math.hypot(dx, dy);
+          const a = L.ref + wrapPi(Math.atan2(dy, dx) - L.ref);
+          const ee = r - L.b * (a + TAU * L.arm[k] - L.ph);
+          e[o] = Math.sqrt(d.W[k] * tukeyW(ee, cut)) * ee * r / Math.sqrt(r * r + L.b * L.b);
+        }
+      });
+      return e;
+    };
+  };
+  for (let round = 0; round < rounds; round++) {
+    locs = ds.map(d => fitLocal(d, c[0], c[1], b0, tol, cut));
+    const f = lm(c, build(locs), 10);
+    const moved = Math.hypot(f.p[0] - c[0], f.p[1] - c[1]);
+    c = f.p; A = f.A; e0 = f.e;
+    if (moved < 1e-3) break;
+  }
+  locs = ds.map(d => fitLocal(d, c[0], c[1], b0, tol, cut));
+  let cov = null;
+  if (A) {
+    let sw = 0;
+    for (const d of ds) sw += d.sw;
+    const s2 = sumSq(e0) / Math.max(sw - 2, 1), det = A[0][0] * A[1][1] - A[0][1] * A[1][0];
+    if (Math.abs(det) > 1e-12) cov = [[(A[1][1] / det) * s2, (-A[0][1] / det) * s2], [(-A[1][0] / det) * s2, (A[0][0] / det) * s2]];
+  }
+  return { x: c[0], y: c[1], cov, locs };
+}
+
 // Combines the kept chunk fits into one spiral, robust to chunks that don't
 // belong (RANSAC / MSAC over chunks):
 //  - hypotheses: each kept chunk's own fit, and a joint fit of every pair of
@@ -477,9 +570,15 @@ function fitJoint(ds, start, S, cut, rounds = 8, iters = 20) {
 //  - score: Σ nk · min(Δk, τ) (nk = its pixel count); lowest wins;
 //  - refinement: joint fit over all inlier chunks (Δk < τ), recompute Δ,
 //    repeat until the inlier set stops changing.
-// opts: { cutoff, tau }. Returns null if no chunk is kept, else
+// opts.model: 'shared' (one spacing and phase for all chunks, as above), or
+// a shared center only, each chunk with its own phase ('phase', model A) or
+// its own phase and spacing held near the nominal one within ±opts.tol
+// ('local', model B): then a chunk's agreement Δk compares its loss under its
+// best local spiral about the hypothesis's center with its own fit's loss.
+// opts: { cutoff, tau, model, tol }. Returns null if no chunk is kept, else
 // { x, y, phase, cov, inlier: Map comp → bool, delta: Map comp → Δ, nHyp, nIn, nKept }.
 function combineChunks(img, comps, fits, p, opts) {
+  if (opts.model && opts.model !== 'shared') return combineChunksLocal(img, comps, fits, p, opts);
   const S = p.spacing, b = S / TAU, cut = Math.max(opts.cutoff * S, 1e-6), tau = opts.tau;
   const ks = fits.map((_, k) => k).filter(k => fits[k].kept);
   if (!ks.length) return null;
@@ -522,6 +621,60 @@ function combineChunks(img, comps, fits, p, opts) {
   ks.forEach((k, i) => { inlier.set(k, bestD[i] < tau); delta.set(k, bestD[i]); });
   return {
     x: h.x, y: h.y, phase: ((h.ph % TAU) + TAU) % TAU, cov: h.cov ?? null,
+    inlier, delta, nHyp: hyps.length, nIn: [...inlier.values()].filter(Boolean).length, nKept: ks.length,
+  };
+}
+
+// combineChunks for models A ('phase') and B ('local'): the same RANSAC over
+// chunks, with a hypothesis being a center only.
+function combineChunksLocal(img, comps, fits, p, opts) {
+  const S = p.spacing, b0 = S / TAU, cut = Math.max(opts.cutoff * S, 1e-6), tau = opts.tau;
+  const tol = opts.model === 'local' ? opts.tol : 0;
+  const ks = fits.map((_, k) => k).filter(k => fits[k].kept);
+  if (!ks.length) return null;
+  const sub = ks.map(k => chunkData(img, comps[k], 300));
+  // own loss: the better of the chunk's own fit and its local spiral about that fit's center
+  const own = ks.map((k, i) => Math.min(evalLoss(sub[i], fits[k].x, fits[k].y, fits[k].phase, S, cut),
+    fitLocal(sub[i], fits[k].x, fits[k].y, b0, tol, cut).loss));
+  const nk = ks.map(k => comps[k].core.length);
+  const deltas = h => sub.map((d, i) => Math.max(0, fitLocal(d, h.x, h.y, b0, tol, cut).loss - own[i]));
+  const score = D => D.reduce((s, v, i) => s + nk[i] * Math.min(v, tau), 0);
+
+  const hyps = ks.map(k => ({ x: fits[k].x, y: fits[k].y }));
+  let pairs = [];
+  for (let i = 0; i < ks.length; i++) for (let j = i + 1; j < ks.length; j++) pairs.push([i, j]);
+  if (pairs.length > 190) {
+    const rnd = mulberry32(ks.length * 7919 + 17);
+    for (let i = pairs.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [pairs[i], pairs[j]] = [pairs[j], pairs[i]]; }
+    pairs = pairs.slice(0, 190);
+  }
+  for (const [i, j] of pairs) {
+    const f = fits[ks[i]];
+    hyps.push(fitJointLocal([sub[i], sub[j]], { x: f.x, y: f.y }, b0, tol, cut, 4));
+  }
+  let best = null, bestD = null, bestS = Infinity;
+  for (const h of hyps) {
+    const D = deltas(h), s = score(D);
+    if (s < bestS) { bestS = s; best = h; bestD = D; }
+  }
+  let inl = bestD.map(v => v < tau), h = best;
+  for (let it = 0; it < 6; it++) {
+    const ds = ks.map((k, i) => (inl[i] ? chunkData(img, comps[k], 1500) : null)).filter(Boolean);
+    if (!ds.length) break;
+    h = fitJointLocal(ds, { x: h.x, y: h.y }, b0, tol, cut);
+    const D = deltas(h), next = D.map(v => v < tau);
+    bestD = D;
+    if (next.every((v, i) => v === inl[i])) break;
+    inl = next;
+  }
+  const inlier = new Map(), delta = new Map(), local = new Map();
+  ks.forEach((k, i) => {
+    inlier.set(k, bestD[i] < tau); delta.set(k, bestD[i]);
+    const L = fitLocal(sub[i], h.x, h.y, b0, tol, cut);
+    local.set(k, { spacing: TAU * L.b, phase: ((L.ph % TAU) + TAU) % TAU });
+  });
+  return {
+    x: h.x, y: h.y, phase: null, cov: h.cov ?? null, local,
     inlier, delta, nHyp: hyps.length, nIn: [...inlier.values()].filter(Boolean).length, nKept: ks.length,
   };
 }

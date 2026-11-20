@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Spiral spacing: procedure</title>
+<title>Spiral experiments: procedure</title>
 <style>
   body { margin: 0 auto; padding: 16px; max-width: 820px; background: #111; color: #ddd; font: 15px/1.5 system-ui, sans-serif; }
   a { color: #7ab0ff; }
@@ -27,15 +27,23 @@
   figcaption { font-size: 13px; color: #999; margin-top: 4px; line-height: 1.4; }
   .box { background: #1a1a1a; border: 1px solid #333; border-radius: 6px; padding: 10px 14px; margin: 12px 0; }
   .muted { color: #999; }
+  h1.part { font-size: 21px; margin-top: 48px; padding: 8px 12px; background: #1d2633; border-left: 4px solid #7ab0ff; border-radius: 4px; }
+  h1.part a { color: #cfe0ff; }
+  .toc li { margin: 2px 0; }
 </style>
 </head>
 <body>
-<h1>Estimating the ring spacing of a spiral: procedure</h1>
-<p class="src">How the <a href="spacing.html">ring-spacing experiment</a> goes from an
-image of a spiral to a robust estimate of its ring spacing (and, along the way,
-its center): every step, its parameters, what was tried, and how well it works.
-For what each control on the page does, see <a href="explain.html">Explain
-controls</a>. Source: <a href="https://github.com/adamfinkelstein/spiral">github.com/adamfinkelstein/spiral</a>.</p>
+<h1>Spiral experiments: procedure</h1>
+<p class="src">The methods behind the two experiment pages, step by step: every step,
+its parameters, what was tried, and how well it works. For what each control
+on the spacing page does, see <a href="explain.html">Explain controls</a>.
+Source: <a href="https://github.com/adamfinkelstein/spiral">github.com/adamfinkelstein/spiral</a>.</p>
+<ul class="toc">
+<li><a href="#part1"><b>Part 1 &mdash; Ring spacing</b></a> (<a href="spacing.html">spacing.html</a>): from an image of a whole spiral to its ring spacing, and a rough center.</li>
+<li><a href="#part2"><b>Part 2 &mdash; Center and phase from chunks</b></a> (<a href="center.html">center.html</a>): given the spacing, the center and phase from only pieces of the spiral.</li>
+</ul>
+
+<h1 class="part" id="part1">Part 1 &mdash; Ring spacing (<a href="spacing.html">spacing.html</a>)</h1>
 
 <div class="box">
 <b>In one paragraph.</b> Find a rough center from image gradients (RANSAC
@@ -179,7 +187,7 @@ the transform treating the image as periodic), take the 512&times;512 FFT.</li>
 <li>L(u,v) = log(1&nbsp;+&nbsp;|F|), divided by its largest value away from zero frequency.</li>
 <li><b>Radial profile</b>: assign each FFT pixel to the bin round(distance from zero
 frequency) and average:
-<span class="eq">P(r) = (1/n<sub>r</sub>) &sum; L(u,v) over round(&radic;(u&sup2;+v&sup2;)) = r</span>
+<div class="eq">P(r) = (1/n<sub>r</sub>) &sum; L(u,v) &nbsp; over round(&radic;(u&sup2;+v&sup2;)) = r</div>
 Only radii up to 256 are used (beyond, the bins cover only the corners).</li>
 <li>Smooth P with a Gaussian of 1.5 bins (removes speckle and the fringes from
 the spiral's start and end radii; cut rms error for rings about 3&times;;
@@ -313,6 +321,249 @@ could set the expected variation automatically.</li>
 <li>Correcting for a non-circular drawing (fitting an ellipse to the rings).</li>
 </ul>
 
-<p><a href="explain.html">Explain controls</a> &middot; <a href="spacing.html">Back to the app</a></p>
+
+<h1 class="part" id="part2">Part 2 &mdash; Center and phase from chunks (<a href="center.html">center.html</a>)</h1>
+
+<div class="box">
+<b>In one paragraph.</b> Only pieces ("chunks") of the spiral are visible,
+in noise; the ring spacing is known (from Part 1) and so is the winding. Find
+a rough center from the image's gradient lines (Part 1, step 1) and blur along
+circles around it. Threshold with hysteresis into connected components. Fit
+each component: a circle (corrected for the spiral's sideways offset), then
+the spiral's center and phase by robust least squares, each pixel on its
+nearest turn. Start every fit from the median of the corrected circle
+centers, then again from the median of the first-round fits ("start 2").
+Combine the chunks that agree into one spiral by RANSAC over chunks. With
+chunks all around the center: ~0.02&ndash;0.1 px and ~1&deg; of phase, even at
+noise 0.6&ndash;1.0.
+</div>
+
+<h2>P2.0 Inputs and test images</h2>
+<table>
+<tr><th>Input</th><th>Meaning</th></tr>
+<tr><td>Chunk image</td><td>512&times;512; only random pieces of the spiral, plus noise. Center unknown.</td></tr>
+<tr><td>Spacing</td><td>Known: from Part 1, modelled as the true spacing &times; (1 + Spacing error), error 0 by default.</td></tr>
+<tr><td>Winding</td><td>Known (real cards all wind the same way); needed for the sideways-offset correction.</td></tr>
+</table>
+<p>The test chunks: <b>Number of chunks</b> (10), each covering a random angle
+between 0 and <b>Max extent</b> (180&deg;), placed uniformly by arc length.
+Optional: noise (fixed pattern per chunk set), radius offsets (Part 1), and a
+spacing error. <span class="muted">The center page is spiral-only.</span></p>
+<div class="figs">
+<figure><img src="procedure/10_chunks_truth.png" alt=""><figcaption>The true spiral, chunks in amber (not seen by the method).</figcaption></figure>
+<figure><img src="procedure/11_chunks_noisy.png" alt=""><figcaption>What the method sees: the chunks with noise 0.6.</figcaption></figure>
+</div>
+
+<h2>P2.1 Denoise, including the tangential blur</h2>
+<ol>
+<li>Rough center: the gradient-line center (Part 1, step 1) of the raw noisy
+chunk image. It is poor on sparse chunks (median 7&ndash;9 px off at noise
+0.6&ndash;1.0), but good enough for the next step.</li>
+<li>Gaussian blur &sigma; 1 px (<b>Denoise blur</b>).</li>
+<li><b>Tangential blur</b> &sigma; 3 px along circles about that center, before
+thresholding: it averages noise along the arcs without smearing across
+them, and it tolerates a center error of several pixels away from the
+middle (a 9 px error at r = 100 changes the blur direction by only 5&deg;).</li>
+</ol>
+<table>
+<tr><th>Noise, tangential blur</th><th>Components</th><th>Kept fits &gt; 5 px off</th><th>Per-chunk median</th><th>Start 2</th><th>Combined center</th></tr>
+<tr><td>0.3, off / 3 px</td><td class="n">68 / 68</td><td class="n">1 / 2</td><td class="n">0.21 / 0.21 px</td><td class="n">0.02 / 0.03 px</td><td class="n">0.04 / 0.03 px</td></tr>
+<tr><td>0.6, off / 3 px</td><td class="n">75 / 68</td><td class="n">8 / 3</td><td class="n">0.51 / 0.36 px</td><td class="n">0.12 / 0.07 px</td><td class="n">0.05 / 0.06 px</td></tr>
+<tr><td>1.0, off / 3 / 5 px</td><td class="n">1038 / 127 / 75</td><td class="n">107 / 18 / 6</td><td class="n">46 / 1.0 / 0.8 px</td><td class="n">4.5 / 0.35 / 0.16 px</td><td class="n">0.10 / 0.08 / 0.10 px</td></tr>
+</table>
+<p class="muted">8 chunk sets of 10 per noise level. The combined center was already robust
+(RANSAC rejects junk); the blur fixes the intermediate stages and makes heavy
+noise much faster. Phase got slightly worse at noise 1.0 (0.95&deg; &rarr; 1.3&deg;).
+Earlier, a plain denoising blur alone took the median error at noise 0.6 from
+206 px to 0.9 px.</p>
+
+<h2>P2.2 Connected components</h2>
+<ul>
+<li><b>Hysteresis thresholding</b> as in Canny: components start at pixels above
+0.5 and extend through 8-connected pixels above 0.4. (0.3 let blurred noise
+percolate; 0.5 broke more chunks.)</li>
+<li>Drop components below 20 px; number the rest by size (#1 = largest).</li>
+<li>Grow each by 2 px into its soft edges, only into pixels at or below the
+low threshold. (Growing into above-threshold pixels picked up dropped noise
+specks between turns and broke the fits.)</li>
+</ul>
+
+<h2>P2.3 Fit each chunk</h2>
+<ol>
+<li>Weighted circle fit (K&aring;sa, then geometric), weights = grey levels.</li>
+<li><b>Spiral correction of the circle center:</b> subtract b&times;(weighted mean of
+(&minus;sin&nbsp;&alpha;,&nbsp;cos&nbsp;&alpha;)) over the chunk's pixels, b = spacing/2&pi;. One
+pass is enough. Circle centers improve from ~1.7 px to ~0.2 px off (no
+noise), and their sideways bias disappears when all chunks are on one side.</li>
+<li><b>Robust spiral fit</b> (iteratively reweighted least squares): each round,
+assign every pixel to its nearest turn (pixels of one component may lie on
+different turns) and give it a Tukey weight (cutoff 0.5 &times; spacing), then
+Levenberg&ndash;Marquardt over center and phase with the spacing fixed. Repeat
+until the center stops moving.</li>
+<li>Outputs: center, phase, &theta; range (core inliers), inlier fraction (pixels
+within half the cutoff), loss, and an approximate 2&sigma; ellipse (shape
+reliable, size not).</li>
+<li><b>Keep</b> a fit if its extent is &ge; 30&deg;, its inlier fraction &ge; 0.65, and
+its center at least one spacing from its own pixels (otherwise it has
+collapsed onto a speck).</li>
+</ol>
+<div class="figs">
+<figure><img src="procedure/13_chunk_cost.png" alt=""><figcaption>Fit cost of one chunk vs. candidate center (bright = low). The long valley points at the center: direction is well determined, distance is not.</figcaption></figure>
+</div>
+<p>What limits a single chunk:</p>
+<ul>
+<li><b>Direction good, distance weak.</b> Only the arc's curvature fixes the
+distance to the center, so errors lie along the line to the center. A
+distance error &delta; becomes a phase error &delta;/b radians.</li>
+<li><b>Extent matters most</b> (noise 0.3, median distance / phase error by true
+extent): &lt;20&deg;: ~54 px / 91&deg;; 20&ndash;45&deg;: 2.8 px / 54&deg;; 45&ndash;90&deg;: 0.5 px / 16&deg;;
+90&ndash;135&deg;: 0.17 px / 5&deg;; &gt;135&deg;: 0.06 px / 2&deg;.</li>
+<li><b>Grey levels matter:</b> fitting binary pixels instead cost ~2 px on a
+60 px chunk.</li>
+<li><b>Components spanning two turns fit better</b> (median 0.11 vs 0.25 px): a
+second turn at known spacing pins the distance.</li>
+<li><b>A spacing error &epsilon;</b> leaves the center alone and goes into the phase,
+&asymp; &theta;&middot;&epsilon;: 0.1% &rarr; 4.6&deg;, 0.3% &rarr; 14&deg;, 1% &rarr; 52&deg; (median).</li>
+<li><b>Per-chunk outlier tests can't catch the remaining bad fits:</b> they have
+the same inlier fraction and loss as good ones, having slid along the flat
+valley. The Tukey loss helps only slightly; cutoffs below ~0.35 &times;
+spacing rejected good fits.</li>
+</ul>
+
+<h2>P2.4 Shared start</h2>
+<ol>
+<li><b>Start 1</b>: the median x and median y of the corrected circle centers of
+chunks reaching 30&deg;.</li>
+<li>Fit every chunk's spiral from start 1. <b>Start 2</b>: the median of the
+kept fits' centers.</li>
+<li>Fit every chunk again from start 2; these are the per-chunk results.</li>
+</ol>
+<p>Start 2 alone is within ~0.03&ndash;0.08 px (max 0.2 px) of the truth when
+chunks surround the center, even at noise 0.6. Starting every chunk from it
+cut per-chunk failures (&gt; 5 px) from 16% to 13% at noise 0.6.</p>
+
+<h2>P2.5 Combine the chunks (RANSAC over chunks)</h2>
+<ol>
+<li>Hypotheses: each kept chunk's own fit, and a joint fit (one center and
+phase) of every pair of kept chunks (all pairs up to 20 chunks, else 190
+sampled).</li>
+<li><b>Agreement</b> of chunk k with a hypothesis: &Delta;<sub>k</sub> = its loss with that
+center and phase minus its loss under its own fit. Measured on pixels, not
+as a distance between centers, so a genuine chunk that slid along its flat
+valley still agrees.</li>
+<li>Score &Sigma; n<sub>k</sub>&middot;min(&Delta;<sub>k</sub>, &tau;), &tau; = 0.04, n<sub>k</sub> = pixels; the
+lowest wins. Then one center and phase are fitted to all agreeing chunks,
+repeating until that set is stable.</li>
+</ol>
+<div class="figs">
+<figure><img src="procedure/12_chunks_components.png" alt=""><figcaption>Noise 0.6 after denoising: components in their own colors, each chunk's center (dots, 2&sigma; ellipses), shared starts (white squares), the combined estimate (yellow ring, 0.08 px off here), and the gradient-line center (green +, 7.9 px off).</figcaption></figure>
+</div>
+<table>
+<tr><th>Chunks (30 per set, masked to a wedge), noise</th><th>Start 2</th><th>Combined center</th><th>Phase: per-chunk median &rarr; combined</th></tr>
+<tr><td>All around, 0.3</td><td class="n">0.016 px</td><td class="n">0.018 px</td><td class="n">0.5&deg; &rarr; 0.75&deg;</td></tr>
+<tr><td>All around, 0.6</td><td class="n">0.04 px</td><td class="n">0.04 px</td><td class="n">1.0&deg; &rarr; 0.8&deg;</td></tr>
+<tr><td>NE + SW quadrants, 0.6</td><td class="n">0.11 px</td><td class="n">0.02 px</td><td class="n">3.4&deg; &rarr; 0.9&deg;</td></tr>
+<tr><td>NE quadrant, 0.3</td><td class="n">0.09 px (max 0.9)</td><td class="n">0.06 px (max 0.14)</td><td class="n">3.1&deg; &rarr; 1.8&deg;</td></tr>
+<tr><td>NE quadrant, 0.6</td><td class="n">0.37 px (max 16)</td><td class="n">0.11 px (max 20)</td><td class="n">3.5&deg; &rarr; 2.6&deg;</td></tr>
+</table>
+<p class="muted">Medians over 8 sets, measured before the tangential blur was added. The shared
+phase is what helps when chunks are on opposite sides. Chunks all on one side
+remain the hard case: their valleys are nearly parallel, so distance errors
+add up, and under noise the estimate is pulled toward the chunks (mean
+0.4&ndash;2.7 px, cause not yet found). Genuine chunks' &Delta; at the combined
+fit: 99% &le; 0.012, so &tau; = 0.04 rejects almost none.</p>
+
+<h2>P2.6 Default parameters</h2>
+<table>
+<tr><th>Step</th><th>Parameter</th><th>Default</th><th>Explored / notes</th></tr>
+<tr><td>P2.1</td><td>Denoise blur</td><td>&sigma; 1 px</td><td>0&ndash;3</td></tr>
+<tr><td>P2.1</td><td>Tangential blur</td><td>&sigma; 3 px</td><td>0, 3, 5</td></tr>
+<tr><td>P2.2</td><td>High / low threshold</td><td>0.5 / 0.4</td><td>low 0.3, 0.4, 0.5</td></tr>
+<tr><td>P2.2</td><td>Min component</td><td>20 px</td><td></td></tr>
+<tr><td>P2.3</td><td>Tukey cutoff</td><td>0.5 &times; spacing</td><td>0.25, 0.35, 0.5</td></tr>
+<tr><td>P2.3</td><td>Keep: min extent / inlier fraction</td><td>30&deg; / 0.65</td><td>random pixels score ~0.5 at this cutoff</td></tr>
+<tr><td>P2.4</td><td>Shared start</td><td>on</td><td>off: each chunk from its own circle fit</td></tr>
+<tr><td>P2.5</td><td>Combine, &tau;</td><td>on, 0.04</td><td></td></tr>
+<tr><td>P2.5</td><td>Chunk model</td><td>shared spacing &amp; phase</td><td>see P2.7</td></tr>
+</table>
+
+<h2>P2.7 Under evaluation</h2>
+<h3>Imperfect spirals: what is shared between chunks</h3>
+<p>With radius offsets, each region sits slightly in or out from the ideal
+curve, so one shared phase is wrong: the default combination rejected up to
+half of the genuine chunks. <b>Chunk model</b> on the page:</p>
+<ul>
+<li><b>A: own phase per chunk</b> &mdash; only the center is shared.</li>
+<li><b>B: own phase and spacing</b> &mdash; each chunk also has a spacing, held near
+nominal by a penalty (<b>Spacing tolerance</b>, &plusmn;10%). For a fixed center a
+chunk's local spiral is a linear regression of r on the unwrapped angle;
+the joint fit alternates that with a fit of the center.</li>
+</ul>
+<table>
+<tr><th>Chunks, offsets</th><th>Start 2</th><th>Shared</th><th>A</th><th>B</th><th>Agreeing (shared / A / B)</th></tr>
+<tr><td>All around, none</td><td class="n"><b>0.03</b></td><td class="n">0.04</td><td class="n">0.28</td><td class="n">0.62</td><td class="n">40 / 40 / 40 of 40</td></tr>
+<tr><td>All around, &plusmn;0.25</td><td class="n"><b>0.10</b></td><td class="n">0.26</td><td class="n">0.22</td><td class="n">0.43</td><td class="n">25 / 40 / 40</td></tr>
+<tr><td>All around, &plusmn;0.5</td><td class="n"><b>0.15</b></td><td class="n">0.55</td><td class="n">0.37</td><td class="n">0.54</td><td class="n">20 / 40 / 40</td></tr>
+<tr><td>NE quadrant, none</td><td class="n">0.16</td><td class="n"><b>0.06</b></td><td class="n">0.19</td><td class="n">0.35</td><td class="n">38 / 38 / 38 of 38</td></tr>
+<tr><td>NE quadrant, &plusmn;0.25</td><td class="n">0.25</td><td class="n">0.46</td><td class="n"><b>0.20</b></td><td class="n">0.35</td><td class="n">24 / 38 / 38</td></tr>
+<tr><td>NE quadrant, &plusmn;0.5</td><td class="n"><b>0.24</b></td><td class="n">0.54</td><td class="n">0.29</td><td class="n">0.72</td><td class="n">17 / 38 / 38</td></tr>
+</table>
+<p class="muted">Median combined center error (px), noise 0.3, tangential blur on, 6 sets.
+A accepts every genuine chunk and beats the shared model whenever offsets are
+present. B as implemented is worse everywhere (its local spacings were off by
+3&ndash;13%): a chunk's own spacing is weakly determined, and the penalty is
+swamped by hundreds of strongly correlated pixels, so the center wanders.
+<b>Start 2</b>, the plain median of per-chunk fits (each with its own phase),
+is the best center whenever offsets are present.</p>
+<h3>Ideas not yet built</h3>
+<ul>
+<li><b>Start 2 as the final center</b>, possibly as a median weighted by each
+chunk's error ellipse, so precise directions count more than loose
+distances.</li>
+<li><b>Start from Part 1's center</b> instead of circle fits (modelled as the
+true center plus an error of a few px); also an independent cross-check.</li>
+<li><b>B with an honest penalty</b> (counting correlated pixels across a line as
+one measurement), or <b>model C</b>: one shared center and phase plus one
+smooth offset curve &delta;(&theta;) for the whole spiral, which also returns the
+deviation itself (a constant &delta; must be pinned against the phase, and |&delta;|
+bounded by ~&frac12; spacing to avoid slipping a turn).</li>
+</ul>
+
+<h2>P2.8 Tried and not kept</h2>
+<ul>
+<li>A grid search over centers as the starting point (replaced by the shared median starts).</li>
+<li>Fitting binary pixels (several times less precise than grey levels).</li>
+<li>Low threshold 0.3 (blurred noise percolates); growing components into above-threshold pixels.</li>
+<li>Tight Tukey cutoffs (&le; 0.25 &times; spacing); per-chunk outlier tests on inlier fraction or loss (can't see a fit that slid along its valley).</li>
+<li>Model B as implemented (above).</li>
+</ul>
+
+<h2>P2.9 Next: toward real cards</h2>
+<p>Real cards (e.g. the sonorine scans) differ from these chunks: the whole
+annulus is present (~40 turns, inner radius ~0.58 of the outer, outer
+&theta; &asymp; 600 rad), grooves are depressions in a noisy depth map, paper texture
+is correlated rather than white, and the grooves deviate from a perfect
+spiral by drift, card warp and the audio itself. Connected components there
+are an artifact of thresholding. Under consideration:</p>
+<ul>
+<li>A <b>realistic card simulation</b>: ~40 turns at ~5.5 px spacing in a 1024&sup2;
+image (plus a real-scale strip), depth-map grooves, smooth drift plus
+band-limited "audio" deviation, slight warp, correlated texture, dust,
+scratches, banding, a damaged sector, a rough annotated center, fixed
+winding and nominal spacing; grey depth vs. binary mask as input.
+Parameters calibrated from the real images.</li>
+<li>A <b>global pipeline instead of chunks</b>: rough center &rarr; tangential blur
+of the depth map &rarr; robust fit of center, spacing and phase on all pixels
+&rarr; <b>unrolled strip</b> along the spiral, where center, spacing and phase
+errors appear as a one-turn wobble, a linear drift and an offset, and the
+residual is the groove's deviation &delta;(&theta;) &rarr; trace the centerline along the
+strip. Geometric patches (sectors &times; radial bands) as a robust local
+cross-check in place of chunks.</li>
+<li>Measures: the traced centerline's RMS error against the true &delta;(&theta;), and
+the fraction of the groove followed without slipping onto a neighboring
+turn.</li>
+</ul>
+
+<p><a href="explain.html">Explain controls</a> &middot; <a href="spacing.html">Spacing page</a> &middot; <a href="center.html">Center page</a></p>
 </body>
 </html>
