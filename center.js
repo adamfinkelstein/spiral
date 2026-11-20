@@ -16,7 +16,7 @@ const HANDLE_R = 7;
 const MAX_CHUNKS = 30; // must match the nChunks slider's max
 const MAX_ROWS = 20;   // rows shown in the estimates table
 
-const ids = ['spacing', 'rStart', 'rEnd', 'phase', 'aspect', 'off20', 'off40', 'off60', 'off80', 'lineWidth', 'softness', 'blur', 'smooth', 'nChunks', 'maxExtent', 'highlight', 'showCenter', 'spacingErr', 'noise', 'denoise', 'thresh', 'threshLo', 'minArea', 'minExtent', 'refine', 'shared', 'robust', 'cutoff', 'minInlier', 'combine', 'tau', 'showEst', 'showEll'];
+const ids = ['spacing', 'rStart', 'rEnd', 'phase', 'aspect', 'off20', 'off40', 'off60', 'off80', 'lineWidth', 'softness', 'blur', 'smooth', 'nChunks', 'maxExtent', 'highlight', 'showCenter', 'spacingErr', 'noise', 'denoise', 'tangBlur', 'thresh', 'threshLo', 'minArea', 'minExtent', 'refine', 'shared', 'robust', 'cutoff', 'minInlier', 'combine', 'tau', 'showEst', 'showEll'];
 const el = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
 
 function params() {
@@ -39,6 +39,7 @@ function params() {
     spacingErr: +el.spacingErr.value,
     noise: +el.noise.value,
     denoise: +el.denoise.value,
+    tangBlur: +el.tangBlur.value,
     thresh: +el.thresh.value,
     threshLo: +el.threshLo.value,
     shared: el.shared.checked,
@@ -243,6 +244,8 @@ let lastComps = [];
 let costTimer = 0;
 let lastStarts = [];
 let lastCombo = null;
+let lastGC = null;
+const tangTmp = new Float32Array(N * N);
 
 let pending = false;
 function render() {
@@ -254,7 +257,7 @@ function render() {
     // 0 to the current spacing (the browser clamps the value if needed).
     el.lineWidth.max = el.spacing.value;
     const p = params();
-    for (const id of ['spacing', 'rStart', 'rEnd', 'phase', 'aspect', 'off20', 'off40', 'off60', 'off80', 'lineWidth', 'softness', 'blur', 'nChunks', 'maxExtent', 'spacingErr', 'noise', 'denoise', 'thresh', 'threshLo', 'minArea', 'minExtent', 'cutoff', 'minInlier', 'tau']) {
+    for (const id of ['spacing', 'rStart', 'rEnd', 'phase', 'aspect', 'off20', 'off40', 'off60', 'off80', 'lineWidth', 'softness', 'blur', 'nChunks', 'maxExtent', 'spacingErr', 'noise', 'denoise', 'tangBlur', 'thresh', 'threshLo', 'minArea', 'minExtent', 'cutoff', 'minInlier', 'tau']) {
       el[id].nextElementSibling.textContent = el[id].value;
     }
     document.getElementById('centerOut').textContent = `(${center.x.toFixed(1)}, ${center.y.toFixed(1)})`;
@@ -283,7 +286,17 @@ function render() {
     const pFit = { ...p, spacing: p.spacing * (1 + p.spacingErr / 100) };
     document.getElementById('assumedOut').textContent = pFit.spacing.toFixed(3);
     for (let i = 0; i < N * N; i++) noisy[i] = part[i] + p.noise * noiseField[i];
+    // Tangential blur: find a rough center from the image's gradient lines
+    // (gradcenter.js; works on the raw noisy image, no components needed),
+    // then, after the denoising blur, blur along circles about it, which
+    // averages noise along the arcs without smearing across them.
+    const gc = p.tangBlur > 0 ? gradientCenter(noisy, pFit.spacing, 150, 0.7, true, 3) : null;
+    lastGC = gc;
     if (p.denoise > 0) gaussianBlur(noisy, p.denoise);
+    if (gc) { tangentialBlur(noisy, tangTmp, gc.c, p.tangBlur); noisy.set(tangTmp); }
+    document.getElementById('gcOut').textContent = gc
+      ? `Gradient-line center (green +): ${Math.hypot(gc.c.x - center.x, gc.c.y - center.y).toFixed(2)} px from the true center; the image is blurred along circles about it.`
+      : '';
     const { label, comps } = labelComponents(noisy, p.thresh, p.threshLo, p.minArea);
     // Fits keep only chunks whose estimated angular extent reaches Min extent
     // (short chunks only fix the center's direction, not its distance) and
@@ -336,6 +349,11 @@ function render() {
     }
     if (p.showEst) lastStarts.forEach((q, i) => drawStart(cctx, q, i));
     if (combo) drawCombined(cctx, combo, p.showEll);
+    if (lastGC && p.showEst) { // gradient-line center: green +
+      const a = 8, q = lastGC.c;
+      cctx.strokeStyle = '#7fff9f'; cctx.lineWidth = 2;
+      cctx.beginPath(); cctx.moveTo(q.x - a, q.y); cctx.lineTo(q.x + a, q.y); cctx.moveTo(q.x, q.y - a); cctx.lineTo(q.x, q.y + a); cctx.stroke();
+    }
     if (p.showCenter) drawCross(cctx, center.x, center.y);
 
     drawTable(p, fits, colors, sel, combo);

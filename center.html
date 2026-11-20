@@ -46,6 +46,7 @@
     fits, filled: median of first-round spiral fits). Yellow ring and ellipse: combined estimate; dimmed chunks and hollow dots: chunks that
     disagree with it. <span id="startOut"></span></p>
     <p class="note" id="comboOut"></p>
+    <p class="note" id="gcOut"></p>
   </figure>
   <figure>
     <figcaption>Per-chunk estimates, ranked by component size in pixels (<span class="d">grey: error vs. truth</span>)</figcaption>
@@ -130,6 +131,9 @@
   <label for="denoise">Denoise blur σ (px)</label>
   <input id="denoise" type="range" min="0" max="3" step="0.1" value="1"><output for="denoise"></output>
 
+  <label for="tangBlur">Tangential blur σ (px)</label>
+  <input id="tangBlur" type="range" min="0" max="8" step="0.5" value="3"><output for="tangBlur"></output>
+
   <label for="thresh">High threshold</label>
   <input id="thresh" type="range" min="0.05" max="0.95" step="0.05" value="0.5"><output for="thresh"></output>
 
@@ -174,6 +178,11 @@
 them use the true spacing × (1 + error), here <span id="assumedOut"></span> px, to test how
 sensitive they are to an imperfect spacing estimate.</p>
 <p class="hint"><b>Noise sigma</b> adds Gaussian noise (in units of full white) to the chunk image before thresholding, so some line pixels drop out and some background pixels join the components.</p>
+<p class="hint"><b>Tangential blur</b> (default 3 px; 0 = off): first estimate a rough center
+from the image's gradient lines (as on the spacing page; green +), then, after
+the denoising blur, blur the image along circles around that center. That
+averages noise along the arcs without smearing across them, before
+thresholding.</p>
 <p class="hint">Estimation: blur the noisy chunk image a little (<b>Denoise blur</b>),
 then hysteresis thresholding as in Canny edge detection: components start at
 pixels above the <b>High threshold</b> and extend through 8-connected pixels above
@@ -210,6 +219,7 @@ rejects noise blobs.</p>
 </div>
 
 <script src="render.js"></script>
+<script src="gradcenter.js"></script>
 <script src="chunkfit.js"></script>
 <script src="center.js"></script>
 </body>

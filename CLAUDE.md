@@ -28,10 +28,16 @@ work from `file://`. Deployed to GitHub Pages on every push to `main`.
   estimate → table of estimates vs. truth (20 largest components) → fit-cost
   map for the selected chunk. Sticky, scrollable controls panel on the right.
   The page's hint paragraphs describe each control.
+- `gradcenter.js` — gradient-line center (`gradientCenter`, `tangentialBlur`,
+  `gradientLines`, `ransacCenter`, …), shared by both pages; no DOM, uses
+  `N` and `gaussianBlur` from render.js. The tangential blur follows the
+  circle (tangent plus a second-order inward term u²/(2r)), so curved rings
+  aren't shifted inward.
 - `chunkfit.js` — the estimation; no DOM, uses only `N` from render.js: `labelComponents`, `fitChunk`, `fitComponents`, `combineChunks`
   (with `chunkData`, `evalLoss`, `phaseFor`, `fitJoint`), `costMap`, plus
   `mulberry32`, `lm`, `solve`. Scripts load in the order render.js,
-  chunkfit.js, center.js.
+  gradcenter.js, chunkfit.js, center.js (spacing page: render.js, gradcenter.js,
+  spacing.js).
 
 Controls and their defaults live in the HTML `value` / `checked` attributes;
 each page's `ids` list and `params()` read them, and "Defaults" resets to them.
@@ -192,6 +198,18 @@ Robustness (8 random offset sets, uniform in ±amp at each knot):
    chunk, loss vs. candidate center on a 128² grid, phase solved per point.
 
 ## Center page: what the experiments showed
+
+- Tangential blur before components ("Tangential blur σ", default 3 px, 0 = off): the
+  gradient-line center from the raw noisy image, then after the denoise blur
+  a blur along circles about it. 8 chunk sets / noise level: no effect at
+  noise 0.3; at 0.6 fewer bad per-chunk fits (8 → 3) and per-chunk median
+  0.51 → 0.36 px; at 1.0 it cleans up segmentation hugely (components 1038 →
+  127 at σ 3 → 75 at σ 5; kept fits > 5 px off 107 → 18 → 6; per-chunk
+  median 46 → 1.0 → 0.8 px; start 2 4.5 → 0.35 → 0.16 px). The combined
+  (RANSAC) center was already ~0.1 px and stays so; its phase got slightly
+  worse (median 0.95° → 1.3° at noise 1). The gradient-line center itself is
+  poor on sparse chunk images (median 6.7 / 9.4 px at noise 0.6 / 1.0), but
+  the blur tolerates that far from the center.
 
 - b = spacing / 2π. A chunk constrains the *direction* to the center well
   and the *distance* poorly (only curvature): the cost valley points at the

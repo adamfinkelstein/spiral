@@ -37,7 +37,8 @@ few pieces ("chunks") of it.
 
 - The true spiral, with random chunks of random angular extent highlighted;
   only the chunk pixels, plus optional noise, are given to the estimator.
-- Estimation: denoising blur → hysteresis thresholding → connected
+- Estimation: denoising blur, then blur along the rings about a rough
+  center from image gradients → hysteresis thresholding → connected
   components → a robust (Tukey) fit of center and phase for each component,
   starting from a shared median estimate → a RANSAC-style combination of all
   agreeing chunks into one spiral.
