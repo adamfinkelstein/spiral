@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spiral spacing: procedure</title>
+<style>
+  body { margin: 0 auto; padding: 16px; max-width: 820px; background: #111; color: #ddd; font: 15px/1.5 system-ui, sans-serif; }
+  a { color: #7ab0ff; }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  h2 { font-size: 18px; margin-top: 34px; border-bottom: 1px solid #333; padding-bottom: 4px; }
+  h3 { font-size: 15px; margin: 22px 0 6px; color: #eee; }
+  p, li { color: #ccc; }
+  li { margin: 4px 0; }
+  code { background: #222; padding: 1px 4px; border-radius: 3px; }
+  .src { color: #aaa; }
+  .eq { margin: 10px 0 10px 24px; font-family: "Times New Roman", serif; font-size: 17px; color: #eee; }
+  table { border-collapse: collapse; margin: 10px 0 14px; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+  th, td { border: 1px solid #333; padding: 4px 8px; text-align: left; vertical-align: top; }
+  th { background: #1c1c1c; color: #eee; font-weight: 600; }
+  td.n { text-align: right; }
+  figure { margin: 12px 0; }
+  .figs { display: flex; flex-wrap: wrap; gap: 12px; }
+  .figs figure { margin: 0; width: 256px; }
+  .figs img { width: 256px; height: 256px; display: block; border: 1px solid #333; }
+  img.wide { width: 100%; max-width: 760px; display: block; border: 1px solid #333; }
+  figcaption { font-size: 13px; color: #999; margin-top: 4px; line-height: 1.4; }
+  .box { background: #1a1a1a; border: 1px solid #333; border-radius: 6px; padding: 10px 14px; margin: 12px 0; }
+  .muted { color: #999; }
+</style>
+</head>
+<body>
+<h1>Estimating the ring spacing of a spiral: procedure</h1>
+<p class="src">How the <a href="spacing.html">ring-spacing experiment</a> goes from an
+image of a spiral to a robust estimate of its ring spacing (and, along the way,
+its center): every step, its parameters, what was tried, and how well it works.
+For what each control on the page does, see <a href="explain.html">Explain
+controls</a>. Source: <a href="https://github.com/adamfinkelstein/spiral">github.com/adamfinkelstein/spiral</a>.</p>
+
+<div class="box">
+<b>In one paragraph.</b> Find a rough center from image gradients (RANSAC
+over pairs of gradient lines, corrected for the spiral's sideways offset,
+with the image blurred along the rings to resist noise). Weight the image by
+1/&radic;r about that center so outer turns don't dominate. Take the 2D
+Fourier transform and its radial profile. Score each candidate spacing by how
+well its harmonics stand above the troughs between them, searching only
+&times;0.5&ndash;2 of the nominal spacing and refining coarse to fine, from
+broad bands down to the expected spacing variation. Precision: about
+0.3&ndash;0.7% when the spiral is perfect, even with heavy noise; about
+0.5&ndash;2.5% when the local spacing varies by up to &plusmn;15&ndash;30%.
+</div>
+
+<h2>0. Inputs and assumptions</h2>
+<table>
+<tr><th>Input</th><th>Meaning</th></tr>
+<tr><td>Image</td><td>512&times;512 grey image, bright spiral on dark. The center can be anywhere (sub-pixel) and is <i>not</i> given.</td></tr>
+<tr><td>Nominal spacing <i>s</i><sub>0</sub></td><td>The device's target ring spacing. The true spacing is assumed to be within &times;0.5&ndash;2 of it. (In the app the true spacing stands in for it.)</td></tr>
+<tr><td>Expected variation <i>v</i></td><td>How much the local spacing may vary along the spiral (device tolerance), default &plusmn;10%.</td></tr>
+<tr><td>Spiral sense</td><td>Which way the spiral winds, needed for the sideways-offset correction in step 1.</td></tr>
+</table>
+<p>The model is an Archimedean spiral r = b&theta; with b = spacing&nbsp;/&nbsp;2&pi;
+(the radius grows by one spacing per turn). b appears throughout: it is also the
+sideways offset that makes a spiral differ from circles (step 1).</p>
+
+<h3>Test images</h3>
+<p>The app renders the spiral per pixel (not with canvas strokes), from the
+distance to the nearest arm, with smooth Gaussian (erf) edges: sharp edges
+contain frequencies the 512 grid can't represent, which alias into false arcs
+in the Fourier transform; a 2&ndash;3 px edge transition removes them. To
+test robustness it can also add:</p>
+<ul>
+<li><b>Radius offsets</b>: a real spiral is never perfect. The curve becomes
+r(&theta;) = b&theta; + &delta;(&theta;), &delta; piecewise linear in &theta; with
+knots at 20/40/60/80% of the way from start to end radius (in units of
+spacing, &minus;1..1) and 0 at both ends. The curve stays continuous with kinks in
+slope, and the average spacing over &theta; is still exactly the nominal one.
+The local spacing changes by the difference between neighbouring knots, spread
+over 20% of &theta; (about 3 turns at spacing 10, 1.5 turns at spacing 20), so
+the same offsets distort a spiral with fewer turns more.</li>
+<li><b>Noise</b>: Gaussian noise, &sigma; in units of full white (0&ndash;1.5 tested).</li>
+<li><b>Aspect</b> (non-circular drawing), <b>blur</b>, <b>line width</b>, <b>hard edges</b>, and concentric <b>rings</b> instead of a spiral.</li>
+</ul>
+<div class="figs">
+<figure><img src="procedure/01_clean.png" alt=""><figcaption>Perfect spiral, spacing 10, width 4, radius 50&ndash;200, off-center.</figcaption></figure>
+<figure><img src="procedure/02_offsets_clean.png" alt=""><figcaption>The same with offsets 0.25, &minus;0.25, 0.2, &minus;0.1: local spacing varies by up to about &plusmn;17%.</figcaption></figure>
+<figure><img src="procedure/03_noisy.png" alt=""><figcaption>…plus noise &sigma; 0.6. This is the running example below.</figcaption></figure>
+</div>
+
+<h2>1. Rough center from gradient lines</h2>
+<p>The spacing itself doesn't need the center (the Fourier magnitude ignores
+where the spiral is), but step 2 weights turns by their radius, so it needs the
+center to within a pixel or so. A centroid of bright pixels would be biased
+whenever some angles are brighter or missing. Instead, every pixel on a ring's
+edge has a gradient pointing across the ring, so the line through it along the
+gradient passes (nearly) through the center; the center is where most lines
+meet.</p>
+<ol>
+<li><b>Blur and gradients.</b> Gaussian blur &sigma; 1 px, then Sobel gradients everywhere.</li>
+<li><b>Choose lines.</b> Lines are undirected, so each falls in one of 64
+orientation bins over 180&deg;. Keep in each bin the 150 strongest pixels above a
+global floor (the 70th percentile of gradient magnitude). Every orientation
+gets an equal say, while orientations with no real edges stay nearly empty
+instead of filling with noise. Weight = magnitude &minus; floor. (Keeping a
+fixed top percentage instead was tried first; it ties the count to image size
+and lets noise fill it.)</li>
+<li><b>Spiral correction.</b> On a spiral, the normal at a point at angle
+&alpha; misses the center by b sideways: it passes through
+center + b&middot;(&minus;sin&nbsp;&alpha;,&nbsp;cos&nbsp;&alpha;) (exactly
+b(r&sup2;+b&sup2;)/(r&sup2;+2b&sup2;); radially only &asymp;&nbsp;b&sup2;/r). For a candidate
+center, each line is shifted back by that amount (no trigonometry needed: the
+direction comes from the pixel's offset from the candidate). Rings need no
+correction.</li>
+<li><b>RANSAC over pairs of lines.</b> Draw a line with probability &prop; its
+weight, and a partner from an orientation bin chosen with probability &prop;
+(lines in the bin)&nbsp;&middot;&nbsp;sin&sup2;(angle between the bins): an
+intersection's error grows like 1/sin of the angle, so near-perpendicular
+pairs are favoured. Their (corrected) intersection is a candidate center,
+scored by &Sigma;&nbsp;w&middot;min(d&sup2;,&nbsp;&epsilon;&sup2;) over a fixed random subset of
+lines (d = corrected distance, &epsilon; = 2 px). 600 candidates scored
+against 1500 lines.</li>
+<li><b>Refine.</b> Weighted least-squares intersection of the inlier lines
+(d&nbsp;&lt;&nbsp;&epsilon;), recomputing inliers and corrections three times.</li>
+<li><b>Tangential blur rounds.</b> Blur the image along circles about the
+current center (Gaussian &sigma; 3 px along the local tangent, bilinear samples;
+shorter near the center), recompute lines and center (150 candidates, 1000
+scoring lines, since it starts close), and repeat until the center moves less
+than 1 px, at most 3 rounds. Blurring <i>along</i> the rings averages noise
+away without smearing across them; ~1 px accuracy is plenty for step 2.</li>
+</ol>
+<div class="figs">
+<figure><img src="procedure/03_noisy.png" alt=""><figcaption>Input (noise 0.6).</figcaption></figure>
+<figure><img src="procedure/04_tangential.png" alt=""><figcaption>After the last tangential blur. Green pixels: inlier lines; green +: estimate; red circle: true center (3.2 px apart here, after 3 rounds).</figcaption></figure>
+</div>
+<table>
+<tr><th>Case (off-center spirals)</th><th>No tangential blur</th><th>Tangential blur 3 px</th></tr>
+<tr><td>No noise (spacing 10 / 20)</td><td class="n">0.03&ndash;0.08 px</td><td class="n">0.04&ndash;0.06 px</td></tr>
+<tr><td>Noise 0.3</td><td class="n">3&ndash;8 px</td><td class="n">0.5&ndash;0.8 px</td></tr>
+<tr><td>Noise 0.6</td><td class="n">6&ndash;8 px</td><td class="n">~2.2 px</td></tr>
+<tr><td>Noise 1.0</td><td class="n">18&ndash;36 px</td><td class="n">2.3&ndash;3.8 px</td></tr>
+</table>
+<p class="muted">Medians over 3 positions. The sideways correction matters most with few
+turns: at spacing 20 it took the clean error from 0.27 to 0.03 px. A
+non-circular drawing (aspect 1.02) is the hardest case (~2 px), since its
+lines no longer meet at one point. RANSAC alone was about as accurate as the
+Hough-style vote it replaced; the tangential blur did most of the work under
+noise. Cost: ~60 ms blur + ~40 ms lines + ~12 ms RANSAC per later round.</p>
+
+<h2>2. Weight the turns</h2>
+<p>In the Fourier transform each turn contributes in proportion to its length,
+which grows with r, so outer turns dominate. The magnitude spectrum can't tell
+inner from outer turns (that information is in the phase), so the weighting
+has to happen in the image, before the transform, about the center from step
+1. Multiply each pixel by</p>
+<p class="eq">w(r) = max(r, 2<i>s</i><sub>0</sub>)<sup>&minus;&frac12;</sup>,
+&nbsp; normalized to mean 1</p>
+<p>The cap near the center avoids amplifying noise where there are no rings.</p>
+<div class="figs">
+<figure><img src="procedure/05_weighted.png" alt=""><figcaption>The noisy example weighted by 1/&radic;r (displayed darker).</figcaption></figure>
+</div>
+<table>
+<tr><th>Spacing, offsets (advanced search, 10%)</th><th>by length (none)</th><th>1/&radic;r</th><th>1/r (equal turns)</th></tr>
+<tr><td>10, &plusmn;0.1</td><td class="n">0.37 / 0.9</td><td class="n">0.75 / 1.3</td><td class="n">0.87 / 1.8</td></tr>
+<tr><td>10, &plusmn;0.25</td><td class="n">0.80 / 1.4</td><td class="n">0.48 / 1.8</td><td class="n">1.20 / 2.4</td></tr>
+<tr><td>10, &plusmn;0.5</td><td class="n">2.5 / 14.6</td><td class="n">2.4 / 8.2</td><td class="n">3.5 / 9.6</td></tr>
+<tr><td>20, &plusmn;0.1</td><td class="n">0.42 / 0.9</td><td class="n">0.63 / 1.4</td><td class="n">1.57 / 2.3</td></tr>
+<tr><td>20, &plusmn;0.25</td><td class="n">2.5 / 11.6</td><td class="n">2.4 / 4.0</td><td class="n">1.8 / 8.0</td></tr>
+<tr><td>20, &plusmn;0.25, noise 0.3</td><td class="n">2.6 / 10.9</td><td class="n">2.2 / 3.7</td><td class="n">1.0 / 5.5</td></tr>
+</table>
+<p class="muted">Median / max % error over 10 random offset sets. 1/r over-weights the
+short inner turns (fewer pixels, broader and noisier peaks); 1/&radic;r keeps the
+medians close to unweighted and cuts the worst cases about 3&times;. Results
+with the estimated center were identical to those with the true center.</p>
+
+<h2>3. Fourier transform and radial profile</h2>
+<ol>
+<li>Subtract the image mean (removes the bright zero-frequency spot), apply a
+Hann window (fades to black at the borders; removes cross-shaped streaks from
+the transform treating the image as periodic), take the 512&times;512 FFT.</li>
+<li>L(u,v) = log(1&nbsp;+&nbsp;|F|), divided by its largest value away from zero frequency.</li>
+<li><b>Radial profile</b>: assign each FFT pixel to the bin round(distance from zero
+frequency) and average:
+<span class="eq">P(r) = (1/n<sub>r</sub>) &sum; L(u,v) over round(&radic;(u&sup2;+v&sup2;)) = r</span>
+Only radii up to 256 are used (beyond, the bins cover only the corners).</li>
+<li>Smooth P with a Gaussian of 1.5 bins (removes speckle and the fringes from
+the spiral's start and end radii; cut rms error for rings about 3&times;;
+3 bins merged the peaks of large spacings).</li>
+</ol>
+<h3>Where the peaks are</h3>
+<p>A point at radius &rho; in the transform is a pattern repeating &rho; times
+across the 512 px image, so rings spaced <i>s</i> px apart put their main
+peak at &rho;<sub>1</sub> = 512&nbsp;/&nbsp;<i>s</i>, and, because each line is a
+narrow band rather than a smooth wave, fainter harmonics at
+<i>k</i>&rho;<sub>1</sub> (51.2, 102.4, 153.6, … for spacing 10).</p>
+<div class="figs">
+<figure><img src="procedure/08_fft_clean.png" alt=""><figcaption>log |FFT| of the clean spiral, with red circles at the expected harmonics.</figcaption></figure>
+<figure><img src="procedure/06_fft.png" alt=""><figcaption>log |FFT| of the weighted noisy example: noise adds a flat floor, the rings still stand out near the center.</figcaption></figure>
+</div>
+<figure><img class="wide" src="procedure/09_profile_clean.png" alt=""><figcaption>Clean spiral. White: radial profile P; peaks at the harmonics (red dashed; the outer dashed pair also marks the search range ×0.5–2). Red: the final-stage score S(&rho;). Purple bar: the estimate on a 0–64 px scale.</figcaption></figure>
+
+<h2>4. Harmonic-sum score</h2>
+<p>For each candidate first-peak radius &rho;, measure how far the profile at
+each multiple stands above the points halfway to its neighbours:</p>
+<p class="eq">S(&rho;) = (1/&radic;K) &sum;<sub>k=1..K</sub> [ P&#771;(k&rho;) &minus; &frac12;P&#771;((k&minus;&frac12;)&rho;) &minus; &frac12;P&#771;((k+&frac12;)&rho;) ]</p>
+<ul>
+<li><b>Only the true &rho;<sub>1</sub> scores high.</b> There every term is a
+peak minus two troughs. At &rho;<sub>1</sub>/2 every other term samples a trough;
+at 2&rho;<sub>1</sub> the halfway points land on peaks.</li>
+<li><b>Subtracting the halfway points</b> removes the slowly falling
+background.</li>
+<li><b>Dividing by &radic;K</b> (K = number of multiples used): an average let a
+multiple of &rho;<sub>1</sub> hitting one or two strong harmonics win; a plain sum
+let tiny &rho; win by piling up ripples.</li>
+<li>Candidates in steps of 0.05; the best sample is refined by a parabola
+through it and its neighbours, &rho;* = &rho;<sub>i</sub> + 0.05&middot;&frac12;(S<sub>i&minus;1</sub>&minus;S<sub>i+1</sub>)/(S<sub>i&minus;1</sub>&minus;2S<sub>i</sub>+S<sub>i+1</sub>),
+and the spacing is <i>s</i>* = 512&nbsp;/&nbsp;&rho;*.</li>
+</ul>
+<p>This single sharp stage (the app with "Advanced peak search" off) gets a
+perfect spiral within ~0.06% (0.2&ndash;0.5% over many shapes), but fails badly
+once the local spacing varies: rings at several spacings smear each harmonic
+into a band, and the score jumps to a wrong peak (errors ~70%).</p>
+
+<h2>5. Advanced peak search</h2>
+<ol>
+<li><b>Restricted range.</b> Search only &rho; for spacings within
+&times;0.5&ndash;2 of <i>s</i><sub>0</sub>. This alone removes the catastrophic
+wrong-peak failures. (Narrower windows, &times;0.8&ndash;1.25 or
+&times;0.9&ndash;1.1, only cap the error by construction: the answer then sits
+on the window's edge and reflects the assumption more than the data.)</li>
+<li><b>Broadened bands on a log scale.</b> If the spacing varies within
+&plusmn;v, harmonic k becomes a band of relative width &plusmn;v around k&rho;<sub>1</sub>,
+so higher harmonics blur more. On a log-radius axis every band has the same
+width, so one Gaussian smoothing (&sigma; = v/2 in log &rho;) broadens all harmonics
+consistently: the score compares bands instead of points.</li>
+<li><b>Only well-separated harmonics.</b> Use harmonics k &le; 1/(4v); beyond that
+the bands of neighbouring harmonics overlap and the troughs vanish.</li>
+<li><b>Coarse to fine.</b> Start at v = max(0.3, 3&middot;v<sub>expected</sub>), find the
+best &rho;, then halve v and search only within &plusmn;v of the previous answer.</li>
+<li><b>Stop at the expected variation</b> (default 10%) instead of refining to
+sharp peaks: when the spacing really varies there is no single sharp peak, and
+each sharper stage locks onto one region's spacing instead of the average.
+(Example, spacing 20 with offsets &plusmn;0.25: 0.9% error at v = 0.3, 9.9% at v = 0.)
+At v<sub>expected</sub> = 0 it refines all the way, for a perfect spiral.</li>
+<li><b>Edge warning</b> if the answer lies on the edge of the &times;0.5&ndash;2 range.
+It rarely fires: failures usually land on a strong local peak inside the range.</li>
+</ol>
+<figure><img class="wide" src="procedure/07_profile.png" alt=""><figcaption>Running example (offsets, noise 0.6, 1/&radic;r): coarse to fine 10.12 → 9.92 → 9.87 px (stages v = 0.3, 0.15, 0.1); the true average spacing is 10. Dashed lines: the search range.</figcaption></figure>
+<table>
+<tr><th>Spiral, offsets (local variation)</th><th>Single sharp stage</th><th>Advanced, 10%</th></tr>
+<tr><td>Spacing 10, none</td><td class="n">0.06 / 0.1</td><td class="n">0.45 / 0.5</td></tr>
+<tr><td>Spacing 10, &plusmn;0.25 (&asymp;&plusmn;17%)</td><td class="n">1.5 / 5.2</td><td class="n">0.75 / 1.6</td></tr>
+<tr><td>Spacing 10, &plusmn;0.5 (&asymp;&plusmn;33%)</td><td class="n">13 / 43</td><td class="n">2.0 / 14</td></tr>
+<tr><td>Spacing 20, &plusmn;0.1 (&asymp;&plusmn;13%)</td><td class="n">2.1 / 70</td><td class="n">0.55 / 1.1</td></tr>
+<tr><td>Spacing 20, &plusmn;0.25 (&asymp;&plusmn;33%)</td><td class="n">70 / 71</td><td class="n">2.5 / 12</td></tr>
+<tr><td>Spacing 20, &plusmn;0.5 (&asymp;&plusmn;67%)</td><td class="n">70 / 70</td><td class="n">16 / 50</td></tr>
+</table>
+<p class="muted">Median / max % error over 10 random offset sets, without turn weighting.</p>
+
+<h2>6. Parameters</h2>
+<table>
+<tr><th>Step</th><th>Parameter</th><th>Default</th><th>Explored / notes</th></tr>
+<tr><td>1</td><td>Pre-blur</td><td>&sigma; 1 px</td><td>&sigma; &asymp; 2 helped under noise before the tangential blur existed</td></tr>
+<tr><td>1</td><td>Orientation bins</td><td>64 over 180&deg;</td><td></td></tr>
+<tr><td>1</td><td>Lines per orientation</td><td>150</td><td>fixed top 5&ndash;50% of all pixels tried first</td></tr>
+<tr><td>1</td><td>Strength floor</td><td>70th percentile</td><td></td></tr>
+<tr><td>1</td><td>RANSAC</td><td>600 &times; 1500, then 150 &times; 1000; &epsilon; = 2 px; partner &prop; sin&sup2;</td><td>uniform pairs with a 30&deg; cutoff tried first; 600 &times; 3000 in every round made RANSAC 18&times; slower</td></tr>
+<tr><td>1</td><td>Tangential blur</td><td>&sigma; 3 px</td><td>0 (off), 2, 3, 5</td></tr>
+<tr><td>1</td><td>Rounds / stop</td><td>&le; 3, &lt; 1 px</td><td>5 rounds and 0.05 px: no better under noise, the estimate jitters ~1 px</td></tr>
+<tr><td>2</td><td>Turn weighting</td><td>1/&radic;r, capped at 2<i>s</i><sub>0</sub></td><td>none, 1/&radic;r, 1/r</td></tr>
+<tr><td>3</td><td>Mean subtraction, Hann window</td><td>on</td><td></td></tr>
+<tr><td>3</td><td>Profile smoothing</td><td>1.5 bins</td><td>0, 1.5, 3</td></tr>
+<tr><td>4</td><td>Candidate step</td><td>0.05 bins</td><td>+ parabolic refinement</td></tr>
+<tr><td>5</td><td>Search range</td><td>&times;0.5&ndash;2 of <i>s</i><sub>0</sub></td><td>none, &times;0.8&ndash;1.25, &times;0.9&ndash;1.1</td></tr>
+<tr><td>5</td><td>Expected variation</td><td>10%</td><td>0, 5, 10, 15%; starting v 0.1&ndash;0.4</td></tr>
+</table>
+
+<h2>7. How well it works, and limits</h2>
+<table>
+<tr><th>Condition (full pipeline)</th><th>Spacing error, median / max</th></tr>
+<tr><td>Perfect spiral, any noise up to 1.5 (radius 50&ndash;200 or 30&ndash;100, spacing 10 or 20)</td><td class="n">0.1&ndash;0.7% / &le; 2%</td></tr>
+<tr><td>Local spacing varying up to &asymp;&plusmn;15%</td><td class="n">0.5&ndash;0.8% / &le; 1.8%</td></tr>
+<tr><td>Local spacing varying &asymp;&plusmn;30%</td><td class="n">2.2&ndash;2.4% / 3.7&ndash;8%</td></tr>
+<tr><td>Local spacing varying &asymp;&plusmn;67%</td><td class="n">~16% / 35% (unreliable)</td></tr>
+</table>
+<ul>
+<li><b>Noise is not the limit.</b> White noise spreads evenly over all frequencies
+and the radial profile averages thousands of FFT pixels per radius, so the
+spacing estimate stays within ~1&ndash;2% even at noise 1.5. Noise mainly
+affects the center (step 1), which only needs ~1 px.</li>
+<li><b>Varying spacing is the limit.</b> The transform sees a mixture of local
+spacings; beyond about &plusmn;30% there is no single peak, and even the target
+(the average spacing) is ill defined: the Fourier transform's own
+pixel-weighted mean spacing then differs from the &theta;-average.</li>
+<li><b>Non-circular drawings</b> (aspect) make the rings elliptical, smearing the
+peaks and confusing the center.</li>
+</ul>
+
+<h3>Tried and not kept</h3>
+<ul>
+<li>Refining to sharp peaks (v&nbsp;=&nbsp;0) when the spacing varies (locks onto one region).</li>
+<li>Narrow search windows (answer sits on the edge).</li>
+<li>1/r turn weighting (over-weights short inner turns).</li>
+<li>Tangential blur on the Fourier input: differences within &plusmn;0.2 percentage
+points either way; the transform is already noise-tolerant.</li>
+<li>Center from the centroid of bright pixels (biased by uneven brightness over angles).</li>
+<li>Keeping a fixed top percentage of gradient pixels (count tied to image size; noise fills it).</li>
+<li>Hough voting on a grid (replaced by RANSAC: grid-free and sub-pixel, similar accuracy).</li>
+</ul>
+<h3>Not yet tried</h3>
+<ul>
+<li>Estimating the spacing separately in radius bands or wedges and combining
+them robustly; this would also measure how much the spacing varies, which
+could set the expected variation automatically.</li>
+<li>Correcting for a non-circular drawing (fitting an ellipse to the rings).</li>
+</ul>
+
+<p><a href="explain.html">Explain controls</a> &middot; <a href="spacing.html">Back to the app</a></p>
+</body>
+</html>

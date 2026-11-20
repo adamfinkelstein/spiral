@@ -14,8 +14,13 @@ work from `file://`. Deployed to GitHub Pages on every push to `main`.
 - `spacing.html` / `spacing.js` — ring-spacing experiment: spiral (or rings)
   on the left, log-magnitude 2D FFT on the right, radial profile and
   harmonic-sum spacing estimate below.
-- `explain.html` — help page for `spacing.html` ("Explain" button). Keep it
-  in sync when its controls change.
+- `explain.html` — help page for `spacing.html` controls ("Explain"
+  button). Keep it in sync when its controls change.
+- `procedure.html` + `procedure/*.png` — the spacing (and center) method
+  step by step: inputs, each step with parameters, what was tried, result
+  tables, limits ("Procedure" button; linked from explain.html and
+  index.html). Figures were rendered from the app in headless Chromium
+  (canvas data → PNG, 384 px). Update it when the method or defaults change.
 - `center.html` / `center.js` — center/phase experiment (spiral only, no
   rings mode: `params()` sets `spiral: true` for render.js). One left column:
   true spiral (drag to move center; chunks highlighted) → connected
@@ -128,6 +133,11 @@ Robustness (8 random offset sets, uniform in ±amp at each knot):
   worst cases most (spacing 20 ±0.25: max 11.6 → 4.0, with noise 10.9 → 3.7;
   spacing 10 ±0.5: 14.6 → 8.2, with noise 24 → 12.8). Spacing 20 ±0.5 stays
   ~16% / 35% for all. Default: 1/√r (the center costs ~0.2–0.4 s per frame).
+- Tried and rejected: tangential blur (σ 3, along circles about the
+  gradient-line center) on the FFT input. Test (advanced 10%, 1/√r, radii
+  50–200 and 30–100, spacing 10/20, noise 0–1.5, 6 patterns): differences
+  within ±0.2 percentage points either way, slightly worse with no noise.
+  The FFT is already noise-tolerant (errors ≤ ~2% even at noise 1.5).
 - Coarse to fine (`vMin`, "Expected spacing variation" slider): stages smooth the profile in log radius (σ = v/2), use harmonics
   k ≤ 1/(4v), halve v each stage from max(0.3, 3·vMin) and search within ±v
   of the previous answer; the final stage is at vMin (0 → the sharp score).
