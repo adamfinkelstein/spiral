@@ -16,7 +16,7 @@ const HANDLE_R = 7;
 const MAX_CHUNKS = 30; // must match the nChunks slider's max
 const MAX_ROWS = 20;   // rows shown in the estimates table
 
-const ids = ['spacing', 'rStart', 'rEnd', 'phase', 'aspect', 'off20', 'off40', 'off60', 'off80', 'lineWidth', 'softness', 'blur', 'smooth', 'nChunks', 'maxExtent', 'highlight', 'showCenter', 'spacingErr', 'noise', 'denoise', 'tangBlur', 'thresh', 'threshLo', 'minArea', 'minExtent', 'refine', 'shared', 'robust', 'cutoff', 'minInlier', 'combine', 'tau', 'chunkModel', 'spTol', 'showEst', 'showEll'];
+const ids = ['spacing', 'rStart', 'rEnd', 'phase', 'aspect', 'off20', 'off40', 'off60', 'off80', 'lineWidth', 'softness', 'blur', 'smooth', 'nChunks', 'maxExtent', 'highlight', 'showCenter', 'spacingErr', 'noise', 'denoise', 'tangBlur', 'thresh', 'minArea', 'minExtent', 'refine', 'shared', 'robust', 'cutoff', 'minInlier', 'combine', 'tau', 'chunkModel', 'spTol', 'showEst', 'showEll'];
 const el = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
 
 function params() {
@@ -41,7 +41,6 @@ function params() {
     denoise: +el.denoise.value,
     tangBlur: +el.tangBlur.value,
     thresh: +el.thresh.value,
-    threshLo: +el.threshLo.value,
     shared: el.shared.checked,
     combine: el.combine.checked,
     tau: +el.tau.value,
@@ -259,7 +258,7 @@ function render() {
     // 0 to the current spacing (the browser clamps the value if needed).
     el.lineWidth.max = el.spacing.value;
     const p = params();
-    for (const id of ['spacing', 'rStart', 'rEnd', 'phase', 'aspect', 'off20', 'off40', 'off60', 'off80', 'lineWidth', 'softness', 'blur', 'nChunks', 'maxExtent', 'spacingErr', 'noise', 'denoise', 'tangBlur', 'thresh', 'threshLo', 'minArea', 'minExtent', 'cutoff', 'minInlier', 'tau', 'spTol']) {
+    for (const id of ['spacing', 'rStart', 'rEnd', 'phase', 'aspect', 'off20', 'off40', 'off60', 'off80', 'lineWidth', 'softness', 'blur', 'nChunks', 'maxExtent', 'spacingErr', 'noise', 'denoise', 'tangBlur', 'thresh', 'minArea', 'minExtent', 'cutoff', 'minInlier', 'tau', 'spTol']) {
       el[id].nextElementSibling.textContent = el[id].value;
     }
     document.getElementById('centerOut').textContent = `(${center.x.toFixed(1)}, ${center.y.toFixed(1)})`;
@@ -301,7 +300,7 @@ function render() {
     document.getElementById('gcOut').textContent = gc
       ? `Gradient-line center (green +): ${Math.hypot(gc.c.x - center.x, gc.c.y - center.y).toFixed(2)} px from the true center; the image is blurred along circles about it.`
       : '';
-    const { label, comps } = labelComponents(noisy, p.thresh, p.threshLo, p.minArea);
+    const { label, comps } = labelComponents(noisy, p.thresh, p.thresh, p.minArea) // single threshold (high = low);
     // Fits keep only chunks whose estimated angular extent reaches Min extent
     // (short chunks only fix the center's direction, not its distance) and
     // enough of whose pixels lie on the fitted spiral.

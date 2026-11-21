@@ -170,10 +170,11 @@ Robustness (8 random offset sets, uniform in ±amp at each knot):
 2. **Noise**: a fixed Gaussian field per seed × Noise sigma, added to the
    chunk image; then **Denoise blur** (Gaussian, σ 1). Weights are clamped
    to 0..1.
-3. **Components** (`labelComponents`): hysteresis thresholding as in Canny
-   (seeds > high 0.5, extended through 8-connected pixels > low 0.4), drop
+3. **Components** (`labelComponents`): a single threshold (0.45) after the
+   tangential blur, 8-connected (the function also supports hysteresis,
+   hi > lo, used before the blur existed: high 0.5 / low 0.4); drop
    components below Min component px, number them by size (#1 = largest),
-   grow 2 px into soft-edge pixels (only those ≤ low threshold).
+   grow 2 px into soft-edge pixels (only those ≤ the threshold).
 4. **Per-chunk fit** (`fitChunk`): weighted Kåsa circle → geometric circle →
    circle-center correction (below) → IRLS: each round assigns every pixel to
    its nearest arm (pixels of one component may sit on different arms) and
@@ -233,7 +234,11 @@ Robustness (8 random offset sets, uniform in ±amp at each knot):
   error <20° ~50 px, 20–45° ~3 px, 45–90° ~0.5 px, >90° ~0.1 px). The clean
   ~0.01 px results rely on anti-aliased edges; binary pixels give ~2 px.
 - Denoise blur is the big win under noise (σ 0.6: median 206 px → 0.9).
-  Low threshold 0.4 beats 0.3 (blurred noise percolates) and 0.5. Tukey loss
+  (Before the tangential blur) hysteresis low 0.4 beat 0.3 (blurred noise
+  percolates) and 0.5. With the tangential blur, a single threshold 0.4 gave
+  the same results as hysteresis 0.5/0.4 at noise 0.3/0.6/1.0, and 0.4–0.5 is
+  a safe range (0.3: junk merges at noise 1; 0.6: arcs break) — hence the
+  single "Threshold", default 0.45. Tukey loss
   helps only slightly; cutoffs ~0.25 × spacing reject good fits.
 - Per-chunk failures that remain have the same inlier fraction and loss as
   good fits (they slide along the flat valley), so per-chunk outlier tests

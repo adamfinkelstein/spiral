@@ -328,7 +328,7 @@ could set the expected variation automatically.</li>
 <b>In one paragraph.</b> Only pieces ("chunks") of the spiral are visible,
 in noise; the ring spacing is known (from Part 1) and so is the winding. Find
 a rough center from the image's gradient lines (Part 1, step 1) and blur along
-circles around it. Threshold with hysteresis into connected components. Fit
+circles around it. Threshold into connected components. Fit
 each component: a circle (corrected for the spiral's sideways offset), then
 the spiral's center and phase by robust least squares, each pixel on its
 nearest turn. Start every fit from the median of the corrected circle
@@ -379,9 +379,15 @@ Earlier, a plain denoising blur alone took the median error at noise 0.6 from
 
 <h2>P2.2 Connected components</h2>
 <ul>
-<li><b>Hysteresis thresholding</b> as in Canny: components start at pixels above
-0.5 and extend through 8-connected pixels above 0.4. (0.3 let blurred noise
-percolate; 0.5 broke more chunks.)</li>
+<li><b>Single threshold</b> 0.45 into 8-connected components. Before the
+tangential blur, hysteresis (as in Canny: start above 0.5, extend above 0.4)
+was needed and hard to tune. With the blur, a single 0.4 gave the same results
+as hysteresis 0.5/0.4 at every noise level, and 0.4&ndash;0.5 is a comfortable
+range: at noise 1.0, 0.3 let blurred noise merge into junk (761 components,
+combined center up to 69 px off) and 0.6 broke the arcs again (145
+components); 0.4/0.5 gave 128/96 components and ~0.08 px combined. The
+default 0.45: 68/68/96 components, start 2 0.03/0.06/0.26 px and combined
+0.04/0.07/0.08 px at noise 0.3/0.6/1.0.</li>
 <li>Drop components below 20 px; number the rest by size (#1 = largest).</li>
 <li>Grow each by 2 px into its soft edges, only into pixels at or below the
 low threshold. (Growing into above-threshold pixels picked up dropped noise
@@ -478,7 +484,7 @@ fit: 99% &le; 0.012, so &tau; = 0.04 rejects almost none.</p>
 <tr><th>Step</th><th>Parameter</th><th>Default</th><th>Explored / notes</th></tr>
 <tr><td>P2.1</td><td>Denoise blur</td><td>&sigma; 1 px</td><td>0&ndash;3</td></tr>
 <tr><td>P2.1</td><td>Tangential blur</td><td>&sigma; 3 px</td><td>0, 3, 5</td></tr>
-<tr><td>P2.2</td><td>High / low threshold</td><td>0.5 / 0.4</td><td>low 0.3, 0.4, 0.5</td></tr>
+<tr><td>P2.2</td><td>Threshold</td><td>0.45</td><td>single 0.3&ndash;0.6; hysteresis 0.5/0.3, 0.5/0.4 (no better after the tangential blur)</td></tr>
 <tr><td>P2.2</td><td>Min component</td><td>20 px</td><td></td></tr>
 <tr><td>P2.3</td><td>Tukey cutoff</td><td>0.5 &times; spacing</td><td>0.25, 0.35, 0.5</td></tr>
 <tr><td>P2.3</td><td>Keep: min extent / inlier fraction</td><td>30&deg; / 0.65</td><td>random pixels score ~0.5 at this cutoff</td></tr>
@@ -533,7 +539,7 @@ bounded by ~&frac12; spacing to avoid slipping a turn).</li>
 <ul>
 <li>A grid search over centers as the starting point (replaced by the shared median starts).</li>
 <li>Fitting binary pixels (several times less precise than grey levels).</li>
-<li>Low threshold 0.3 (blurred noise percolates); growing components into above-threshold pixels.</li>
+<li>Hysteresis thresholding (unnecessary after the tangential blur); thresholds as low as 0.3 (blurred noise percolates); growing components into above-threshold pixels.</li>
 <li>Tight Tukey cutoffs (&le; 0.25 &times; spacing); per-chunk outlier tests on inlier fraction or loss (can't see a fit that slid along its valley).</li>
 <li>Model B as implemented (above).</li>
 </ul>

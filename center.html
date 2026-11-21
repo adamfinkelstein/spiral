@@ -134,11 +134,8 @@
   <label for="tangBlur">Tangential blur σ (px)</label>
   <input id="tangBlur" type="range" min="0" max="8" step="0.5" value="3"><output for="tangBlur"></output>
 
-  <label for="thresh">High threshold</label>
-  <input id="thresh" type="range" min="0.05" max="0.95" step="0.05" value="0.5"><output for="thresh"></output>
-
-  <label for="threshLo">Low threshold</label>
-  <input id="threshLo" type="range" min="0.05" max="0.95" step="0.05" value="0.4"><output for="threshLo"></output>
+  <label for="thresh">Threshold</label>
+  <input id="thresh" type="range" min="0.05" max="0.95" step="0.05" value="0.45"><output for="thresh"></output>
 
   <label for="minArea">Min component (px)</label>
   <input id="minArea" type="range" min="1" max="200" step="1" value="20"><output for="minArea"></output>
@@ -190,9 +187,10 @@ the denoising blur, blur the image along circles around that center. That
 averages noise along the arcs without smearing across them, before
 thresholding.</p>
 <p class="hint">Estimation: blur the noisy chunk image a little (<b>Denoise blur</b>),
-then hysteresis thresholding as in Canny edge detection: components start at
-pixels above the <b>High threshold</b> and extend through 8-connected pixels above
-the <b>Low threshold</b>. Small components are dropped, and each is grown by 2 px
+and along the rings (<b>Tangential blur</b>), then threshold it (<b>Threshold</b>)
+into 8-connected components. (Hysteresis thresholding was used before the
+tangential blur; with it, a single threshold does as well.) Small components
+are dropped, and each is grown by 2 px
 into its soft edges. Each is then fit using grey levels as weights: a circle fit
 first (Kåsa, then geometric, then its center shifted to correct for the spiral's
 ≈ b = spacing/2π sideways offset), then center and phase of a spiral with the known

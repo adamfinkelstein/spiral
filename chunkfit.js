@@ -22,7 +22,9 @@ function mulberry32(a) {
 
 // ---------- Connected components ----------
 
-// Hysteresis thresholding (as in Canny): 8-connected components seeded by
+// Thresholding into components (the center page passes hi = lo: a single
+// threshold, enough after the tangential blur). With hi > lo it is
+// hysteresis thresholding (as in Canny): 8-connected components seeded by
 // pixels with img > hi and extended through pixels with img > lo; components
 // with fewer than minArea such pixels are dropped. Each kept component is then
 // grown by up to `grow` px (8-neighbour BFS) into unlabelled pixels with
