@@ -6,7 +6,7 @@
 
 const $ = id => document.getElementById(id);
 const ctx2 = id => $(id).getContext('2d');
-const cardCv = $('card'), cardCtx = ctx2('card'), rawCtx = ctx2('raw');
+const cardCv = $('card'), cardCtx = ctx2('card');
 const fftCtx = ctx2('fft'), profCv = $('prof'), profCtx = ctx2('prof'), cohCtx = ctx2('coh'), gradCtx = ctx2('grad');
 const wrapCv = $('wrap'), wrapCtx = ctx2('wrap'), audioCv = $('audio'), audioCtx = ctx2('audio');
 const detCv = $('detail'), detCtx = ctx2('detail');
@@ -29,28 +29,16 @@ const PARAM_INFO = [
   ['centerJitter', 'Card center vs. frame center (σ)', 'px', 'assumed'],
   ['annotErr', 'Hand-mark error (σ per axis)', 'px', 'assumed'],
   ['annotRadiusErr', 'Hand-marked radii error (σ)', '×', 'assumed'],
-  ['groove', 'Groove amplitude (cosine)', '', 'unit; profile near-sinusoidal, groove ≈ 47% of spacing (image 21)'],
-  ['edgeFade', 'Groove fade at the ends', 'px', 'assumed'],
-  ['grain', 'Fine grain (rms)', '', 'measured: 2.6 vs. groove 5.0 rms'],
+  ['width', 'Groove width at nominal depth', '× spacing', 'assumed (the mask in image 22 covers ~47%); round stylus (parabola)'],
+  ['edgeFade', 'Depth fade at the ends', 'px', 'assumed'],
+  ['audio', 'Sound: depth modulation (rms)', '× depth', 'assumed; hill-and-dale; at −1 the stylus leaves the card'],
+  ['audioWave', 'Sound wavelengths along the groove', 'px', 'assumed'],
+  ['grain', 'Grain (rms)', '× groove rms', 'measured: 2.6 vs. groove 5.0 rms (image 21)'],
   ['grainCell', 'Grain cell size', 'px', 'measured ACF 0.5 at ~3–5 px'],
-  ['slow', 'Slow depth drift (rms)', '', 'measured: 10.9 vs. groove 5.0 rms'],
-  ['slowCell', 'Slow drift scale', 'px', 'measured correlation ~90 px'],
   ['drift', 'Groove drift from the spiral (rms)', 'px', 'phase between turns varies ±2 px (image 21)'],
   ['driftTurns', 'Drift periods', 'turns', 'assumed'],
-  ['wobble', 'Lateral wobble (rms)', 'px', 'assumed; small and smooth (the measured ~1.3 px along the arc includes noise)'],
+  ['wobble', 'Lateral wobble (rms)', 'px', 'assumed; small and smooth'],
   ['wobbleWave', 'Wobble wavelengths', 'px', 'assumed'],
-  ['audio', 'Audio: depth modulation (rms)', '× groove', 'assumed; hill-and-dale (vertical), at the groove bottom'],
-  ['audioWave', 'Audio wavelengths along the groove', 'px', 'assumed'],
-  ['aspect', 'Stretch (aspect − 1, ±)', '', 'assumed (scanner)'],
-  ['warp', 'Smooth warp (rms)', 'px', 'assumed (card not flat)'],
-  ['warpScale', 'Warp wavelengths', 'px', 'assumed'],
-  ['banding', 'Scanner banding', '', 'assumed'],
-  ['bandPeriod', 'Banding period', 'px', 'assumed'],
-  ['dust', 'Dust specks', 'count', 'assumed'],
-  ['dustAmp', 'Dust depth', '', 'assumed'],
-  ['scratches', 'Scratches', 'count', 'assumed'],
-  ['scratchAmp', 'Scratch depth', '', 'assumed'],
-  ['damage', 'Damaged sector', '', 'assumed: width rad, groove ×, grain ×'],
 ];
 
 function showParams(P) {
@@ -68,7 +56,7 @@ class Stale extends Error {}
 const guard = id => { if (id !== runId) throw new Stale(); };
 const num = id => +$(id).value;
 const lowOpts = () => ({
-  hpSigma: num('hpSigma'), clip: num('clip'), weightEx: num('weightEx'), window: num('window'),
+  weightEx: num('weightEx'), window: num('window'),
   search: num('search'), gridStep: num('gridStep'), gradient: $('gradient').checked, gradTang: num('gradTang'), gradEps: num('gradEps'),
 });
 
@@ -82,7 +70,7 @@ async function runFrom(stage) {
       img = low = strip = null; times = {}; showParams(card.P); clearSteps();
       const im = new Float32Array(N * N);
       await tm('render', () => renderLowRes(card, im, 2, f => { guard(id); status(`Rendering the low-res card… ${Math.round(100 * f)}%`); }));
-      img = im; drawRaw();
+      img = im; drawCard();
     }
     if (at <= 1 || !low) {
       low = strip = null;
@@ -134,14 +122,14 @@ function track() {
   const ds = []; for (let i = 0; i < n; i += 7) ds.push(D[i]);
   const md = median(ds), wrong = new Uint8Array(n);
   for (let i = 0; i < n; i++) wrong[i] = Math.round((D[i] - md) / CARD_TAU) !== 0 ? 1 : 0;
-  const audioTrue = Float64Array.from(D, (d, i) => card.audioAt(d + TH[i])); // the audio of the groove actually traced
+  const audioTrue = Float64Array.from(D, (d, i) => Math.max(-1, card.audioAt(d + TH[i]))); // the sound of the groove actually traced (−1: not cut)
   Object.assign(strip, { o: L.o, ref: L.ref, amp: u.amp, tOff, wrong, audioTrue, audio: null });
   if (!spot) { const i = Math.floor(n / 2), [x, y] = stripPoint(g, TH[i], L.o[i]); spot = { x, y }; }
 }
 
 async function readout(id) {
   const { g, S, TH, o, step } = strip;
-  const rd = await readoutPass(card, g, TH, o, S, f => { guard(id); status(`Audio readout… ${Math.round(100 * f)}%`); }, num('hb'), num('audioSmooth') * 3 / step, 300 / step);
+  const rd = await readoutPass(card, g, TH, o, S, f => { guard(id); status(`Sound readout… ${Math.round(100 * f)}%`); }, num('hb'), num('audioSmooth') * 3 / step, 300 / step);
   strip.audio = rd.est;
 }
 
@@ -168,7 +156,7 @@ function showResults() {
   rows.push(`<tr><td><span class="k" style="background:#4cf"></span>Low-res coherence fit</td><td>${f(cerr(low.geom))}</td><td>${sp(CARD_TAU * low.geom.b)}</td><td>${f(spiralErr(() => 0))}</td></tr>`);
   const R = strip.R.geom;
   rows.push(`<tr><td><span class="k" style="background:#fd3"></span>Full-res refit</td><td>${f(cerr(R))}</td><td>${sp(CARD_TAU * R.b)}</td><td>${f(spiralErr(i => strip.R.model[i]))}</td></tr>`);
-  rows.push(`<tr><td colspan="4" class="src">Coherence ${f(low.coherence)} (1 = perfect cosine groove). True spacing ${f(card.S, 3)} px. Spiral vs. grooves: RMS radial distance (px, mod S) from the fitted spiral to the true grooves over the traced turns: what is left for the trace to follow (drift, audio, warp).</td></tr>`);
+  rows.push(`<tr><td colspan="4" class="src">Coherence ${f(low.coherence)} (1 = a pure cosine groove). True spacing ${f(card.S, 3)} px. Spiral vs. grooves: RMS radial distance (px, mod S) from the fitted spiral to the true grooves over the traced turns: what is left for the trace to follow (drift, wobble).</td></tr>`);
   $('est').innerHTML = rows.join('');
 
   const { tOff, wrong, o, TH } = strip, n = TH.length;
@@ -184,8 +172,9 @@ function showResults() {
     `<tr><td>RMS distance to the true groove</td><td>${f(Math.sqrt(se / n))} px</td></tr>`,
     `<tr><td>Columns off by more than S/4</td><td>${f((100 * big) / n)}%</td></tr>`,
     `<tr><td>Columns on the wrong groove</td><td>${f((100 * nw) / n)}%</td></tr>`,
-    `<tr><td>Audio (depth, × groove amplitude): true RMS</td><td>${f(Math.sqrt(sxx / n), 3)}</td></tr>`,
-    `<tr><td>Audio readout: error RMS / correlation</td><td>${f(Math.sqrt(sd / n), 3)} / ${f(sxy / Math.sqrt(sxx * syy), 3)}</td></tr>`,
+    `<tr><td>Sound (relative depth): true RMS</td><td>${f(Math.sqrt(sxx / n), 3)}</td></tr>`,
+    `<tr><td>Groove not cut (sound ≤ −1)</td><td>${f((100 * audioTrue.reduce((a, v) => a + (v <= -1), 0)) / n)}%</td></tr>`,
+    `<tr><td>Sound readout: error RMS / correlation</td><td>${f(Math.sqrt(sd / n), 3)} / ${f(sxy / Math.sqrt(sxx * syy), 3)}</td></tr>`,
   ].join('');
 }
 
@@ -222,12 +211,9 @@ function marks(c, which = { ann: true, low: true, refit: true, spot: true }) {
   if (which.spot && spot) { c.strokeStyle = '#f44'; c.lineWidth = 2; c.strokeRect((spot.x - DET / 2) / k, (spot.y - DET / 2) / k, DET / k, DET / k); }
 }
 
-function drawCard() { // the raw low-res depth until the low-res stage has run, then its local-contrast image
+function drawCard() { // the low-res card until the low-res stage has run, then the masked input it uses
   grey(cardCtx, low ? low.hp : img);
   marks(cardCtx);
-}
-function drawRaw() {
-  grey(rawCtx, img); marks(rawCtx, { ann: true, spot: true });
   const k = K();
   $('rawOut').textContent = `Scale ×${k.toFixed(2)}: the nominal ${card.P.spacing} px spacing is ${(card.P.spacing / k).toFixed(2)} low-res px; the annulus r ≈ ${Math.round(card.P.rIn / k)}–${Math.round(card.P.rOut / k)} px. Hand mark ${Math.hypot(card.ann.x - card.C.x, card.ann.y - card.C.y).toFixed(1)} px from the true center.`;
 }
@@ -236,10 +222,9 @@ function blank(ctx, msg) {
   const c = ctx.canvas; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, c.width, c.height);
   if (msg) { ctx.fillStyle = '#777'; ctx.font = `${Math.round(c.width / 32)}px system-ui`; ctx.fillText(msg, c.width / 20, c.height / 2); }
 }
-function clearSteps() { for (const c of [rawCtx, fftCtx, profCtx, cohCtx, gradCtx, wrapCtx, stripCtx, plotCtx, turnCtx, audioCtx, detCtx]) blank(c); }
+function clearSteps() { for (const c of [cardCtx, fftCtx, profCtx, cohCtx, gradCtx, wrapCtx, stripCtx, plotCtx, turnCtx, audioCtx, detCtx]) blank(c); }
 
 function drawLowSteps() {
-  drawRaw();
   const k = K();
   // c. log |FFT|, central half (DC at N/2), 1 bin per canvas px
   {
@@ -283,7 +268,7 @@ function drawLowSteps() {
     const cross = ([x, y], col) => { c.strokeStyle = col; c.lineWidth = 2; c.beginPath(); c.moveTo(x - 10, y); c.lineTo(x + 10, y); c.moveTo(x, y - 10); c.lineTo(x, y + 10); c.stroke(); };
     cross(P(card.ann.x, card.ann.y), '#fff'); cross(P(card.C.x, card.C.y), '#f44');
     const [gx, gy] = P(low.geom.x, low.geom.y); c.strokeStyle = '#4cf'; c.lineWidth = 2; c.beginPath(); c.arc(gx, gy, 9, 0, CARD_TAU); c.stroke();
-    $("cohOut").textContent = `Grid step ${(h * k).toFixed(1)} px, ${n}² candidates. Answer ${Math.hypot(low.geom.x - card.C.x, low.geom.y - card.C.y).toFixed(2)} px from the true center; coherence ${low.coherence.toFixed(2)} (1 = a perfect cosine groove)`;
+    $("cohOut").textContent = `Grid step ${(h * k).toFixed(1)} px, ${n}² candidates. Answer ${Math.hypot(low.geom.x - card.C.x, low.geom.y - card.C.y).toFixed(2)} px from the true center; coherence ${low.coherence.toFixed(2)} (1 = a pure cosine groove)`;
   }
   drawGrad();
 }
@@ -297,7 +282,7 @@ function drawGrad() {
     if (!!inl[i] !== (pass === 1)) continue;
     gradCtx.fillStyle = inl[i] ? 'rgba(60,255,100,1)' : 'rgba(255,60,60,0.55)'; gradCtx.fillRect(X[i] - (inl[i] ? 3 : 1.5), Y[i] - (inl[i] ? 3 : 1.5), inl[i] ? 6 : 3, inl[i] ? 6 : 3);
   }
-  $('gradOut').textContent = `${low.gc.nIn} of ${X.length} lines agree; answer ${Math.hypot(low.gc.x - card.C.x, low.gc.y - card.C.y).toFixed(0)} px from the true center (hand mark ${Math.hypot(card.ann.x - card.C.x, card.ann.y - card.C.y).toFixed(0)} px). The lines are measured 300–500 px from the center on a ~5.4 px pattern, so tiny angle errors miss it; dust specks (gradients all pointing at their own centers) compete.`;
+  $('gradOut').textContent = `${low.gc.nIn} of ${X.length} lines agree; answer ${Math.hypot(low.gc.x - card.C.x, low.gc.y - card.C.y).toFixed(0)} px from the true center (hand mark ${Math.hypot(card.ann.x - card.C.x, card.ann.y - card.C.y).toFixed(0)} px). The lines are measured 300–500 px from the center on a ~5.4 px pattern, so tiny angle errors miss it. `;
   marks(gradCtx, { gc: true, spot: true });
 }
 
@@ -425,10 +410,10 @@ function drawAudio() {
   c.fillStyle = '#888'; c.fillText(`${((i1 - i0) * strip.step).toLocaleString()} px of groove`, W - 110, H - 4);
 }
 
-function drawAll() { DET = num('detSize'); drawCard(); drawRaw(); drawGrad(); drawDetail(); drawWrap(); drawStrip(); drawPlot(); drawTurns(); drawAudio(); }
+function drawAll() { DET = num('detSize'); drawCard(); drawGrad(); drawDetail(); drawWrap(); drawStrip(); drawPlot(); drawTurns(); drawAudio(); }
 
 // ---------- events ----------
-for (const cv of [cardCv, $('raw'), $('grad')]) cv.addEventListener('click', e => {
+for (const cv of [cardCv, $('grad')]) cv.addEventListener('click', e => {
   if (!strip || !strip.audio) return;
   const r = cv.getBoundingClientRect(), k = K();
   spot = { x: ((e.clientX - r.left) / r.width) * N * k, y: ((e.clientY - r.top) / r.height) * N * k };

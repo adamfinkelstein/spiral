@@ -45,7 +45,7 @@
       <label for="seed">Seed</label><input id="seed" type="number" min="1" step="1" value="1">
     </div>
     <div id="status"></div>
-    <p style="color:#888;font-size:12px;margin:6px 0 0">Each step below has its own settings beside it; changing one re-runs from that step. Lengths are in spacings where they should scale with resolution.</p>
+    <p style="color:#888;font-size:12px;margin:6px 0 0">Each step below has its own settings beside it; changing one re-runs from that step. Lengths are in spacings where they should scale with resolution. Heights are in units of the nominal groove depth.</p>
   </div>
   <div class="sum">
     <div><h3>Estimates (errors vs. the true card)</h3><table class="t" id="est"></table></div>
@@ -56,33 +56,19 @@
 <h2>1. Low resolution (1024², ×5.42): spacing, center, phase</h2>
 
 <div class="step">
-  <div class="fig"><canvas id="raw" class="sq pick" width="1024" height="1024"></canvas></div>
-  <div class="panel">
-    <h4>a. Input: the card downsampled</h4>
-    <p>The full-res depth averaged over each low-res pixel (2×2 samples per pixel, the grain averaged over 6×6). The slow depth drift dominates; the grooves (~5.4 px here) are fine stripes. Click any card view to pick the detail spot (red box).</p>
-    <p class="num" id="rawOut"></p>
-  </div>
-</div>
-
-<div class="step">
   <div class="fig"><canvas id="card" class="sq pick" width="1024" height="1024"></canvas></div>
   <div class="panel">
-    <h4>b. Local contrast, annulus from the hand marks</h4>
-    <p>Minus a Gaussian blur (removes the slow drift), times a soft mask from the dashed hand-marked circles, scaled to unit rms and clipped (dust, scratches).</p>
-    <div class="grid">
-      <label for="hpSigma">High-pass σ</label>
-      <select id="hpSigma" data-stage="low"><option value="0">none</option><option value="0.5">0.5 spacing</option><option value="1" selected>1 spacing</option><option value="2">2 spacings</option><option value="4">4 spacings</option></select>
-      <label for="clip">Clip at</label>
-      <select id="clip" data-stage="low"><option value="1.5">±1.5 rms</option><option value="2.5" selected>±2.5 rms</option><option value="4">±4 rms</option><option value="0">no clipping</option></select>
-    </div>
+    <h4>a. Input: the card at low resolution, masked to the marked annulus</h4>
+    <p>The full-res height map averaged over each low-res pixel (2×2 samples per pixel, the grain averaged over 6×6), times a soft mask from the hand-marked circles (dashed; ramps over one spacing inside them), minus its mean and scaled to unit rms. An idealized card: flat, no warp, bend, dust or scratches; only grain. Click any card view to pick the detail spot (red box).</p>
     <p><span class="c-w">White +</span> hand mark, <span class="c-c">cyan</span> low-res fit, <span class="c-y">yellow</span> full-res refit, <span class="c-r">red +</span> truth.</p>
+    <p class="num" id="rawOut"></p>
   </div>
 </div>
 
 <div class="step">
   <div class="fig"><canvas id="fft" class="sq" width="512" height="512"></canvas></div>
   <div class="panel">
-    <h4>c. FFT of b × weight (central half of log |FFT|)</h4>
+    <h4>b. FFT of a × weight (central half of log |FFT|)</h4>
     <p>The image is weighted about the hand mark so the outer turns don't dominate, then transformed. The spiral's rings sit at radius N/spacing.</p>
     <div class="grid">
       <label for="weightEx">Turn weighting</label>
@@ -95,7 +81,7 @@
 <div class="step">
   <div class="fig"><canvas id="prof" width="1040" height="600"></canvas></div>
   <div class="panel">
-    <h4>d. Radial profile → spacing</h4>
+    <h4>c. Radial profile → spacing</h4>
     <p>Mean log |FFT| per radius (smoothed by 1 bin), labelled by spacing in full-res px. The spacing is the peak within the window around the machine's nominal spacing, refined parabolically; more than 3% from the nominal → rejected, nominal used. No harmonics: the groove is nearly a cosine.</p>
     <div class="grid">
       <label for="window">Window</label>
@@ -109,7 +95,7 @@
 <div class="step">
   <div class="fig"><canvas id="coh" class="sq" width="512" height="512"></canvas></div>
   <div class="panel">
-    <h4>e. Center search: spiral coherence</h4>
+    <h4>d. Center search: spiral coherence</h4>
     <p>|Z| = |Σ v·e<sup>−i(r/b − α)</sup>| for candidate centers on a grid about the hand mark, at the FFT spacing: the depth is ≈ −cos(r/b − α + φ) about the true center, so |Z| peaks there and arg Z is the phase. The lobe is only ~0.4 spacing wide, narrower than the hand mark's error, hence the grid; then a pattern search over x, y and spacing.</p>
     <div class="grid">
       <label for="search">Search radius</label>
@@ -125,7 +111,7 @@
 <div class="step">
   <div class="fig"><canvas id="grad" class="sq pick" width="1024" height="1024"></canvas></div>
   <div class="panel">
-    <h4>f. Gradient-line center (comparison only)</h4>
+    <h4>e. Gradient-line center (comparison only)</h4>
     <p>The Part 1 method: lines along the gradients of the tangentially blurred image, RANSAC for the point most of them pass through (with the spiral's sideways correction). Not used downstream.</p>
     <div class="grid">
       <label for="gradient">Run it</label><span><input id="gradient" type="checkbox" data-stage="low"> (~2 s)</span>
@@ -144,7 +130,7 @@
 <div class="step">
   <div class="fig"><canvas id="detail" class="sq" width="512" height="512" style="cursor:crosshair"></canvas></div>
   <div class="panel">
-    <h4>g. Detail at full resolution</h4>
+    <h4>f. Detail at full resolution</h4>
     <p>The full-res depth around the spot (click to move). <span class="c-r">Red</span>: traced groove (<span class="c-m">magenta</span> where on the wrong groove), <span class="c-g">green</span>: true centerline.</p>
     <div class="grid">
       <label for="detSize">Size</label>
@@ -156,8 +142,8 @@
 <div class="step">
   <div class="fig"><canvas id="wrap" class="sq" width="900" height="900"></canvas></div>
   <div class="panel">
-    <h4>h. Strip offsets and the geometry refit</h4>
-    <p>The strip runs along the low-res spiral: a column every few px of groove, each a radial line sampled at ±1 spacing, detrended, clipped and demodulated: Z = Σ v·e<sup>−2πid/S</sup> (cos² window) gives the groove offset o = −S·arg(−Z)/2π (mod S) and a confidence |Z|.</p>
+    <h4>g. Strip offsets and the geometry refit</h4>
+    <p>The strip runs along the low-res spiral: a column every few px of groove, each a radial line sampled at ±1 spacing, detrended and demodulated: Z = Σ v·e<sup>−2πid/S</sup> (cos² window) gives the groove offset o = −S·arg(−Z)/2π (mod S) and a confidence |Z|.</p>
     <p>Dots: one per 40 columns, inner turns left, smoothed over σ 24 px for display (brightness ∝ |Z|). Relative to the strip's spiral, a center error is a one-turn wave, a spacing error a slope, a phase error an offset. The refit (<span class="c-y">yellow</span>) fits exactly that, modulo S: a grid over spacing and center, then robust least squares. <span class="c-r">Red</span>: the same for the true center, spacing and phase (no drift) &mdash; yellow should follow it. <span class="c-g">Green</span>: the true grooves.</p>
     <div class="grid">
       <label for="colStep">Column step</label>
@@ -174,7 +160,7 @@
 <div class="step">
   <div class="fig"><canvas id="strip" width="1040" height="240"></canvas></div>
   <div class="panel">
-    <h4>i. Unrolled strip around the spot</h4>
+    <h4>h. Unrolled strip around the spot</h4>
     <p>Columns along the groove, rows across it (1 px, outward up); the middle row is the low-res spiral; each column's mean is removed for display. <span class="c-y">Yellow</span>: refitted spiral (±S faint); <span class="c-r">red</span>: trace; <span class="c-g">green</span>: true groove.</p>
   </div>
 </div>
@@ -182,7 +168,7 @@
 <div class="step">
   <div class="fig"><canvas id="plot" width="1040" height="260"></canvas></div>
   <div class="panel">
-    <h4>j. The trace: groove offset from the refitted spiral</h4>
+    <h4>i. The trace: groove offset from the refitted spiral</h4>
     <p>Each column's Z is smoothed along the groove (the sideways path is smooth), and the trace takes the groove nearest a reference: the refitted spiral plus the slowly varying residual (within ±S/2 of the spiral), so noise can't move it to another turn.</p>
     <div class="grid">
       <label for="smooth">Trace smoothing</label>
@@ -190,39 +176,39 @@
       <label for="lockS">Reference smoothing</label>
       <select id="lockS" data-stage="track"><option value="100">σ 100 px</option><option value="300" selected>σ 300 px</option><option value="900">σ 900 px</option></select>
     </div>
-    <p><span class="c-r">Red</span>: traced; <span class="c-g">green</span>: true (drift, wobble, warp as seen from the fitted spiral).</p>
+    <p><span class="c-r">Red</span>: traced; <span class="c-g">green</span>: true (drift and wobble, as seen from the fitted spiral).</p>
   </div>
 </div>
 
 <div class="step">
   <div class="fig"><canvas id="turns" width="1040" height="160"></canvas></div>
   <div class="panel">
-    <h4>k. Trace error per turn</h4>
+    <h4>j. Trace error per turn</h4>
     <p>Bars: RMS distance from the traced point to the nearest true groove centerline (dotted: S/4). Red: share of the turn on the wrong groove (0–100% of the height).</p>
   </div>
 </div>
 
-<h2>3. Audio readout (hill-and-dale: the groove's depth along the trace)</h2>
+<h2>3. Sound readout (hill-and-dale: the depth of the groove along the trace)</h2>
 
 <div class="step">
   <div class="fig"><canvas id="audio" width="1040" height="260"></canvas></div>
   <div class="panel">
-    <h4>l. Depth at the groove bottom</h4>
-    <p>The sound is cut vertically, so it is read from the depth along the traced centerline: bottom (mean over ±w) minus the ridges at ±S/2, divided by its own average over 300 px (the groove's amplitude varies slowly), × groove amplitude.</p>
+    <h4>k. Depth at the groove bottom</h4>
+    <p>The sound is the depth of the cut (hill-and-dale): the stylus moves up and down, and where it rises above the card the groove disappears. Read from the traced centerline: the land at ±S/2 minus the bottom (each a mean over ±w), relative to its own average over 300 px of groove, minus 1. A gap reads −1 (the floor).</p>
     <div class="grid">
       <label for="hb">Window ±w</label>
       <select id="hb" data-stage="readout"><option value="1">±1 px</option><option value="2">±2 px</option><option value="3" selected>±3 px</option><option value="5">±5 px</option></select>
       <label for="audioSmooth">Smoothing</label>
       <select id="audioSmooth" data-stage="readout"><option value="0">none</option><option value="1" selected>σ 3 px</option><option value="2">σ 6 px</option></select>
     </div>
-    <p><span class="c-r">Red</span>: read out; <span class="c-g">green</span>: the true audio of the traced groove.</p>
+    <p><span class="c-r">Red</span>: read out; <span class="c-g">green</span>: the true sound of the traced groove (relative depth, floored at −1 where nothing is cut).</p>
   </div>
 </div>
 
 <h2>Card parameters (this preset)</h2>
 <div style="max-width:1310px;margin-top:8px">
 <table class="t" id="params"></table>
-<p style="color:#888;font-size:12px">Full-resolution pixels; depth in units of the groove's cosine amplitude.</p>
+<p style="color:#888;font-size:12px">Full-resolution pixels; heights in units of the nominal groove depth.</p>
 </div>
 
 <script>var SPIRAL_N = 1024;</script>

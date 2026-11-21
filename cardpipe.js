@@ -43,25 +43,23 @@ function smooth1d(a, sigma) {
 // Returns the preprocessed image and the estimates (full-res px).
 // Every length in opts is relative to the spacing (so it scales with the
 // resolution) except search (full-res px).
-const LOW_DEFAULTS = { hpSigma: 1, clip: 2.5, weightEx: 0.5, window: 0.1, search: 60, gridStep: 0.15, gradient: false, gradTang: 0.5, gradEps: 0.4 };
+const LOW_DEFAULTS = { weightEx: 0.5, window: 0.1, search: 60, gridStep: 0.15, gradient: false, gradTang: 0.5, gradEps: 0.4 };
 function lowResStage(img, F, nominal, ann, opts = {}) {
   opts = { ...LOW_DEFAULTS, ...opts };
   const k = F / N, sNom = nominal / k, a = { x: ann.x / k, y: ann.y / k }, rIn = ann.rIn / k, rOut = ann.rOut / k;
-  // local contrast: subtract a Gaussian (σ 1 spacing) to remove the slow drift
-  // (σ 2 spacings left more of it: coherence 0.43 → 0.6 on "typical" with σ 1)
-  const hp = new Float32Array(img), lo = new Float32Array(img);
-  if (opts.hpSigma > 0) gaussianBlur(lo, opts.hpSigma * sNom); else lo.fill(0);
-  for (let i = 0; i < N * N; i++) hp[i] = img[i] - lo[i];
-  // soft annulus mask from the annotation (ramps over one spacing inside the marked edges)
+  // the annulus from the hand marks: a soft mask (ramps over one spacing
+  // inside the marked circles); inside it, minus its mean, scaled to unit rms
   const sm = t => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
-  let ss = 0, sw = 0;
+  const hp = new Float32Array(N * N), m = new Float32Array(N * N);
+  let s0 = 0, s1 = 0, sw = 0;
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
-    const r = Math.hypot(x + 0.5 - a.x, y + 0.5 - a.y), m = sm((r - rIn) / sNom) * sm((rOut - r) / sNom), i = y * N + x;
-    hp[i] *= m; ss += hp[i] * hp[i]; sw += m;
+    const r = Math.hypot(x + 0.5 - a.x, y + 0.5 - a.y), i = y * N + x;
+    m[i] = sm((r - rIn) / sNom) * sm((rOut - r) / sNom); s0 += m[i] * img[i]; sw += m[i];
   }
-  const sc = 1 / Math.sqrt(ss / Math.max(sw, 1));
-  const cl = opts.clip > 0 ? opts.clip : Infinity;
-  for (let i = 0; i < N * N; i++) hp[i] = Math.max(-cl, Math.min(cl, hp[i] * sc)); // clip dust and scratches
+  const mean = s0 / Math.max(sw, 1);
+  for (let i = 0; i < N * N; i++) { hp[i] = (img[i] - mean) * m[i]; s1 += hp[i] * hp[i]; }
+  const sc = 1 / Math.sqrt(s1 / Math.max(sw, 1));
+  for (let i = 0; i < N * N; i++) hp[i] *= sc;
 
   // spacing: the peak of the FFT's radial profile within ±10% of the
   // nominal spacing (image weighted 1/√r about the marked center), refined
@@ -89,7 +87,7 @@ function lowResStage(img, F, nominal, ann, opts = {}) {
   // center, spacing and phase: spiral coherence, searched about the mark
   const sp = spiralCoherence(hp, a, sLow, opts.search / k, opts.gridStep);
   return {
-    hp, fftIn, mag: Float32Array.from(mag), profile: pr, fft: { iLo, iHi, rho }, spacing: sFFT * k, fftOK, coherence: sp.coh, grid: sp.grid,
+    hp, mask: m, fftIn, mag: Float32Array.from(mag), profile: pr, fft: { iLo, iHi, rho }, spacing: sFFT * k, fftOK, coherence: sp.coh, grid: sp.grid,
     gc: gc && { x: gc.c.x * k, y: gc.c.y * k, img: Float32Array.from(gc.img), X: gc.L.X, Y: gc.L.Y, inl: gc.inl, nIn: gc.nIn, path: gc.path },
     geom: { x: sp.x * k, y: sp.y * k, b: sp.b * k, ph: sp.ph },
   };
@@ -101,7 +99,7 @@ function lowResStage(img, F, nominal, ann, opts = {}) {
 // up to e, so |Z| falls like J0(2πe/S): its main lobe is only ~0.4 spacing
 // wide. Hence a grid over ±R about the mark (step 0.1 spacing, on a subset of
 // pixels), then a pattern search on (x, y, b) with all sampled pixels.
-// Coherence = |Z| relative to a perfect cosine groove (1).
+// Coherence = |Z| relative to a pure cosine groove (1).
 function spiralCoherence(hp, a, s, R, step = 0.15) {
   const rnd = mulberry32(12345), X = [], Y = [], V = [];
   for (let i = 0; i < N * N; i++) if (hp[i] !== 0 && rnd() < 0.05) { X.push((i % N) + 0.5); Y.push(Math.floor(i / N) + 0.5); V.push(hp[i]); }
@@ -178,11 +176,8 @@ async function demodPass(card, geom, TH, S, center, hw, progress) {
     let s0 = 0, s1 = 0;
     for (let j = 0; j < m; j++) { const r = R + D[j]; const x = card.sample(geom.x + r * ca, geom.y + r * sa); v[j] = x; s0 += x; s1 += x * D[j]; }
     s0 /= m; s1 /= sd2;
-    let ss = 0;
-    for (let j = 0; j < m; j++) { v[j] -= s0 + s1 * D[j]; ss += v[j] * v[j]; }
-    const cl = 2 * Math.sqrt(ss / m); // clip spikes (dust, scratches) at 2 rms
     let re = 0, im = 0;
-    for (let j = 0; j < m; j++) { const x = Math.max(-cl, Math.min(cl, v[j])); re += x * cw[j]; im -= x * sw[j]; }
+    for (let j = 0; j < m; j++) { const x = v[j] - s0 - s1 * D[j]; re += x * cw[j]; im -= x * sw[j]; }
     zr[i] = re; zi[i] = im;
     if ((i & 4095) === 4095) { progress && progress(i / n); await tick(); }
   }
@@ -288,27 +283,27 @@ function lockTrack(oLocal, amp, model, S, sigma) {
   return { o: out, ref };
 }
 
-// Audio readout (hill-and-dale: the audio is the groove's depth). Per column,
-// the depth at the traced bottom (mean over ±hb px) minus the ridges on both
-// sides (mean over ±hb px at ±S/2): r ≈ −A(2 + h) for groove amplitude A and
-// audio h. A varies slowly (fade, damage), so h ≈ 2(r/r̄ − 1) with r̄ = r
-// smoothed by σ 100 columns (300 px); 0 where the groove is too faint
-// (|r̄| < ¼ of its median), clipped to ±2; then smoothed by σ 1 column.
-// (Tested on typical: hb 3 best; smoothing the ridges along the groove made
-// it worse, 0.42 → 0.25 correlation.)
-async function readoutPass(card, geom, TH, o, S, progress, hb = 3, smooth = 1, avg = 100) {
-  const n = TH.length, bot = new Float64Array(n), rid = new Float64Array(n), h = S / 2;
+// Audio readout (hill-and-dale: the sound is the depth of the cut). Per
+// column, the land on both sides (mean over ±hb px at ±S/2) minus the traced
+// bottom (mean over ±hb px): the cut depth, ≥ 0 (where the sound lifts the
+// stylus out of the card it is 0 plus grain). Relative to its own average
+// along the groove (σ avg columns; the nominal depth fades at the ends):
+// est = depth/average − 1, the sound, which can't go below −1 (no cut).
+// Then smoothed by σ `smooth` columns.
+async function readoutPass(card, geom, TH, o, S, progress, hb = 2, smooth = 1, avg = 100) {
+  const n = TH.length, r = new Float64Array(n), h = S / 2;
   for (let i = 0; i < n; i++) {
     const a = TH[i] + geom.ph, ca = Math.cos(a), sa = Math.sin(a), R = geom.b * TH[i] + o[i];
     const at = d => card.sample(geom.x + (R + d) * ca, geom.y + (R + d) * sa);
-    let bs = 0, rs = 0;
-    for (let j = -hb; j <= hb; j++) { bs += at(j); rs += at(j - h) + at(j + h); }
-    bot[i] = bs / (2 * hb + 1); rid[i] = rs / (2 * (2 * hb + 1));
+    let bot = 0, land = 0;
+    for (let j = -hb; j <= hb; j++) { bot += at(j); land += at(j - h) + at(j + h); }
+    r[i] = (land / 2 - bot) / (2 * hb + 1);
     if ((i & 8191) === 8191) { progress && progress(i / n); await tick(); }
   }
-  const r = Float64Array.from(bot, (v, i) => v - rid[i]);
+  // where the average depth is under ¼ of its median (the faded ends of the
+  // recording) the ratio is meaningless: 0 there; otherwise clipped to −1..3
   const rs = smooth1d(r, avg), est = new Float64Array(n);
-  const md = median(Array.from(rs.filter((_, i) => i % 17 === 0), Math.abs));
-  for (let i = 0; i < n; i++) est[i] = rs[i] < -0.25 * md ? Math.max(-2, Math.min(2, 2 * (r[i] / rs[i] - 1))) : 0;
+  const md = median(Array.from(rs.filter((_, i) => i % 17 === 0)));
+  for (let i = 0; i < n; i++) est[i] = rs[i] > 0.25 * md ? Math.max(-1, Math.min(3, r[i] / rs[i] - 1)) : 0;
   return { raw: r, smooth: rs, est: smooth > 0 ? smooth1d(est, smooth) : est };
 }

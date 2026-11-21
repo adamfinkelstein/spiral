@@ -49,24 +49,22 @@ few pieces ("chunks") of it.
   maximum extent), noise,
   spacing error, and each estimation step; the page describes each.
 
-## A realistic card (`card.html`)
+## An idealized card (`card.html`)
 
-The whole pipeline on a simulated recording card whose parameters are taken
-from real scans (sonorine_001: ~40 turns, 29 px groove spacing at full
-resolution, near-sinusoidal groove profile, measured grain and slow depth
-drift, plus assumed warp, dust, scratches and a damaged sector). Presets and
-a seed instead of sliders.
+The whole pipeline on a simulated recording card: flat, with paper grain
+(level measured on the sonorine scans), ~40 turns at 29 px groove spacing,
+and the sound cut into the groove's depth (hill-and-dale): a round stylus
+moves up and down, and where it rises above the card the groove disappears.
+Presets and a seed instead of sliders.
 
-- Starts from a hand-marked center and annulus (the truth plus error).
+- Starts from a hand-marked center and annulus (the truth plus error); the
+  low-res input is masked to that annulus.
 - Low resolution (1024²): ring spacing from the FFT near the machine's
   nominal spacing, then center, spacing and phase by maximizing the spiral's
   coherence near the hand mark.
 - Full resolution: an unrolled strip along that spiral, one demodulated
   column every 3 px of groove, a robust refit of the geometry, and the groove
   traced locked to the refitted spiral.
-- Audio: the sound is cut vertically (hill-and-dale), so it is read from the
-  groove's depth along the trace.
-- Shows every step (input, local contrast, FFT, radial profile, coherence
-  search, gradient-line center for comparison, full-res detail, the strip and
-  its offsets, per-turn errors, audio vs. truth), the errors against the
-  truth, and every card parameter with its source.
+- Sound: read from the groove's depth along the trace.
+- Every step is shown large in one column with its own settings beside it,
+  with errors against the truth and every card parameter with its source.
