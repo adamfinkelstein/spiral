@@ -1,19 +1,19 @@
 // card.html: a realistic card (cardmodel.js) through the whole pipeline
-// (cardpipe.js): low-res spacing, center and phase from a hand-marked start,
-// then the full-res strip, geometry refit and groove trace, scored against the
-// card's truth.
+// (cardpipe.js), every step shown in one column with its settings beside it:
+// low-res spacing, center and phase from a hand-marked start, then the
+// full-res strip, geometry refit, groove trace and audio readout, scored
+// against the card's truth.
 
 const $ = id => document.getElementById(id);
 const ctx2 = id => $(id).getContext('2d');
-const cardCv = $('card'), cardCtx = cardCv.getContext('2d'), rawCtx = ctx2('raw');
-const fftCtx = ctx2('fft'), profCtx = ctx2('prof'), cohCtx = ctx2('coh'), gradCtx = ctx2('grad');
-const wrapCtx = ctx2('wrap'), audioCv = $('audio'), audioCtx = ctx2('audio');
-const detCv = $('detail'), detCtx = detCv.getContext('2d');
-const stripCv = $('strip'), stripCtx = stripCv.getContext('2d');
-const plotCv = $('plot'), plotCtx = plotCv.getContext('2d');
-const turnCv = $('turns'), turnCtx = turnCv.getContext('2d');
-const DET = 256; // detail window, full-res px
-$('detailSize').textContent = `${DET}×${DET}`;
+const cardCv = $('card'), cardCtx = ctx2('card'), rawCtx = ctx2('raw');
+const fftCtx = ctx2('fft'), profCv = $('prof'), profCtx = ctx2('prof'), cohCtx = ctx2('coh'), gradCtx = ctx2('grad');
+const wrapCv = $('wrap'), wrapCtx = ctx2('wrap'), audioCv = $('audio'), audioCtx = ctx2('audio');
+const detCv = $('detail'), detCtx = ctx2('detail');
+const stripCv = $('strip'), stripCtx = ctx2('strip');
+const plotCv = $('plot'), plotCtx = ctx2('plot');
+const turnCv = $('turns'), turnCtx = ctx2('turns');
+let DET = 256; // detail window, full-res px
 
 for (const [k, v] of Object.entries(CARD_PRESETS)) {
   const o = document.createElement('option'); o.value = k; o.textContent = v.label; $('preset').appendChild(o);
@@ -59,65 +59,90 @@ function showParams(P) {
     PARAM_INFO.map(([k, name, unit, src]) => `<tr><td>${name}</td><td>${fmt(P[k])}${unit && P[k] !== null ? ' ' + unit : ''}</td><td class="src">${src}</td></tr>`).join('');
 }
 
-// ---------- state ----------
-let card = null, img = null, low = null, strip = null, spot = null, runId = 0;
+// ---------- state and pipeline ----------
+// Stages, in order; a setting re-runs from its stage (data-stage in the HTML).
+const STAGES = ['render', 'low', 'strip', 'refit', 'track', 'readout', 'draw'];
+let card = null, img = null, low = null, strip = null, spot = null, runId = 0, times = {};
 const status = s => { $('status').textContent = s; };
 class Stale extends Error {}
 const guard = id => { if (id !== runId) throw new Stale(); };
+const num = id => +$(id).value;
+const lowOpts = () => ({
+  hpSigma: num('hpSigma'), clip: num('clip'), weightEx: num('weightEx'), window: num('window'),
+  search: num('search'), gridStep: num('gridStep'), gradient: $('gradient').checked, gradTang: num('gradTang'), gradEps: num('gradEps'),
+});
 
-async function run() {
-  const id = ++runId;
+async function runFrom(stage) {
+  const id = ++runId, at = STAGES.indexOf(stage), t0 = performance.now();
+  const tm = async (name, f) => { const t = performance.now(); await f(); times[name] = (performance.now() - t) / 1000; guard(id); };
   try {
-    const t0 = performance.now();
-    card = makeCard($('preset').value, +$('seed').value || 1);
-    low = strip = null;
-    showParams(card.P);
-    img = new Float32Array(N * N);
-    await renderLowRes(card, img, 2, f => { guard(id); status(`Rendering the low-res card… ${Math.round(100 * f)}%`); });
-    guard(id); clearSteps(); drawCard(); status('Low-res stage: spacing, center, phase…'); await tick(); guard(id);
-    const t1 = performance.now();
-    low = lowResStage(img, card.F, card.P.spacing, card.ann, { search: 60, gradient: $('gradient').checked });
-    const t2 = performance.now();
-    drawCard(); drawLowSteps(); await tick(); guard(id);
-    await runStrip(id);
-    const t3 = performance.now();
-    status(`Done in ${((t3 - t0) / 1000).toFixed(1)} s (low-res render ${((t1 - t0) / 1000).toFixed(1)}, low-res stage ${((t2 - t1) / 1000).toFixed(1)}, full-res stage ${((t3 - t2) / 1000).toFixed(1)}).`);
+    // each stage clears its own output first, so an interrupted run is redone
+    if (at <= 0 || !img) {
+      card = makeCard($('preset').value, +$('seed').value || 1);
+      img = low = strip = null; times = {}; showParams(card.P); clearSteps();
+      const im = new Float32Array(N * N);
+      await tm('render', () => renderLowRes(card, im, 2, f => { guard(id); status(`Rendering the low-res card… ${Math.round(100 * f)}%`); }));
+      img = im; drawRaw();
+    }
+    if (at <= 1 || !low) {
+      low = strip = null;
+      status('Low-res stage: spacing, center, phase…'); await tick(); guard(id);
+      await tm('low', async () => { low = lowResStage(img, card.F, card.P.spacing, card.ann, lowOpts()); });
+      drawCard(); drawLowSteps(); await tick(); guard(id);
+    }
+    if (at <= 2 || !strip) {
+      strip = null;
+      const g = low.geom, S = CARD_TAU * g.b, step = num('colStep');
+      const TH = stripColumns(g, card.ann, step, num('turnsSel'));
+      await tm('strip', async () => {
+        const Z = await demodPass(card, g, TH, S, null, 1, f => { guard(id); status(`Full-res strip: ${TH.length.toLocaleString()} columns… ${Math.round(100 * f)}%`); });
+        strip = { g, S, TH, Z, step, U: unwrapOffsets(Z, S, 0, null, false) };
+      });
+    }
+    if (at <= 3 || !strip.R) await tm('refit', async () => refit());
+    if (at <= 4 || !strip.o) await tm('track', async () => track());
+    if (at <= 5 || !strip.audio) await tm('readout', () => readout(id));
+    showResults(); drawAll();
+    status(`Done in ${((performance.now() - t0) / 1000).toFixed(1)} s (` + Object.entries(times).map(([k, v]) => `${k} ${v.toFixed(1)}`).join(', ') + ').');
   } catch (e) {
     if (!(e instanceof Stale)) { status('Error: ' + e.message); throw e; }
   }
 }
 
-async function runStrip(id) {
-  const g = low.geom, S = CARD_TAU * g.b;
-  const TH = stripColumns(g, card.ann, 3, +$('turnsSel').value);
-  const Z = await demodPass(card, g, TH, S, null, 1, f => { guard(id); status(`Full-res strip: ${TH.length.toLocaleString()} columns… ${Math.round(100 * f)}%`); });
-  guard(id);
-  const U = unwrapOffsets(Z, S, 0, null, false);
-  const R = refitGeometry(g, TH, U.o, U.amp, S);
-  strip = { g, S, TH, Z, R, U };
-  await track(id);
+// geometry refit from the strip's offsets; also the true spiral (center,
+// spacing, phase; no drift) as an offset from the strip's spiral, for h.
+function refit() {
+  const { g, S, TH, U } = strip, n = TH.length;
+  strip.R = refitGeometry(g, TH, U.o, U.amp, S, num('refitR'));
+  const ideal = new Float64Array(n);
+  for (let i = 0; i < n; i++) {
+    const [x, y] = stripPoint(g, TH[i], 0), dx = x - card.C.x, dy = y - card.C.y;
+    let e = Math.hypot(dx, dy) - card.b * (Math.atan2(dy, dx) - card.phi);
+    ideal[i] = -(e - card.S * Math.round(e / card.S));
+  }
+  strip.ideal = ideal;
+  strip.o = strip.audio = null;
 }
 
-// lock the trace (fast: re-run when only the smoothing changes), score it,
-// and read the audio out along it
-async function track(id) {
-  const { g, S, TH, Z, R } = strip, n = TH.length;
-  const u = unwrapOffsets(Z, S, +$('smooth').value, null, false);
-  const L = lockTrack(u.o, u.amp, R.model, S, 100);
+// lock the trace and score it
+function track() {
+  const { g, S, TH, Z, R, step } = strip, n = TH.length;
+  const u = unwrapOffsets(Z, S, num('smooth') / step, null, false);
+  const L = lockTrack(u.o, u.amp, R.model, S, num('lockS') / step);
   const tOff = new Float64Array(n), D = new Float64Array(n);
   for (let i = 0; i < n; i++) { const t = truthAt(card, g, TH[i], L.o[i]); tOff[i] = t.tOff; D[i] = t.thTrue - TH[i]; }
   const ds = []; for (let i = 0; i < n; i += 7) ds.push(D[i]);
   const md = median(ds), wrong = new Uint8Array(n);
   for (let i = 0; i < n; i++) wrong[i] = Math.round((D[i] - md) / CARD_TAU) !== 0 ? 1 : 0;
-  const rd = await readoutPass(card, g, TH, L.o, S, f => { guard(id); status(`Audio readout… ${Math.round(100 * f)}%`); });
-  guard(id);
   const audioTrue = Float64Array.from(D, (d, i) => card.audioAt(d + TH[i])); // the audio of the groove actually traced
-  Object.assign(strip, { o: L.o, ref: L.ref, amp: u.amp, tOff, wrong, audio: rd.est, audioTrue });
-  if (!spot) { // default spot: middle of the traced range, upper right
-    const i = Math.floor(n / 2), [x, y] = stripPoint(g, TH[i], L.o[i]);
-    spot = { x, y };
-  }
-  showResults(); drawAll();
+  Object.assign(strip, { o: L.o, ref: L.ref, amp: u.amp, tOff, wrong, audioTrue, audio: null });
+  if (!spot) { const i = Math.floor(n / 2), [x, y] = stripPoint(g, TH[i], L.o[i]); spot = { x, y }; }
+}
+
+async function readout(id) {
+  const { g, S, TH, o, step } = strip;
+  const rd = await readoutPass(card, g, TH, o, S, f => { guard(id); status(`Audio readout… ${Math.round(100 * f)}%`); }, num('hb'), num('audioSmooth') * 3 / step, 300 / step);
+  strip.audio = rd.est;
 }
 
 // ---------- metrics ----------
@@ -155,7 +180,7 @@ function showResults() {
   for (let i = 0; i < n; i++) { const a = audioTrue[i], b = audio[i]; sxy += a * b; sxx += a * a; syy += b * b; sd += (a - b) ** 2; }
   const turns = (TH[n - 1] - TH[0]) / CARD_TAU;
   $('trace').innerHTML = [
-    `<tr><td>Columns traced</td><td>${n.toLocaleString()} (${f(turns, 1)} turns, ${(3 * n / 1000).toFixed(0)} k px of groove)</td></tr>`,
+    `<tr><td>Columns traced</td><td>${n.toLocaleString()} (${f(turns, 1)} turns, ${(strip.step * n / 1000).toFixed(0)} k px of groove)</td></tr>`,
     `<tr><td>RMS distance to the true groove</td><td>${f(Math.sqrt(se / n))} px</td></tr>`,
     `<tr><td>Columns off by more than S/4</td><td>${f((100 * big) / n)}%</td></tr>`,
     `<tr><td>Columns on the wrong groove</td><td>${f((100 * nw) / n)}%</td></tr>`,
@@ -201,7 +226,11 @@ function drawCard() { // the raw low-res depth until the low-res stage has run, 
   grey(cardCtx, low ? low.hp : img);
   marks(cardCtx);
 }
-function drawRaw() { grey(rawCtx, img); marks(rawCtx, { ann: true, spot: true }); }
+function drawRaw() {
+  grey(rawCtx, img); marks(rawCtx, { ann: true, spot: true });
+  const k = K();
+  $('rawOut').textContent = `Scale ×${k.toFixed(2)}: the nominal ${card.P.spacing} px spacing is ${(card.P.spacing / k).toFixed(2)} low-res px; the annulus r ≈ ${Math.round(card.P.rIn / k)}–${Math.round(card.P.rOut / k)} px. Hand mark ${Math.hypot(card.ann.x - card.C.x, card.ann.y - card.C.y).toFixed(1)} px from the true center.`;
+}
 
 function blank(ctx, msg) {
   const c = ctx.canvas; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, c.width, c.height);
@@ -225,7 +254,7 @@ function drawLowSteps() {
   }
   // d. radial profile vs. ρ, labelled by spacing (full-res px)
   {
-    const c = profCtx, W = 512, H = 512, r0 = 60, r1 = 400, P = low.profile;
+    const c = profCtx, W = profCv.width, H = profCv.height, r0 = 60, r1 = 400, P = low.profile;
     blank(c);
     let mn = Infinity, mx = -Infinity;
     for (let r = r0; r <= r1; r++) { mn = Math.min(mn, P[r]); mx = Math.max(mx, P[r]); }
@@ -236,9 +265,10 @@ function drawLowSteps() {
     c.strokeStyle = '#ddd'; c.lineWidth = 1.5; c.beginPath();
     for (let r = r0; r <= r1; r++) r === r0 ? c.moveTo(xOf(r), yOf(P[r])) : c.lineTo(xOf(r), yOf(P[r]));
     c.stroke();
-    c.fillStyle = '#999'; c.font = '13px system-ui';
+    c.fillStyle = '#999'; c.font = '17px system-ui';
     for (const sp of [15, 20, 25, 29, 35, 50, 80]) { const r = (N * k) / sp; if (r < r0 || r > r1) continue; c.fillText(String(sp), xOf(r) - 7, H - 22); c.fillRect(xOf(r), H - 40, 1, 5); }
     c.fillText('spacing (full-res px) →  finer to the right', W / 2 - 110, H - 6);
+    $('profOut').textContent = `Peak at ${low.spacing.toFixed(3)} px (${low.spacing >= card.S ? '+' : ''}${(100 * (low.spacing / card.S - 1)).toFixed(2)}% vs. true ${card.S.toFixed(3)}; nominal ${card.P.spacing}).${low.fftOK ? '' : ' Rejected: nominal used.'}`;
     c.fillText(`peak ${low.spacing.toFixed(2)} px${low.fftOK ? '' : ' (rejected → nominal)'}`, 40, 28);
   }
   // e. coherence grid
@@ -253,17 +283,21 @@ function drawLowSteps() {
     const cross = ([x, y], col) => { c.strokeStyle = col; c.lineWidth = 2; c.beginPath(); c.moveTo(x - 10, y); c.lineTo(x + 10, y); c.moveTo(x, y - 10); c.lineTo(x, y + 10); c.stroke(); };
     cross(P(card.ann.x, card.ann.y), '#fff'); cross(P(card.C.x, card.C.y), '#f44');
     const [gx, gy] = P(low.geom.x, low.geom.y); c.strokeStyle = '#4cf'; c.lineWidth = 2; c.beginPath(); c.arc(gx, gy, 9, 0, CARD_TAU); c.stroke();
-    $('cohOut').textContent = `Grid step ${(h * k).toFixed(1)} px. Coherence at the answer ${low.coherence.toFixed(2)} (1 = a perfect cosine groove).`;
+    $("cohOut").textContent = `Grid step ${(h * k).toFixed(1)} px, ${n}² candidates. Answer ${Math.hypot(low.geom.x - card.C.x, low.geom.y - card.C.y).toFixed(2)} px from the true center; coherence ${low.coherence.toFixed(2)} (1 = a perfect cosine groove)`;
   }
   drawGrad();
 }
 
 function drawGrad() {
   if (!low) return blank(gradCtx);
-  if (!low.gc) return blank(gradCtx, 'Off: turn on “Gradient-line center too” at right.');
+  if (!low.gc) { $('gradOut').textContent = ''; return blank(gradCtx, 'Off: tick “Run it” at right.'); }
   grey(gradCtx, low.gc.img);
   const { X, Y, inl } = low.gc;
-  for (let i = 0; i < X.length; i++) { gradCtx.fillStyle = inl[i] ? 'rgba(60,230,100,0.9)' : 'rgba(255,60,60,0.6)'; gradCtx.fillRect(X[i] - 1.5, Y[i] - 1.5, 3, 3); }
+  for (let pass = 0; pass < 2; pass++) for (let i = 0; i < X.length; i++) { // red first, green on top
+    if (!!inl[i] !== (pass === 1)) continue;
+    gradCtx.fillStyle = inl[i] ? 'rgba(60,255,100,1)' : 'rgba(255,60,60,0.55)'; gradCtx.fillRect(X[i] - (inl[i] ? 3 : 1.5), Y[i] - (inl[i] ? 3 : 1.5), inl[i] ? 6 : 3, inl[i] ? 6 : 3);
+  }
+  $('gradOut').textContent = `${low.gc.nIn} of ${X.length} lines agree; answer ${Math.hypot(low.gc.x - card.C.x, low.gc.y - card.C.y).toFixed(0)} px from the true center (hand mark ${Math.hypot(card.ann.x - card.C.x, card.ann.y - card.C.y).toFixed(0)} px). The lines are measured 300–500 px from the center on a ~5.4 px pattern, so tiny angle errors miss it; dust specks (gradients all pointing at their own centers) compete.`;
   marks(gradCtx, { gc: true, spot: true });
 }
 
@@ -342,7 +376,7 @@ function drawPlot() {
   const line = (f, col) => { c.strokeStyle = col; c.lineWidth = 1.5; c.beginPath(); for (let i = i0; i < i1; i++) { const x = i - i0 + 0.5; i === i0 ? c.moveTo(x, yOf(f(i))) : c.lineTo(x, yOf(f(i))); } c.stroke(); };
   line(i => o[i] + tOff[i] - R.model[i], 'rgba(60,230,100,0.9)');
   line(i => o[i] - R.model[i], 'rgba(255,68,68,0.85)');
-  c.fillStyle = '#888'; c.fillText(`${((i1 - i0) * 3).toLocaleString()} px of groove`, W - 110, H - 4);
+  c.fillStyle = '#888'; c.fillText(`${((i1 - i0) * strip.step).toLocaleString()} px of groove`, W - 110, H - 4);
 }
 
 function drawTurns() {
@@ -361,60 +395,60 @@ function drawTurns() {
 }
 
 function drawWrap() {
-  const c = wrapCtx, W = 512, H = 512, { TH, R, o, tOff, S } = strip, n = TH.length;
+  const c = wrapCtx, W = wrapCv.width, H = wrapCv.height, { TH, R, o, tOff, S, ideal } = strip, n = TH.length;
   blank(c);
-  const wr = d => d - S * Math.round(d / S), yOf = d => H / 2 - (wr(d) / S) * (H - 20), xOf = i => (i / n) * W;
-  const us = unwrapOffsets(strip.Z, S, 8, null, false); // smoothed along the groove by σ 8 columns, for display
+  const wr = d => d - S * Math.round(d / S), yOf = d => H / 2 - (wr(d) / S) * (H - 30), xOf = i => (i / n) * W;
+  const us = unwrapOffsets(strip.Z, S, 24 / strip.step, null, false); // smoothed along the groove by σ 24 px, for display
   let am = 0; for (let i = 0; i < n; i += 40) am = Math.max(am, us.amp[i]);
   c.strokeStyle = '#333'; c.beginPath(); c.moveTo(0, H / 2); c.lineTo(W, H / 2); c.stroke();
+  // turn boundaries
+  c.strokeStyle = '#222'; for (let i = 1, t = TH[0] + CARD_TAU; i < n; i++) if (TH[i] >= t) { c.beginPath(); c.moveTo(xOf(i), 0); c.lineTo(xOf(i), H); c.stroke(); t += CARD_TAU; }
   for (let i = 0; i < n; i += 40) { const t = Math.min(1, (2 * us.amp[i]) / am); c.fillStyle = `rgba(255,255,255,${0.15 + 0.85 * t})`; c.fillRect(xOf(i) - 1, yOf(us.o[i]) - 1, 2, 2); }
-  for (let i = 0; i < n; i += 40) { c.fillStyle = 'rgba(60,230,100,0.8)'; c.fillRect(xOf(i), yOf(o[i] + tOff[i]), 1, 1); }
-  for (let i = 0; i < n; i += 10) { c.fillStyle = '#fd3'; c.fillRect(xOf(i), yOf(R.model[i]), 1, 1.5); }
-  c.fillStyle = '#999'; c.font = '13px system-ui'; c.fillText('+S/2', 4, 22); c.fillText('−S/2', 4, H - 6);
-  c.fillText(`${((TH[n - 1] - TH[0]) / CARD_TAU).toFixed(0)} turns →`, W - 80, H - 6);
+  for (let i = 0; i < n; i += 40) { c.fillStyle = 'rgba(60,230,100,0.8)'; c.fillRect(xOf(i), yOf(o[i] + tOff[i]), 1.5, 1.5); }
+  for (let i = 0; i < n; i += 5) { c.fillStyle = 'rgba(255,60,60,0.9)'; c.fillRect(xOf(i), yOf(ideal[i]) + 1, 1, 2); }
+  for (let i = 0; i < n; i += 5) { c.fillStyle = '#fd3'; c.fillRect(xOf(i), yOf(R.model[i]) - 2, 1, 2); }
+  c.fillStyle = '#999'; c.font = '15px system-ui'; c.fillText('+S/2', 6, 20); c.fillText('−S/2', 6, H - 8);
+  c.fillText(`${((TH[n - 1] - TH[0]) / CARD_TAU).toFixed(0)} turns →`, W - 90, H - 8);
+  const G = R.geom, L = low.geom, k = Math.hypot(G.x - L.x, G.y - L.y);
+  $('wrapOut').textContent = `${n.toLocaleString()} columns. The refit moved the center ${k.toFixed(2)} px from the low-res fit (the amplitude of yellow's one-turn wave) and the spacing by ${(100 * (G.b / L.b - 1)).toFixed(3)}%. True vs. low-res: center ${Math.hypot(card.C.x - L.x, card.C.y - L.y).toFixed(2)} px (red's wave), spacing ${(100 * (card.b / L.b - 1)).toFixed(3)}%.`;
 }
 
 function drawAudio() {
-  const W = audioCv.width, H = audioCv.height, c = audioCtx, { audio, audioTrue } = strip, cols = Math.floor(W / 3);
+  const W = audioCv.width, H = audioCv.height, c = audioCtx, { audio, audioTrue, step } = strip, cols = Math.floor((W * 3) / (3 * step)), px = W / cols;
   const [i0, i1] = stripWindow(cols);
   blank(c);
   const mx = Math.max(0.3, 4 * card.P.audio), yOf = v => H / 2 - (v / mx) * (H / 2 - 12);
   c.strokeStyle = '#333'; c.lineWidth = 1; c.font = '11px system-ui'; c.fillStyle = '#888';
   for (const d of [-mx, -mx / 2, 0, mx / 2, mx]) { c.beginPath(); c.moveTo(0, yOf(d)); c.lineTo(W, yOf(d)); c.stroke(); c.fillText(`${d >= 0 ? '+' : ''}${d.toFixed(2)}`, 4, yOf(d) - 2); }
-  const line = (a, col) => { c.strokeStyle = col; c.lineWidth = 1.5; c.beginPath(); for (let i = i0; i < i1; i++) { const x = (i - i0) * 3 + 1.5, y = yOf(Math.max(-mx, Math.min(mx, a[i]))); i === i0 ? c.moveTo(x, y) : c.lineTo(x, y); } c.stroke(); };
+  const line = (a, col) => { c.strokeStyle = col; c.lineWidth = 1.5; c.beginPath(); for (let i = i0; i < i1; i++) { const x = (i - i0) * px + px / 2, y = yOf(Math.max(-mx, Math.min(mx, a[i]))); i === i0 ? c.moveTo(x, y) : c.lineTo(x, y); } c.stroke(); };
   line(audioTrue, 'rgba(60,230,100,0.9)'); line(audio, 'rgba(255,68,68,0.85)');
-  c.fillStyle = '#888'; c.fillText(`${((i1 - i0) * 3).toLocaleString()} px of groove`, W - 110, H - 4);
+  c.fillStyle = '#888'; c.fillText(`${((i1 - i0) * strip.step).toLocaleString()} px of groove`, W - 110, H - 4);
 }
 
-function drawAll() { drawCard(); drawRaw(); drawGrad(); drawDetail(); drawWrap(); drawStrip(); drawPlot(); drawTurns(); drawAudio(); }
+function drawAll() { DET = num('detSize'); drawCard(); drawRaw(); drawGrad(); drawDetail(); drawWrap(); drawStrip(); drawPlot(); drawTurns(); drawAudio(); }
 
 // ---------- events ----------
 for (const cv of [cardCv, $('raw'), $('grad')]) cv.addEventListener('click', e => {
-  if (!strip) return;
+  if (!strip || !strip.audio) return;
   const r = cv.getBoundingClientRect(), k = K();
   spot = { x: ((e.clientX - r.left) / r.width) * N * k, y: ((e.clientY - r.top) / r.height) * N * k };
   drawAll();
 });
 detCv.addEventListener('click', e => { // recenter on a point in the detail
-  if (!strip) return;
+  if (!strip || !strip.audio) return;
   const r = detCv.getBoundingClientRect();
   spot = { x: spot.x - DET / 2 + ((e.clientX - r.left) / r.width) * DET, y: spot.y - DET / 2 + ((e.clientY - r.top) / r.height) * DET };
   drawAll();
 });
-$('preset').addEventListener('change', () => { spot = null; run(); });
-$('seed').addEventListener('change', () => { spot = null; run(); });
-$('newCard').addEventListener('click', () => { $('seed').value = (+$('seed').value || 0) + 1; spot = null; run(); });
-$('run').addEventListener('click', () => run());
-$('gradient').addEventListener('change', () => run());
-$('turnsSel').addEventListener('change', async () => {
-  if (!low) return;
-  const id = ++runId; spot = null;
-  try { const t = performance.now(); strip = null; await runStrip(id); status(`Full-res stage ${((performance.now() - t) / 1000).toFixed(1)} s.`); } catch (e) { if (!(e instanceof Stale)) throw e; }
-});
-$('smooth').addEventListener('change', async () => {
-  if (!strip) return;
-  const id = ++runId;
-  try { await track(id); status('Trace updated.'); } catch (e) { if (!(e instanceof Stale)) throw e; }
+$('preset').addEventListener('change', () => { spot = null; runFrom('render'); });
+$('seed').addEventListener('change', () => { spot = null; runFrom('render'); });
+$('newCard').addEventListener('click', () => { $('seed').value = (+$('seed').value || 0) + 1; spot = null; runFrom('render'); });
+$('run').addEventListener('click', () => runFrom('render'));
+for (const el of document.querySelectorAll('[data-stage]')) el.addEventListener('change', () => {
+  const st = el.dataset.stage;
+  if (st === 'draw') { if (strip && strip.audio) drawAll(); return; }
+  if (st === 'strip') spot = null;
+  runFrom(st);
 });
 
-run();
+runFrom('render');

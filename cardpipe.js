@@ -8,14 +8,16 @@
 const tick = () => new Promise(r => setTimeout(r, 0));
 const wrapPI = a => a - CARD_TAU * Math.round(a / CARD_TAU);
 
-// Low-res image: the mean of ss×ss point samples per pixel (a stand-in for
-// downsampling the full-res depth map).
+// Low-res image: the full-res depth averaged over each low-res pixel (k×k
+// full-res px): ss×ss samples per pixel, each averaging the grain over its
+// own (k/ss)² share on a 3×3 grid (so 6×6 grain samples per pixel at ss 2),
+// as downsampling the depth map by area would.
 async function renderLowRes(card, out, ss, progress) {
   const k = card.F / N;
   for (let y = 0; y < N; y++) {
     for (let x = 0; x < N; x++) {
       let v = 0;
-      for (let j = 0; j < ss; j++) for (let i = 0; i < ss; i++) v += card.sample((x + (i + 0.5) / ss) * k, (y + (j + 0.5) / ss) * k);
+      for (let j = 0; j < ss; j++) for (let i = 0; i < ss; i++) v += card.sample((x + (i + 0.5) / ss) * k, (y + (j + 0.5) / ss) * k, k / ss, 3);
       out[y * N + x] = v / (ss * ss);
     }
     if ((y & 63) === 63) { progress && progress((y + 1) / N); await tick(); }
@@ -39,12 +41,16 @@ function smooth1d(a, sigma) {
 // img: low-res depth (N×N). nominal: the machine's spacing (full-res px).
 // ann: hand-marked center and annulus radii (full-res px).
 // Returns the preprocessed image and the estimates (full-res px).
-function lowResStage(img, F, nominal, ann, opts = { search: 60, gradient: false }) {
+// Every length in opts is relative to the spacing (so it scales with the
+// resolution) except search (full-res px).
+const LOW_DEFAULTS = { hpSigma: 1, clip: 2.5, weightEx: 0.5, window: 0.1, search: 60, gridStep: 0.15, gradient: false, gradTang: 0.5, gradEps: 0.4 };
+function lowResStage(img, F, nominal, ann, opts = {}) {
+  opts = { ...LOW_DEFAULTS, ...opts };
   const k = F / N, sNom = nominal / k, a = { x: ann.x / k, y: ann.y / k }, rIn = ann.rIn / k, rOut = ann.rOut / k;
   // local contrast: subtract a Gaussian (σ 1 spacing) to remove the slow drift
   // (σ 2 spacings left more of it: coherence 0.43 → 0.6 on "typical" with σ 1)
   const hp = new Float32Array(img), lo = new Float32Array(img);
-  gaussianBlur(lo, sNom);
+  if (opts.hpSigma > 0) gaussianBlur(lo, opts.hpSigma * sNom); else lo.fill(0);
   for (let i = 0; i < N * N; i++) hp[i] = img[i] - lo[i];
   // soft annulus mask from the annotation (ramps over one spacing inside the marked edges)
   const sm = t => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
@@ -54,17 +60,18 @@ function lowResStage(img, F, nominal, ann, opts = { search: 60, gradient: false 
     hp[i] *= m; ss += hp[i] * hp[i]; sw += m;
   }
   const sc = 1 / Math.sqrt(ss / Math.max(sw, 1));
-  for (let i = 0; i < N * N; i++) hp[i] = Math.max(-2.5, Math.min(2.5, hp[i] * sc)); // clip dust and scratches
+  const cl = opts.clip > 0 ? opts.clip : Infinity;
+  for (let i = 0; i < N * N; i++) hp[i] = Math.max(-cl, Math.min(cl, hp[i] * sc)); // clip dust and scratches
 
   // spacing: the peak of the FFT's radial profile within ±10% of the
   // nominal spacing (image weighted 1/√r about the marked center), refined
   // parabolically. The groove is nearly a cosine, so there are no useful
   // harmonics, and the profile has ripple of its own (from the annulus edges)
   // that throws off the harmonic sum's trough samples.
-  const fftIn = Float32Array.from(evenWeight(hp, a, sNom, 0.5));
+  const fftIn = Float32Array.from(opts.weightEx > 0 ? evenWeight(hp, a, sNom, opts.weightEx) : hp);
   computeSpectrum(fftIn);
   const pr = smooth1d(Float64Array.from(profile), 1);
-  const iLo = Math.floor(N / (1.1 * sNom)), iHi = Math.ceil(N / (0.9 * sNom));
+  const iLo = Math.floor(N / ((1 + opts.window) * sNom)), iHi = Math.ceil(N / ((1 - opts.window) * sNom));
   let bi = iLo;
   for (let i = iLo; i <= iHi; i++) if (pr[i] > pr[bi]) bi = i;
   let rho = bi;
@@ -74,14 +81,16 @@ function lowResStage(img, F, nominal, ann, opts = { search: 60, gradient: false 
   // the edge of the window) means the FFT missed, so fall back to the nominal
   const fftOK = !edge && Math.abs(sFFT / sNom - 1) < 0.03, sLow = fftOK ? sFFT : sNom;
 
-  // optional comparison: the gradient-line center (tangential blur σ 3)
-  const gc = opts.gradient ? gradientCenter(hp, sLow, 150, 0.7, true, 3) : null;
+  // optional comparison: the gradient-line center (tangential blur and
+  // RANSAC tolerance scaled with the spacing; the Part 1 values 3 and 2 px
+  // were 0.15–0.3 and 0.1–0.2 spacings there)
+  const gc = opts.gradient ? gradientCenter(hp, sLow, 150, 0.7, true, opts.gradTang * sLow, opts.gradEps * sLow) : null;
 
   // center, spacing and phase: spiral coherence, searched about the mark
-  const sp = spiralCoherence(hp, a, sLow, opts.search / k);
+  const sp = spiralCoherence(hp, a, sLow, opts.search / k, opts.gridStep);
   return {
     hp, fftIn, mag: Float32Array.from(mag), profile: pr, fft: { iLo, iHi, rho }, spacing: sFFT * k, fftOK, coherence: sp.coh, grid: sp.grid,
-    gc: gc && { x: gc.c.x * k, y: gc.c.y * k, img: Float32Array.from(gc.img), X: gc.L.X, Y: gc.L.Y, inl: gc.inl, path: gc.path },
+    gc: gc && { x: gc.c.x * k, y: gc.c.y * k, img: Float32Array.from(gc.img), X: gc.L.X, Y: gc.L.Y, inl: gc.inl, nIn: gc.nIn, path: gc.path },
     geom: { x: sp.x * k, y: sp.y * k, b: sp.b * k, ph: sp.ph },
   };
 }
@@ -93,7 +102,7 @@ function lowResStage(img, F, nominal, ann, opts = { search: 60, gradient: false 
 // wide. Hence a grid over ±R about the mark (step 0.1 spacing, on a subset of
 // pixels), then a pattern search on (x, y, b) with all sampled pixels.
 // Coherence = |Z| relative to a perfect cosine groove (1).
-function spiralCoherence(hp, a, s, R) {
+function spiralCoherence(hp, a, s, R, step = 0.15) {
   const rnd = mulberry32(12345), X = [], Y = [], V = [];
   for (let i = 0; i < N * N; i++) if (hp[i] !== 0 && rnd() < 0.05) { X.push((i % N) + 0.5); Y.push(Math.floor(i / N) + 0.5); V.push(hp[i]); }
   const n = X.length, sub = Math.max(1, Math.floor(n / 8000));
@@ -108,7 +117,7 @@ function spiralCoherence(hp, a, s, R) {
     return [zr, zi];
   };
   const score = (cx, cy, b, step) => Math.hypot(...Z(cx, cy, b, step));
-  const b0 = s / CARD_TAU, h = 0.15 * s, G = Math.ceil(R / h);
+  const b0 = s / CARD_TAU, h = step * s, G = Math.ceil(R / h);
   const grid = { G, h, v: new Float32Array((2 * G + 1) ** 2), x0: a.x, y0: a.y };
   let best = { x: a.x, y: a.y, v: -1 };
   for (let j = -G; j <= G; j++) for (let i = -G; i <= G; i++) {
@@ -287,7 +296,7 @@ function lockTrack(oLocal, amp, model, S, sigma) {
 // (|r̄| < ¼ of its median), clipped to ±2; then smoothed by σ 1 column.
 // (Tested on typical: hb 3 best; smoothing the ridges along the groove made
 // it worse, 0.42 → 0.25 correlation.)
-async function readoutPass(card, geom, TH, o, S, progress, hb = 3) {
+async function readoutPass(card, geom, TH, o, S, progress, hb = 3, smooth = 1, avg = 100) {
   const n = TH.length, bot = new Float64Array(n), rid = new Float64Array(n), h = S / 2;
   for (let i = 0; i < n; i++) {
     const a = TH[i] + geom.ph, ca = Math.cos(a), sa = Math.sin(a), R = geom.b * TH[i] + o[i];
@@ -298,8 +307,8 @@ async function readoutPass(card, geom, TH, o, S, progress, hb = 3) {
     if ((i & 8191) === 8191) { progress && progress(i / n); await tick(); }
   }
   const r = Float64Array.from(bot, (v, i) => v - rid[i]);
-  const rs = smooth1d(r, 100), est = new Float64Array(n);
+  const rs = smooth1d(r, avg), est = new Float64Array(n);
   const md = median(Array.from(rs.filter((_, i) => i % 17 === 0), Math.abs));
   for (let i = 0; i < n; i++) est[i] = rs[i] < -0.25 * md ? Math.max(-2, Math.min(2, 2 * (r[i] / rs[i] - 1))) : 0;
-  return { raw: r, smooth: rs, est: smooth1d(est, 1) };
+  return { raw: r, smooth: rs, est: smooth > 0 ? smooth1d(est, smooth) : est };
 }

@@ -5,158 +5,226 @@
 <title>Spiral: realistic card, whole pipeline</title>
 <style>
   body { margin: 0; padding: 16px; background: #111; color: #ddd; font: 14px system-ui, sans-serif; }
-  .row { display: flex; gap: 28px; align-items: flex-start; }
-  figure { margin: 0; }
-  figcaption { margin-bottom: 4px; color: #aaa; }
-  canvas { display: block; border: 1px solid #333; background: #000; }
-  canvas.sq { width: 512px; height: 512px; }
-  .pair figure { width: 514px; }
+  canvas { display: block; border: 1px solid #333; background: #000; width: 900px; }
+  canvas.sq { height: 900px; }
   canvas.pick { cursor: crosshair; }
-  h2 { margin: 6px 0 -6px; font-size: 15px; color: #ddd; font-weight: 600; }
-  .pair { display: flex; gap: 16px; }
-  .left { display: flex; flex-direction: column; gap: 18px; flex: none; }
-  .note { color: #888; font-size: 12px; margin: 6px 0 0; max-width: 1040px; line-height: 1.4; }
-  .side { width: 440px; position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow-y: auto; }
-  .controls { display: grid; grid-template-columns: 165px 1fr; gap: 8px 10px; align-items: center; margin-top: 14px; }
-  .controls h4 { grid-column: 1 / -1; margin: 10px 0 0; color: #aaa; font-weight: 600; }
-  .controls select, .controls input[type=number] { background: #222; color: #ddd; border: 1px solid #555; border-radius: 3px; padding: 2px 4px; font: inherit; }
-  .button { display: inline-block; margin-top: 18px; margin-right: 6px; padding: 5px 12px; border: 1px solid #555; border-radius: 4px; background: #222; color: #ddd; text-decoration: none; font: inherit; cursor: pointer; }
+  .top { display: flex; gap: 28px; align-items: flex-start; flex-wrap: wrap; }
+  .top .ctl { width: 420px; }
+  .top .ctl .grid { grid-template-columns: 110px 1fr; }
+  .top .ctl select, .top .ctl input { width: 100%; box-sizing: border-box; }
+  .top .sum { width: 860px; display: flex; gap: 24px; }
+  .top .sum > div { flex: 1; }
+  .step { display: flex; gap: 24px; align-items: flex-start; margin-top: 22px; }
+  .step .fig { flex: none; width: 902px; }
+  .step .panel { width: 380px; position: sticky; top: 12px; color: #aaa; font-size: 13px; line-height: 1.45; }
+  .panel h4 { margin: 0 0 6px; font-size: 14px; color: #ddd; }
+  .panel p { margin: 0 0 8px; }
+  .panel .num { color: #ddd; font-variant-numeric: tabular-nums; }
+  h2 { margin: 30px 0 0; font-size: 17px; color: #eee; font-weight: 600; border-bottom: 1px solid #333; padding-bottom: 4px; max-width: 1310px; }
+  .grid { display: grid; grid-template-columns: 175px 1fr; gap: 7px 10px; align-items: center; margin: 8px 0; }
+  select, input[type=number] { background: #222; color: #ddd; border: 1px solid #555; border-radius: 3px; padding: 2px 4px; font: inherit; }
+  .button { display: inline-block; margin: 0 6px 8px 0; padding: 5px 12px; border: 1px solid #555; border-radius: 4px; background: #222; color: #ddd; text-decoration: none; font: inherit; cursor: pointer; }
   .button:hover { background: #333; border-color: #777; }
-  #status { margin-top: 14px; color: #ccc; min-height: 1.4em; }
-  table.t { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; margin-top: 8px; }
+  #status { margin-top: 8px; color: #ccc; min-height: 1.4em; }
+  table.t { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
   table.t th { text-align: right; color: #aaa; font-weight: 500; padding: 2px 4px; border-bottom: 1px solid #333; }
   table.t td { text-align: right; padding: 2px 4px; }
   table.t th:first-child, table.t td:first-child { text-align: left; }
   table.t td.src { text-align: left; color: #888; white-space: normal; }
-  table.t tr.h td { color: #aaa; padding-top: 8px; font-weight: 600; text-align: left; }
   .k { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: -1px; margin-right: 3px; }
-  h3 { margin: 18px 0 0; font-size: 14px; color: #ccc; font-weight: 600; }
+  h3 { margin: 0 0 6px; font-size: 14px; color: #ccc; font-weight: 600; }
+  .c-w { color: #fff } .c-c { color: #4cf } .c-y { color: #fd3 } .c-r { color: #f44 } .c-g { color: #3e6 } .c-m { color: #f6f }
 </style>
 </head>
 <body>
-<div class="row">
-<div class="left">
-  <h2>1. Low resolution (1024², ×5.42): spacing, center, phase</h2>
-  <div class="pair">
-    <figure>
-      <figcaption>a. Input: the card downsampled (click any card view to pick the detail spot)</figcaption>
-      <canvas id="raw" class="sq pick" width="1024" height="1024"></canvas>
-      <p class="note">Depth, 2×2 point samples per pixel. The slow depth drift dominates; the ~5.4 px grooves are finer than this view.</p>
-    </figure>
-    <figure>
-      <figcaption>b. Local contrast, annulus from the hand marks</figcaption>
-      <canvas id="card" class="sq pick" width="1024" height="1024"></canvas>
-      <p class="note">Minus a Gaussian (σ 1 spacing), unit rms, clipped at ±2.5, times a soft mask from the dashed hand-marked circles.
-        <span style="color:#fff">White +</span> hand mark, <span style="color:#4cf">cyan</span> low-res fit, <span style="color:#fd3">yellow</span> full-res refit, <span style="color:#f44">red +</span> truth.</p>
-    </figure>
+<div class="top">
+  <div class="ctl">
+    <a class="button" href="index.html">&larr; Experiments</a><a class="button" href="procedure.html#part3" target="_blank">Procedure</a><button class="button" id="newCard" type="button">New card</button><button class="button" id="run" type="button">Run again</button>
+    <div class="grid">
+      <label for="preset">Card preset</label><select id="preset"></select>
+      <label for="seed">Seed</label><input id="seed" type="number" min="1" step="1" value="1">
+    </div>
+    <div id="status"></div>
+    <p style="color:#888;font-size:12px;margin:6px 0 0">Each step below has its own settings beside it; changing one re-runs from that step. Lengths are in spacings where they should scale with resolution.</p>
   </div>
-  <div class="pair">
-    <figure>
-      <figcaption>c. FFT input (b × 1/√r about the hand mark) → log |FFT| (central half)</figcaption>
-      <canvas id="fft" class="sq" width="512" height="512"></canvas>
-      <p class="note">Dashed: the search window, ±10% of the nominal spacing. <span style="color:#4cf">Cyan</span>: the peak found.</p>
-    </figure>
-    <figure>
-      <figcaption>d. Radial profile of the FFT</figcaption>
-      <canvas id="prof" class="sq" width="512" height="512"></canvas>
-      <p class="note">Mean log |FFT| per radius (smoothed by 1 bin), labelled by spacing in full-res px. Grey band: the window;
-        <span style="color:#4cf">cyan</span>: peak (parabolic); white dashed: nominal; <span style="color:#f44">red</span>: true spacing. No harmonics: the groove is nearly a cosine.</p>
-    </figure>
+  <div class="sum">
+    <div><h3>Estimates (errors vs. the true card)</h3><table class="t" id="est"></table></div>
+    <div><h3>Groove trace and audio</h3><table class="t" id="trace"></table></div>
   </div>
-  <div class="pair">
-    <figure>
-      <figcaption>e. Center search: spiral coherence |Z| about the hand mark</figcaption>
-      <canvas id="coh" class="sq" width="512" height="512"></canvas>
-      <p class="note">|Σ v·e<sup>−i(r/b − α)</sup>| for candidate centers on a grid ±60 px about the hand mark (<span style="color:#fff">white +</span>), at the FFT spacing. The bright lobe is only ~0.4 spacing (~12 px) wide.
-        <span style="color:#4cf">Cyan</span>: after the pattern search (x, y, spacing); <span style="color:#f44">red +</span>: truth. <span id="cohOut"></span></p>
-    </figure>
-    <figure>
-      <figcaption>f. Gradient-line center (comparison; turn on at right)</figcaption>
-      <canvas id="grad" class="sq" width="1024" height="1024"></canvas>
-      <p class="note" id="gradNote">The Part 1 method: lines along the gradients of the tangentially blurred image, RANSAC for the point most of them pass through.
-        <span style="color:#3e6">Green</span>: lines within 2 px of its answer (<span style="color:#f6f">magenta</span>), <span style="color:#f44">red</span>: the rest; red +: truth.</p>
-    </figure>
-  </div>
-
-  <h2>2. Full resolution: unrolled strip, refit, groove trace</h2>
-  <div class="pair">
-    <figure>
-      <figcaption>g. Detail at full resolution (<span id="detailSize"></span> px around the spot; click to move)</figcaption>
-      <canvas id="detail" class="sq" width="512" height="512" style="cursor:crosshair"></canvas>
-      <p class="note"><span style="color:#f44">Red</span>: traced groove (<span style="color:#f6f">magenta</span> where on the wrong groove), <span style="color:#3e6">green</span>: true centerline.</p>
-    </figure>
-    <figure>
-      <figcaption>h. Strip offsets, all columns (mod S, relative to the low-res spiral)</figcaption>
-      <canvas id="wrap" class="sq" width="512" height="512"></canvas>
-      <p class="note">One dot per 40 columns, inner (left) to outer turns: the groove offset from the demodulation, smoothed over σ 24 px for display (brightness ∝ |Z|).
-        A center error shows as a one-turn wave, a spacing error as a slope, phase as an offset. <span style="color:#fd3">Yellow</span>: the refitted model (mod S); <span style="color:#3e6">green</span>: the true grooves.</p>
-    </figure>
-  </div>
-  <figure>
-    <figcaption>i. Unrolled strip around the spot (a column along the groove every 3 px; rows across it, 1 px, outward up)</figcaption>
-    <canvas id="strip" width="1040" height="200"></canvas>
-    <p class="note">Each column is a radial line about the low-res spiral (the middle row); each column's mean is removed for display.
-      <span style="color:#fd3">Yellow</span>: refitted spiral (±S faint); <span style="color:#f44">red</span>: trace; <span style="color:#3e6">green</span>: true groove.</p>
-  </figure>
-  <figure>
-    <figcaption>j. Groove offset from the refitted spiral, same stretch (px)</figcaption>
-    <canvas id="plot" width="1040" height="200"></canvas>
-    <p class="note"><span style="color:#f44">Red</span>: traced; <span style="color:#3e6">green</span>: true (drift, wobble and the card's warp, as seen from the fitted spiral).</p>
-  </figure>
-  <figure>
-    <figcaption>k. Trace error per turn, inner to outer</figcaption>
-    <canvas id="turns" width="1040" height="130"></canvas>
-    <p class="note">Bars: RMS distance from the traced point to the nearest true groove centerline (px; dotted line at S/4).
-      Red: share of the turn on the wrong groove (0–100% of the height).</p>
-  </figure>
-
-  <h2>3. Audio readout (the groove's depth along the trace)</h2>
-  <figure>
-    <figcaption>l. Depth at the groove bottom relative to the ridges, normalized (× groove amplitude), around the spot</figcaption>
-    <canvas id="audio" width="1040" height="200"></canvas>
-    <p class="note">The audio is cut vertically (hill-and-dale), so it is read from the depth along the traced centerline: bottom (±3 px) minus the ridges at ±S/2, divided by its own slow average.
-      <span style="color:#f44">Red</span>: read out; <span style="color:#3e6">green</span>: the true audio. <span id="audioSpan"></span></p>
-  </figure>
 </div>
-<div class="side">
-<a class="button" href="index.html">&larr; Experiments</a><a class="button" href="procedure.html#part3" target="_blank">Procedure</a><button class="button" id="newCard" type="button">New card</button><button class="button" id="run" type="button">Run again</button>
-<div class="controls">
-  <h4>Card</h4>
-  <label for="preset">Preset</label>
-  <select id="preset"></select>
-  <label for="seed">Seed</label>
-  <input id="seed" type="number" min="1" step="1" value="1">
 
-  <h4>Pipeline</h4>
-  <label for="turnsSel">Trace</label>
-  <select id="turnsSel">
-    <option value="0" selected>All turns</option>
-    <option value="10">10 middle turns</option>
-    <option value="3">3 middle turns</option>
-  </select>
-  <label for="smooth">Trace smoothing</label>
-  <select id="smooth">
-    <option value="0">none</option>
-    <option value="2">σ 6 px</option>
-    <option value="4">σ 12 px</option>
-    <option value="8">σ 24 px</option>
-    <option value="16" selected>σ 48 px</option>
-    <option value="32">σ 96 px</option>
-  </select>
-  <label for="gradient">Gradient-line center too</label>
-  <span><input id="gradient" type="checkbox"> <span class="note">(comparison only, ~1.5 s)</span></span>
+<h2>1. Low resolution (1024², ×5.42): spacing, center, phase</h2>
+
+<div class="step">
+  <div class="fig"><canvas id="raw" class="sq pick" width="1024" height="1024"></canvas></div>
+  <div class="panel">
+    <h4>a. Input: the card downsampled</h4>
+    <p>The full-res depth averaged over each low-res pixel (2×2 samples per pixel, the grain averaged over 6×6). The slow depth drift dominates; the grooves (~5.4 px here) are fine stripes. Click any card view to pick the detail spot (red box).</p>
+    <p class="num" id="rawOut"></p>
+  </div>
 </div>
-<div id="status"></div>
 
-<h3>Estimates (errors vs. the true card)</h3>
-<table class="t" id="est"></table>
-<h3>Groove trace and audio</h3>
-<table class="t" id="trace"></table>
-<h3>Card parameters (this preset)</h3>
+<div class="step">
+  <div class="fig"><canvas id="card" class="sq pick" width="1024" height="1024"></canvas></div>
+  <div class="panel">
+    <h4>b. Local contrast, annulus from the hand marks</h4>
+    <p>Minus a Gaussian blur (removes the slow drift), times a soft mask from the dashed hand-marked circles, scaled to unit rms and clipped (dust, scratches).</p>
+    <div class="grid">
+      <label for="hpSigma">High-pass σ</label>
+      <select id="hpSigma" data-stage="low"><option value="0">none</option><option value="0.5">0.5 spacing</option><option value="1" selected>1 spacing</option><option value="2">2 spacings</option><option value="4">4 spacings</option></select>
+      <label for="clip">Clip at</label>
+      <select id="clip" data-stage="low"><option value="1.5">±1.5 rms</option><option value="2.5" selected>±2.5 rms</option><option value="4">±4 rms</option><option value="0">no clipping</option></select>
+    </div>
+    <p><span class="c-w">White +</span> hand mark, <span class="c-c">cyan</span> low-res fit, <span class="c-y">yellow</span> full-res refit, <span class="c-r">red +</span> truth.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="fig"><canvas id="fft" class="sq" width="512" height="512"></canvas></div>
+  <div class="panel">
+    <h4>c. FFT of b × weight (central half of log |FFT|)</h4>
+    <p>The image is weighted about the hand mark so the outer turns don't dominate, then transformed. The spiral's rings sit at radius N/spacing.</p>
+    <div class="grid">
+      <label for="weightEx">Turn weighting</label>
+      <select id="weightEx" data-stage="low"><option value="0">none</option><option value="0.5" selected>1/√r</option><option value="1">1/r</option></select>
+    </div>
+    <p>Dashed: the search window. <span class="c-c">Cyan</span>: the peak found.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="fig"><canvas id="prof" width="1040" height="600"></canvas></div>
+  <div class="panel">
+    <h4>d. Radial profile → spacing</h4>
+    <p>Mean log |FFT| per radius (smoothed by 1 bin), labelled by spacing in full-res px. The spacing is the peak within the window around the machine's nominal spacing, refined parabolically; more than 3% from the nominal → rejected, nominal used. No harmonics: the groove is nearly a cosine.</p>
+    <div class="grid">
+      <label for="window">Window</label>
+      <select id="window" data-stage="low"><option value="0.05">±5%</option><option value="0.1" selected>±10%</option><option value="0.2">±20%</option><option value="0.4">±40%</option></select>
+    </div>
+    <p>Grey band: the window; <span class="c-c">cyan</span>: peak; white dashed: nominal; <span class="c-r">red</span>: true spacing.</p>
+    <p class="num" id="profOut"></p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="fig"><canvas id="coh" class="sq" width="512" height="512"></canvas></div>
+  <div class="panel">
+    <h4>e. Center search: spiral coherence</h4>
+    <p>|Z| = |Σ v·e<sup>−i(r/b − α)</sup>| for candidate centers on a grid about the hand mark, at the FFT spacing: the depth is ≈ −cos(r/b − α + φ) about the true center, so |Z| peaks there and arg Z is the phase. The lobe is only ~0.4 spacing wide, narrower than the hand mark's error, hence the grid; then a pattern search over x, y and spacing.</p>
+    <div class="grid">
+      <label for="search">Search radius</label>
+      <select id="search" data-stage="low"><option value="30">±30 px</option><option value="60" selected>±60 px</option><option value="120">±120 px</option></select>
+      <label for="gridStep">Grid step</label>
+      <select id="gridStep" data-stage="low"><option value="0.1">0.1 spacing</option><option value="0.15" selected>0.15 spacing</option><option value="0.25">0.25 spacing</option><option value="0.4">0.4 spacing</option></select>
+    </div>
+    <p><span class="c-w">White +</span> hand mark (grid center), <span class="c-c">cyan</span>: answer, <span class="c-r">red +</span>: truth.</p>
+    <p class="num" id="cohOut"></p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="fig"><canvas id="grad" class="sq pick" width="1024" height="1024"></canvas></div>
+  <div class="panel">
+    <h4>f. Gradient-line center (comparison only)</h4>
+    <p>The Part 1 method: lines along the gradients of the tangentially blurred image, RANSAC for the point most of them pass through (with the spiral's sideways correction). Not used downstream.</p>
+    <div class="grid">
+      <label for="gradient">Run it</label><span><input id="gradient" type="checkbox" data-stage="low"> (~2 s)</span>
+      <label for="gradTang">Tangential blur σ</label>
+      <select id="gradTang" data-stage="low"><option value="0">none</option><option value="0.3">0.3 spacing</option><option value="0.5" selected>0.5 spacing</option><option value="1">1 spacing</option></select>
+      <label for="gradEps">RANSAC tolerance</label>
+      <select id="gradEps" data-stage="low"><option value="0.2">0.2 spacing</option><option value="0.4" selected>0.4 spacing</option><option value="0.8">0.8 spacing</option></select>
+    </div>
+    <p><span class="c-g">Green</span>: lines within the tolerance of its answer (<span class="c-m">magenta</span> ring), <span class="c-r">red</span>: the rest (drawn first); red +: truth.</p>
+    <p class="num" id="gradOut"></p>
+  </div>
+</div>
+
+<h2>2. Full resolution: unrolled strip, refit, groove trace</h2>
+
+<div class="step">
+  <div class="fig"><canvas id="detail" class="sq" width="512" height="512" style="cursor:crosshair"></canvas></div>
+  <div class="panel">
+    <h4>g. Detail at full resolution</h4>
+    <p>The full-res depth around the spot (click to move). <span class="c-r">Red</span>: traced groove (<span class="c-m">magenta</span> where on the wrong groove), <span class="c-g">green</span>: true centerline.</p>
+    <div class="grid">
+      <label for="detSize">Size</label>
+      <select id="detSize" data-stage="draw"><option value="128">128 px</option><option value="256" selected>256 px</option><option value="512">512 px</option></select>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="fig"><canvas id="wrap" class="sq" width="900" height="900"></canvas></div>
+  <div class="panel">
+    <h4>h. Strip offsets and the geometry refit</h4>
+    <p>The strip runs along the low-res spiral: a column every few px of groove, each a radial line sampled at ±1 spacing, detrended, clipped and demodulated: Z = Σ v·e<sup>−2πid/S</sup> (cos² window) gives the groove offset o = −S·arg(−Z)/2π (mod S) and a confidence |Z|.</p>
+    <p>Dots: one per 40 columns, inner turns left, smoothed over σ 24 px for display (brightness ∝ |Z|). Relative to the strip's spiral, a center error is a one-turn wave, a spacing error a slope, a phase error an offset. The refit (<span class="c-y">yellow</span>) fits exactly that, modulo S: a grid over spacing and center, then robust least squares. <span class="c-r">Red</span>: the same for the true center, spacing and phase (no drift) &mdash; yellow should follow it. <span class="c-g">Green</span>: the true grooves.</p>
+    <div class="grid">
+      <label for="colStep">Column step</label>
+      <select id="colStep" data-stage="strip"><option value="2">2 px</option><option value="3" selected>3 px</option><option value="5">5 px</option></select>
+      <label for="turnsSel">Traced turns</label>
+      <select id="turnsSel" data-stage="strip"><option value="0" selected>all</option><option value="10">10 middle</option><option value="3">3 middle</option></select>
+      <label for="refitR">Refit center search</label>
+      <select id="refitR" data-stage="refit"><option value="0.5">±0.5 spacing</option><option value="1.5" selected>±1.5 spacing</option><option value="3">±3 spacings</option></select>
+    </div>
+    <p class="num" id="wrapOut"></p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="fig"><canvas id="strip" width="1040" height="240"></canvas></div>
+  <div class="panel">
+    <h4>i. Unrolled strip around the spot</h4>
+    <p>Columns along the groove, rows across it (1 px, outward up); the middle row is the low-res spiral; each column's mean is removed for display. <span class="c-y">Yellow</span>: refitted spiral (±S faint); <span class="c-r">red</span>: trace; <span class="c-g">green</span>: true groove.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="fig"><canvas id="plot" width="1040" height="260"></canvas></div>
+  <div class="panel">
+    <h4>j. The trace: groove offset from the refitted spiral</h4>
+    <p>Each column's Z is smoothed along the groove (the sideways path is smooth), and the trace takes the groove nearest a reference: the refitted spiral plus the slowly varying residual (within ±S/2 of the spiral), so noise can't move it to another turn.</p>
+    <div class="grid">
+      <label for="smooth">Trace smoothing</label>
+      <select id="smooth" data-stage="track"><option value="0">none</option><option value="6">σ 6 px</option><option value="12">σ 12 px</option><option value="24">σ 24 px</option><option value="48" selected>σ 48 px</option><option value="96">σ 96 px</option></select>
+      <label for="lockS">Reference smoothing</label>
+      <select id="lockS" data-stage="track"><option value="100">σ 100 px</option><option value="300" selected>σ 300 px</option><option value="900">σ 900 px</option></select>
+    </div>
+    <p><span class="c-r">Red</span>: traced; <span class="c-g">green</span>: true (drift, wobble, warp as seen from the fitted spiral).</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="fig"><canvas id="turns" width="1040" height="160"></canvas></div>
+  <div class="panel">
+    <h4>k. Trace error per turn</h4>
+    <p>Bars: RMS distance from the traced point to the nearest true groove centerline (dotted: S/4). Red: share of the turn on the wrong groove (0–100% of the height).</p>
+  </div>
+</div>
+
+<h2>3. Audio readout (hill-and-dale: the groove's depth along the trace)</h2>
+
+<div class="step">
+  <div class="fig"><canvas id="audio" width="1040" height="260"></canvas></div>
+  <div class="panel">
+    <h4>l. Depth at the groove bottom</h4>
+    <p>The sound is cut vertically, so it is read from the depth along the traced centerline: bottom (mean over ±w) minus the ridges at ±S/2, divided by its own average over 300 px (the groove's amplitude varies slowly), × groove amplitude.</p>
+    <div class="grid">
+      <label for="hb">Window ±w</label>
+      <select id="hb" data-stage="readout"><option value="1">±1 px</option><option value="2">±2 px</option><option value="3" selected>±3 px</option><option value="5">±5 px</option></select>
+      <label for="audioSmooth">Smoothing</label>
+      <select id="audioSmooth" data-stage="readout"><option value="0">none</option><option value="1" selected>σ 3 px</option><option value="2">σ 6 px</option></select>
+    </div>
+    <p><span class="c-r">Red</span>: read out; <span class="c-g">green</span>: the true audio of the traced groove.</p>
+  </div>
+</div>
+
+<h2>Card parameters (this preset)</h2>
+<div style="max-width:1310px;margin-top:8px">
 <table class="t" id="params"></table>
-<p class="note">Full-resolution pixels; depth in units of the groove's cosine amplitude.</p>
+<p style="color:#888;font-size:12px">Full-resolution pixels; depth in units of the groove's cosine amplitude.</p>
 </div>
-</div>
+
 <script>var SPIRAL_N = 1024;</script>
 <script src="render.js"></script>
 <script src="fftspacing.js"></script>

@@ -211,7 +211,11 @@ function makeCard(presetName, seed) {
     return { psi: ((r - dev) / b - al) / CARD_TAU, r, a: al + phi, th, dev };
   };
 
-  const sample = (x, y) => { // depth at observed full-res point (x, y)
+  // depth at observed full-res point (x, y). With box > 0, the grain (the
+  // only structure much finer than a low-res pixel) is averaged over a
+  // gss×gss grid across a box×box square about the point, as downsampling
+  // by area would.
+  const sample = (x, y, box = 0, gss = 0) => {
     toIdealQ(x, y);
     const dx = QX - C.x, dy = QY - C.y, r = Math.hypot(dx, dy), a = Math.atan2(dy, dx), al = a - phi;
     const th = al + CARD_TAU * Math.round((r / b - al) / CARD_TAU);
@@ -224,7 +228,14 @@ function makeCard(presetName, seed) {
       v = -contrast * (cs + audioAt(al + CARD_TAU * Math.round(psi)) * g); // audio: extra depth at the bottom
     }
     if (SL) v += lerpT(SL, x, y);
-    if (P.grain) v += P.grain * nG * (1 + dm * ((dmg ? dmg.grain : 1) - 1)) * vnoise(x, y, P.grainCell, seedG);
+    if (P.grain) {
+      let gr = 0;
+      if (box > 0 && gss > 1) {
+        for (let j = 0; j < gss; j++) for (let i = 0; i < gss; i++) gr += vnoise(x + ((i + 0.5) / gss - 0.5) * box, y + ((j + 0.5) / gss - 0.5) * box, P.grainCell, seedG);
+        gr /= gss * gss;
+      } else gr = vnoise(x, y, P.grainCell, seedG);
+      v += P.grain * nG * (1 + dm * ((dmg ? dmg.grain : 1) - 1)) * gr;
+    }
     if (P.banding) v += P.banding * Math.sin((CARD_TAU * y) / P.bandPeriod + bandPh);
     if (P.dust || P.scratches) v += defectsAt(x, y);
     return v;

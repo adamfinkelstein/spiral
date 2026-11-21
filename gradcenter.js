@@ -187,19 +187,19 @@ function ransacCenter(L, b, iters = 600, nSub = 1500, eps = 2) {
 // center (σ = tang px), recompute the lines and the RANSAC center, until it
 // moves < 1 px (at most 3 rounds; later rounds use 150 candidates and
 // 1000 scoring lines, since they start close). Returns { c, L, inl, nIn, rounds }.
-function gradientCenter(src, spacing, perBin, floorQ, spiral = true, tang = 0) {
+function gradientCenter(src, spacing, perBin, floorQ, spiral = true, tang = 0, eps = 2) { // eps: RANSAC inlier distance, px
   const b = spiral ? spacing / (2 * Math.PI) : 0;
   glTmp.set(src);
   gaussianBlur(glTmp, 1);
   let L = gradientLines(glTmp, perBin, floorQ);
   if (!L) return null;
-  let r = ransacCenter(L, b, 600, 1500), rounds = 0;
+  let r = ransacCenter(L, b, 600, 1500, eps), rounds = 0;
   if (!r) return null;
   const path = [r.c];
   while (tang > 0 && rounds < 3) { // more rounds only chase noise
     tangentialBlur(glTmp, glTmp2, r.c, tang);
     const L2 = gradientLines(glTmp2, perBin, floorQ);
-    const r2 = L2 && ransacCenter(L2, b, 150, 1000); // already close: fewer candidates
+    const r2 = L2 && ransacCenter(L2, b, 150, 1000, eps); // already close: fewer candidates
     if (!r2) break;
     rounds++;
     const moved = Math.hypot(r2.c.x - r.c.x, r2.c.y - r.c.y);

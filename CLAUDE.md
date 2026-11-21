@@ -83,6 +83,18 @@ each page's `ids` list and `params()` read them, and "Defaults" resets to them.
   columns, within ±S/2; trace = nearest groove; default smoothing σ 16
   columns = 48 px), `readoutPass` (audio: bottom ±3 px minus ridges at ±S/2,
   normalized by its 300-px average), `truthAt` for scoring.
+- Layout: one column of large step views (900 px), each with a sticky panel
+  beside it holding that step's explanation, settings and numbers. Settings
+  carry `data-stage` (render, low, strip, refit, track, readout, draw) and
+  re-run from that stage (`runFrom`); each stage clears its own output first
+  so an interrupted run is redone. Low-res settings are in spacings
+  (`LOW_DEFAULTS` in cardpipe.js); full-res smoothing in px (converted to
+  columns with the column step).
+- Low-res rendering averages by area: `sample(x, y, box, gss)` averages the
+  grain over a gss×gss grid in a box (2×2 samples per pixel, grain 6×6).
+- `gradientCenter(..., tang, eps)`: eps (RANSAC tolerance) is now a
+  parameter (default 2 px, so the other pages are unchanged); card.html
+  passes 0.5 and 0.4 spacings.
 - The page shows every step: (a) input, (b) local contrast, (c) FFT,
   (d) radial profile, (e) coherence grid, (f) gradient-line center (if on),
   (g) detail, (h) all columns' offsets mod S + model, (i) strip, (j) offset
