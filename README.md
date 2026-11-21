@@ -51,20 +51,19 @@ few pieces ("chunks") of it.
 
 ## An idealized card (`card.html`)
 
-The whole pipeline on a simulated recording card: flat, with paper grain
-(level measured on the sonorine scans), ~40 turns at 29 px groove spacing,
-and the sound cut into the groove's depth (hill-and-dale): a round stylus
-moves up and down, and where it rises above the card the groove disappears.
-Presets and a seed instead of sliders.
+The whole pipeline on a simulated recording card, as a static report built in
+Python (`cardlab/`, `build_card.py`) and committed with its images:
 
-- Starts from a hand-marked center and annulus (the truth plus error); the
-  low-res input is masked to that annulus.
-- Low resolution (1024²): ring spacing from the FFT near the machine's
-  nominal spacing, then center, spacing and phase by maximizing the spiral's
-  coherence near the hand mark.
-- Full resolution: an unrolled strip along that spiral, one demodulated
-  column every 3 px of groove, a robust refit of the geometry, and the groove
-  traced locked to the refitted spiral.
-- Sound: read from the groove's depth along the trace.
-- Every step is shown large in one column with its own settings beside it,
-  with errors against the truth and every card parameter with its source.
+```sh
+python -m venv .venv && .venv/bin/pip install -r requirements.txt
+.venv/bin/python build_card.py          # presets × seeds 1–5, rebuilds card.html
+```
+
+The card is flat with paper grain (level measured on the sonorine scans),
+~40 turns at 29 px groove spacing, and the sound cut into the groove's depth
+(hill-and-dale); where the stylus rises above the card the groove disappears.
+From a hand-marked center: spacing (FFT) and center/spacing/phase (spiral
+coherence) at low resolution, then an unrolled strip at full resolution, a
+robust geometry refit, the groove trace and the sound read from the depth,
+all scored against the truth over many seeds. The earlier in-browser version
+is `card_js.html`.

@@ -1,3 +1,5 @@
 screen.png
 .DS_Store
 Claude outputs/
+.venv/
+__pycache__/

@@ -49,13 +49,54 @@ work from `file://`. Deployed to GitHub Pages on every push to `main`.
 Controls and their defaults live in the HTML `value` / `checked` attributes;
 each page's `ids` list and `params()` read them, and "Defaults" resets to them.
 
-- `card.html` / `card.js` (UI), `cardmodel.js`, `cardpipe.js` — realistic
-  card, whole pipeline (see "Card page" below). Scripts: `var SPIRAL_N = 1024`,
+- `card.html` — now a static report built in Python (see "Card report
+  (Python)" below); `card/img/*.png` and `card/results.json` are generated
+  and committed.
+- `card_js.html` / `card.js` (UI), `cardmodel.js`, `cardpipe.js` — the
+  earlier in-browser version of the card page, kept frozen (see "Card page
+  (card_js.html)" below). Scripts: `var SPIRAL_N = 1024`,
   render.js, fftspacing.js, gradcenter.js, chunkfit.js, cardmodel.js,
   cardpipe.js, card.js. No sliders: presets + seed; runs ~8 s (progress in the
   status line; a newer run cancels an older one via `runId`).
 
-## Card page (card.html)
+## Card report (Python, cardlab/)
+
+The third app moved to Python (Adam's preference for experiments): the
+pipeline runs locally and writes card.html plus images, committed so GitHub
+Pages serves them (nothing is built on GitHub).
+
+- Setup on the Mac: `python -m venv .venv && .venv/bin/pip install -r
+  requirements.txt` (`.venv/` is gitignored). Build: `.venv/bin/python
+  build_card.py` (default: presets typical, loud, hard, clean × seeds 1–5,
+  showcase typical:1; ~10 s per run). Summaries are cached in
+  card/results.json, so only new preset:seed runs are computed; `--rerun`
+  recomputes all (do that after any pipeline change). Options: `--presets`,
+  `--seeds 1-5,8`, `--showcase hard:2`.
+- Style (Adam's): small, readable functions; descriptive names; a few
+  comments, no docstrings; factor shared code; lean on vetted libraries
+  (OpenCV, scipy, scikit-image / scikit-learn, e.g. their RANSAC) and
+  vectorized numpy instead of loops.
+- Modules: `params.py` (CardParams dataclass, PRESETS, PARAM_NOTES with
+  sources), `geometry.py` (Spiral, Mark, TAU, wrap, smoothstep,
+  spiral_points), `model.py` (make_card, Card.groove_height /
+  nearest_groove / sound, render → full-res float32 image ~6 s; grain is
+  Gaussian-filtered white noise, unlike the JS value noise),
+  `lowres.py` (cv2.INTER_AREA downsample, annulus mask, FFT spacing,
+  coherence grid + scipy Nelder–Mead), `strip.py` (strip columns by equal
+  arc length, cv2.remap sampling in blocks < 32767 wide, demodulation,
+  refit: grid start + scipy least_squares with soft_l1 on wrapped
+  residuals, lock_trace), `readout.py` (sound), `scoring.py` (truth),
+  `pipeline.py` (run_pipeline, summarize), `figures.py` (matplotlib, one
+  function per step figure), `report.py` (HTML).
+- Not ported yet: the gradient-based centers (lines + RANSAC; tilt about
+  the hand mark) — step e is a placeholder in the report.
+- Results (Python, 5 seeds): typical — low-res center 0.03–0.22 px, trace
+  0.40–0.70 px, no wrong groove, sound corr 0.89–0.92; clean 0.98–0.99;
+  loud 0.94–0.96; hard trace 1.1–2.7 px, 0–1.9% wrong groove, sound
+  0.75–0.81. Lower sound correlation than the JS version (0.93–0.96 for
+  typical): the grain spectrum differs (white noise blurred vs value noise).
+
+## Card page (card_js.html, frozen)
 
 - `makeCard(preset, seed)` (cardmodel.js): procedural height `sample(x, y)`
   at any full-res point (frame 5551², ~200 ns/sample), so the low-res image
@@ -377,7 +418,7 @@ adding controls. To see a page, take a headless Chrome screenshot:
 State: all work is committed locally; `main` is 6 commits ahead of
 origin/main (card page work 9eecd25..9406574, plus this note) — not yet pushed.
 
-Open experiment — "gradient tilt" center for card.html step e (not
+Open experiment — "gradient tilt" center for step e (JS, not
 committed; work in progress saved, gitignored, in
 `Claude outputs/cardpipe_tilt_wip.js`, with the node harness
 `Claude outputs/tilt_test_harness.js`; run harnesses by concatenating
@@ -405,9 +446,8 @@ cardpipe.js and the test with `const N=1024` prepended):
   line misses the true center by ~90 low-res px at sound 0.4, 1.9 px with
   no sound). Adam's future idea: RANSAC over N > 2 lines.
 
-Planned next: port the card pipeline (third app) to Python (numpy, scipy,
-OpenCV, scikit-image) — precomputed images + a static report page, built
-locally and committed for GitHub Pages; requirements.txt committed, `.venv/`
-gitignored (Adam uses pyenv on the Mac). Open question for Adam: replace
-card.html or keep it frozen beside the new report. First experiment there:
-redo the tilt-center test with exact gradients.
+Done since: the card pipeline is ported to Python (cardlab/, card.html is
+the generated report; the JS page lives on as card_js.html). Next: port the
+tilt center to cardlab and redo the test with exact gradients (e.g.
+spectral derivatives or scipy.ndimage.gaussian_gradient_magnitude-style
+Gaussian derivatives), then the line method with skimage.measure.ransac.
