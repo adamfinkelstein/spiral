@@ -184,6 +184,104 @@ def detail(run, path, size, spot):
     save(figure, path)
 
 
+def offsets_explainer(path):
+    # a cartoon of pane f: a toy card (4 turns; the strip's spiral has its center
+    # 0.45 spacing off and its spacing 4% off), the groove's offset from the
+    # strip's spiral as the strip unrolls it, and the same offsets modulo the spacing
+    true_spacing, center_error = 1.04, np.array([0.4, -0.2])
+    strip_pitch, true_pitch = 1 / TAU, true_spacing / TAU
+    theta = np.linspace(3 * TAU, 7 * TAU, 4000)
+    strip_x, strip_y = strip_pitch * theta * np.cos(theta), strip_pitch * theta * np.sin(theta)
+    true_x, true_y = center_error[0] + true_pitch * theta * np.cos(theta), center_error[1] + true_pitch * theta * np.sin(theta)
+    radius = np.hypot(strip_x - center_error[0], strip_y - center_error[1])
+    angle = np.unwrap(np.arctan2(strip_y - center_error[1], strip_x - center_error[0]))
+    folded = -wrap(radius - true_pitch * angle, true_spacing)  # radial offset from the strip's spiral to the nearest groove
+    unwrapped = np.unwrap(folded * TAU / true_spacing) * true_spacing / TAU
+    unwrapped -= true_spacing * np.round(np.mean(unwrapped) / true_spacing)  # follow the groove nearest the strip's spiral
+    turns = (theta - theta[0]) / TAU
+    marks = {"A": 600, "B": 1450, "C": 3100}
+    groove, strip, mark_color = COLORS["true"], COLORS["low"], "#f6f"
+
+    figure = new_figure(900, 1300)
+    top = figure.add_axes([0.0, 0.56, 0.56, 0.43])
+    top.set_aspect("equal")
+    top.set_axis_off()
+    top.plot(true_x, true_y, color=groove, lw=2.5)
+    top.plot(strip_x, strip_y, "--", color=strip, lw=1.5)
+    top.plot(*center_error, "+", color=groove, ms=14, mew=2.5)
+    top.plot(0, 0, "+", color=strip, ms=14, mew=2.5)
+    for name, k in marks.items():
+        direction = np.array([np.cos(theta[k]), np.sin(theta[k])])
+        on_strip = np.array([strip_x[k], strip_y[k]])
+        start, end = on_strip - direction, on_strip + direction
+        top.plot([start[0], end[0]], [start[1], end[1]], color="#999", lw=5, alpha=0.5, solid_capstyle="butt")
+        top.plot(*on_strip, "o", color=strip, ms=6)
+        top.plot(*(on_strip + folded[k] * direction), "o", color=mark_color, ms=8)
+        top.text(*(end + 0.4 * direction), name, color=mark_color, fontsize=16, weight="bold", ha="center", va="center")
+    top.set_xlim(-7.9, 7.9)
+    top.set_ylim(7.9, -7.9)
+    notes = [
+        ("A toy card, 4 turns", "#ddd"),
+        ("", None),
+        ("green: the real groove", groove),
+        ("cyan, dashed: the spiral the strip", strip),
+        ("  follows (from the low-res stage;", strip),
+        ("  here its center is 0.45 spacing", strip),
+        ("  off and its spacing 4% off)", strip),
+        ("+: each spiral's center", "#ddd"),
+        ("", None),
+        ("grey bars: strip columns, each a", "#aaa"),
+        ("  radial line \u00b11 spacing (S) about", "#aaa"),
+        ("  the cyan spiral (cyan dot)", "#aaa"),
+        ("magenta dot: the nearest groove", mark_color),
+        ("  on that line; its distance from", mark_color),
+        ("  the cyan dot (outward +) is the", mark_color),
+        ("  column's offset", mark_color),
+        ("", None),
+        ("A, B, C: three columns,", mark_color),
+        ("  followed in the plots below", mark_color),
+    ]
+    for row, (text, color) in enumerate(notes):
+        if text:
+            figure.text(0.585, 0.975 - row * 0.0215, text, color=color, fontsize=12.5, va="top")
+
+    def offsets_axes(rect, title):
+        axes = figure.add_axes(rect)
+        axes.axhline(0, color=strip, ls="--", lw=1.5)
+        axes.set_xlim(0, 4)
+        axes.set_xlabel("column: turns along the strip (inner turns left)")
+        axes.set_title(title, color="#ddd", fontsize=13, loc="left")
+        return axes
+
+    middle = offsets_axes([0.09, 0.285, 0.88, 0.225], "Unrolled: the grooves' offsets from the cyan spiral (outward up)")
+    middle.axhspan(-1, 1, color="#555", alpha=0.35, lw=0)
+    for copy in (-2, -1, 1, 2):
+        middle.plot(turns, unwrapped + copy * true_spacing, color=groove, lw=1.2, alpha=0.4)
+    middle.plot(turns, unwrapped, color=groove, lw=2.5)
+    middle.set_ylim(-2.45, 2.45)
+    middle.set_yticks([-2, -1, 0, 1, 2], ["\u22122S", "\u2212S", "0", "S", "2S"])
+    middle.text(0.04, 2.2, "every turn of the groove, one spacing apart; grey: the \u00b1S each column samples",
+                color="#ccc", fontsize=11, va="center")
+    middle.text(0.04, -2.2, "one wave per turn: the center error;  the slow rise: the spacing error",
+                color="#ccc", fontsize=11, va="center")
+
+    bottom = offsets_axes([0.09, 0.05, 0.88, 0.165], "Modulo S (pane f): nearest groove only; past \u00b1S/2 the next is nearer (arrow)")
+    breaks = np.concatenate([[False], np.abs(np.diff(folded)) > true_spacing / 2])
+    bottom.plot(turns, np.where(breaks, np.nan, folded), color=groove, lw=2.5)
+    for edge in (-0.5, 0.5):
+        bottom.axhline(edge * true_spacing, color="#888", ls=":", lw=1)
+    jump = np.flatnonzero(breaks & (turns > 2.2))[0]
+    bottom.annotate("", xy=(turns[jump], folded[jump]), xytext=(turns[jump - 1], folded[jump - 1]),
+                    arrowprops=dict(arrowstyle="->", color="#fff", lw=1.5, connectionstyle="arc3,rad=0.5"))
+    bottom.set_ylim(-0.66, 0.66)
+    bottom.set_yticks([-0.5, 0, 0.5], ["\u2212S/2", "0", "S/2"])
+    for axes in (middle, bottom):
+        for name, k in marks.items():
+            axes.plot(turns[k], folded[k], "o", color=mark_color, ms=8, zorder=5)
+            axes.text(turns[k] - 0.07, folded[k], name, color=mark_color, fontsize=14, weight="bold", ha="right", va="center")
+    save(figure, path)
+
+
 def offsets_mod_spacing(run, path, every=40):
     strip, spacing = run.strip, run.strip.spiral.spacing
     columns = np.arange(len(strip.theta))

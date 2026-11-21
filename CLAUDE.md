@@ -107,7 +107,10 @@ Pages serves them (nothing is built on GitHub).
   boxes; clicking one (HTML boxes over the image, small script) swaps step
   e. The detail draws trace and truth as polylines over the whole spiral,
   clipped by the axes (consecutive columns are neighbours along the
-  groove), wrong-groove columns in magenta.
+  groove), wrong-groove columns in magenta. Before step f, a cartoon
+  (`figures.offsets_explainer`, `f_explain.png`, also in procedure P3.4):
+  toy card with the strip's spiral off center, the offsets unrolled, and
+  modulo S, with three columns A, B, C followed through all three.
 - Sanity check against the JS version: `checks/compare_with_js.sh [preset]
   [seed]` (needs node — on the Mac via nvm in Terminal; ~2 min) dumps the
   Python pipeline's inputs and intermediates and feeds the same inputs to

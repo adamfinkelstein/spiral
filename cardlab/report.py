@@ -108,6 +108,7 @@ def make_figures(run, folder, detail_size=256):
         "b_fft": lambda p: figures.spectrum(run, p),
         "c_profile": lambda p: figures.radial_profile(run, p),
         "d_coherence": lambda p: figures.coherence_map(run, p),
+        "f_explain": figures.offsets_explainer,
         "f_offsets": lambda p: figures.offsets_mod_spacing(run, p),
         "g_strip": lambda p: figures.strip_image(run, p),
         "h_trace": lambda p: figures.trace_offset(run, p),
@@ -187,6 +188,10 @@ Showcase: preset <b>{escape(card.params.label)}</b>, seed {card.seed}. <a href="
 <div class="step"><img id="detail" src="{image_folder}/{spots[selected]['image']}.png"><div class="panel"><h4>e. Detail at full resolution (256 px)</h4>
 <p><span class='r'>Red</span>: trace (<span class='m'>magenta</span>: wrong groove); <span class='g'>green</span>: true centerline. Darker = deeper: the depth follows the sound.</p>
 <p>Click a red box in step a to choose the spot.</p><p class="num" id="detailInfo"></p></div></div>
+{step(img("f_explain"), "How to read step f (a cartoon)",
+      "Top: a toy card with 4 turns. The strip follows the spiral from the low-res stage (<span class='c'>cyan</span>, dashed), which is a little off: here its center by 0.45 spacing and its spacing by 4%. Each column is a radial line ±1 spacing about it (grey bars). Where the line meets the groove (<span class='g'>green</span>), the distance from the cyan spiral, outward positive, is the column's offset (<span class='m'>magenta</span>).",
+      "Middle: the offsets along the strip, unrolled. A center error gives one wave per turn, a spacing error a slow rise. Every turn of the groove shows up, one spacing apart, because each column crosses several.",
+      "Bottom: what step f plots. A column can't tell which turn it sees, only where the nearest groove sits, so the offsets are taken modulo the spacing, in −S/2…+S/2; when a curve passes ±S/2 the next turn is nearer and it wraps around. The refit (<span class='y'>yellow</span> in f) fits exactly this kind of curve, modulo S.")}
 {step(img("f_offsets"), "f. Strip offsets and the geometry refit",
       f"Columns every {run.strip.step:g} px along the low-res spiral; each is a radial line sampled at ±1 spacing (cv2.remap), detrended and demodulated: Z = Σ v·e<sup>−2πid/S</sup> gives the groove's offset (mod S) and a confidence |Z|.",
       "Relative to the strip's spiral a center error is a one-turn wave, a spacing error a slope, a phase error an offset. The refit (<span class='y'>yellow</span>) fits exactly that modulo S: a grid over spacing and center, then scipy least_squares with a robust loss. <span class='r'>Red</span>: the true geometry; <span class='g'>green</span>: true grooves; grey dots: measured (smoothed 24 px).",
