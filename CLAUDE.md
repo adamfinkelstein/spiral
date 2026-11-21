@@ -5,6 +5,9 @@ experiment page. No build step, no dependencies — open `index.html` directly
 (`open index.html`). Pages are plain `<script>` tags (no ES modules) so they
 work from `file://`. Deployed to GitHub Pages on every push to `main`.
 
+New session? Read `notes/context.md` first: the project's story, goals,
+Adam's preferences and open questions.
+
 ## Files
 
 - `index.html` — landing page linking to the three experiments.
