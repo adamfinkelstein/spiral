@@ -186,16 +186,21 @@ function ransacCenter(L, b, iters = 600, nSub = 1500, eps = 2) {
 // plain (σ 1) image, then repeatedly blur along circles about the current
 // center (σ = tang px), recompute the lines and the RANSAC center, until it
 // moves < 1 px (at most 3 rounds; later rounds use 150 candidates and
-// 1000 scoring lines, since they start close). Returns { c, L, inl, nIn, rounds }.
-function gradientCenter(src, spacing, perBin, floorQ, spiral = true, tang = 0, eps = 2) { // eps: RANSAC inlier distance, px
+// 1000 scoring lines, since they start close). With `start` (e.g. a
+// hand-marked center) the first pass is already tangentially blurred about
+// it, with the full RANSAC (it may be well off). Returns { c, L, inl, nIn,
+// rounds, path, img }.
+function gradientCenter(src, spacing, perBin, floorQ, spiral = true, tang = 0, eps = 2, start = null) { // eps: RANSAC inlier distance, px
   const b = spiral ? spacing / (2 * Math.PI) : 0;
   glTmp.set(src);
   gaussianBlur(glTmp, 1);
-  let L = gradientLines(glTmp, perBin, floorQ);
+  const first = start && tang > 0;
+  if (first) tangentialBlur(glTmp, glTmp2, start, tang);
+  let L = gradientLines(first ? glTmp2 : glTmp, perBin, floorQ);
   if (!L) return null;
-  let r = ransacCenter(L, b, 600, 1500, eps), rounds = 0;
+  let r = ransacCenter(L, b, 600, 1500, eps), rounds = first ? 1 : 0;
   if (!r) return null;
-  const path = [r.c];
+  const path = first ? [start, r.c] : [r.c];
   while (tang > 0 && rounds < 3) { // more rounds only chase noise
     tangentialBlur(glTmp, glTmp2, r.c, tang);
     const L2 = gradientLines(glTmp2, perBin, floorQ);

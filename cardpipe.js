@@ -79,10 +79,11 @@ function lowResStage(img, F, nominal, ann, opts = {}) {
   // the edge of the window) means the FFT missed, so fall back to the nominal
   const fftOK = !edge && Math.abs(sFFT / sNom - 1) < 0.03, sLow = fftOK ? sFFT : sNom;
 
-  // optional comparison: the gradient-line center (tangential blur and
-  // RANSAC tolerance scaled with the spacing; the Part 1 values 3 and 2 px
+  // optional comparison: the gradient-line center, its first tangential
+  // blur about the hand mark (tangential blur and RANSAC tolerance scaled
+  // with the spacing; the Part 1 values 3 and 2 px
   // were 0.15–0.3 and 0.1–0.2 spacings there)
-  const gc = opts.gradient ? gradientCenter(hp, sLow, 150, 0.7, true, opts.gradTang * sLow, opts.gradEps * sLow) : null;
+  const gc = opts.gradient ? gradientCenter(hp, sLow, 150, 0.7, true, opts.gradTang * sLow, opts.gradEps * sLow, a) : null; // first pass blurred about the hand mark
 
   // center, spacing and phase: spiral coherence, searched about the mark
   const sp = spiralCoherence(hp, a, sLow, opts.search / k, opts.gridStep);

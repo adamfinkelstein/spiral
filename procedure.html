@@ -644,7 +644,16 @@ middle, the lines are extrapolated ~300&ndash;500 px from where they are measure
 so small angle errors miss the center by more than the RANSAC tolerance; only
 ~2&ndash;3% of the lines agree on any point. Its tangential blur and RANSAC
 tolerance are set in spacings (default 0.5 and 0.4; Part 1's 3 px and 2 px were
-0.15&ndash;0.3 and 0.1&ndash;0.2 spacings there).</p>
+0.15&ndash;0.3 and 0.1&ndash;0.2 spacings there), and its first pass is already blurred
+along circles about the hand-marked center (not left unblurred). The main reason
+it fails here is the sound itself: the groove's depth changes along the groove,
+so the gradients have a large along-groove component and the lines don't point
+at the center. On a clean card, with exact (spectral) derivatives and lines
+taken at the strongest 10% of gradients, the median line misses the true center
+by ~90 low-res px with the sound at 0.4, 23 px at 0.1, and 1.9 px with no
+sound (Sobel: 7 px). A wider tangential blur averages more of the sound away
+(lines agreeing within 0.4 spacing: 4% at σ 0.5 spacing, ~17% at 2, ~25% at
+10), but the answer was still 19&ndash;200 px off.</p>
 
 <h2>P3.3 Full-res stage: the unrolled strip</h2>
 <p>Columns along the low-res spiral every 3 px of groove, from 1.5 turns inside

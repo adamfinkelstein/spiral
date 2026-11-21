@@ -79,8 +79,14 @@ each page's `ids` list and `params()` read them, and "Defaults" resets to them.
   Center/spacing/phase: `spiralCoherence` maximizes |Σ v e^{−i(r/b−α)}| (grid
   ±60 px about the mark, step 0.15 S, then pattern search on x, y, b); phase
   = arg. The gradient-line center fails here (optional comparison only;
-  `gradientCenter(..., tang, eps)` — eps is an optional parameter, default 2
-  px so the other pages are unchanged; card.html passes 0.5 and 0.4 S).
+  `gradientCenter(..., tang, eps, start)` — eps and start are optional
+  (default 2 px and none, so the other pages are unchanged); card.html
+  passes 0.5 and 0.4 S and the hand mark as start, so the first pass is
+  already tangentially blurred about it). It fails mainly because the
+  hill-and-dale sound varies the depth along the groove: gradients get a
+  big along-groove component (clean card, exact derivatives: median line
+  misses the true center by ~90 low-res px with sound 0.4, 1.9 px with no
+  sound).
 - Full res: `stripColumns` (every 3 px of groove), `demodPass` (rows ±S,
   linear detrend, cos² window, Z per column), `unwrapOffsets` (o = −S
   arg(−Z)/2π; optional smoothing and unwrapping), `refitGeometry` (grid over
