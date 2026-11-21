@@ -177,10 +177,28 @@ Pages serves them (nothing is built on GitHub).
   use the same pixels less directly than Z. Not in the procedure or report;
   card_js.html (frozen) still has the line method as an option. Possible
   future idea (Adam): RANSAC over N > 2 lines.
+- Card model (Nov 2026): the groove's lateral wobble (0.3 px rms, 200–3000
+  px along the groove, assumed) was removed: results unchanged within the
+  seed-to-seed spread (trace −0.01–0.03 px). Drift vs. the real card
+  (Tomaz's images 21 / 26, groove-mask centroid per turn vs. his fitted
+  spiral): 2.9 / 3.5 px rms, extremes −7.8..+4.7 px; neighbouring turns
+  uncorrelated, while along a turn it changes ~1.5 px per 1200 px. The
+  model's drift was 2 px rms with periods 0.7–12 turns (too slow from turn
+  to turn); now 3.2 px rms (hard 5), periods 0.3–1 turn, 60 waves (corr ~0
+  one turn apart, ~1.6 px median change per 0.06 turn). Effect: refit
+  center 0.03–0.18 → 0.09–0.33 px, trace 0.39–0.63 → 0.54–0.83 px rms,
+  sound corr ~0.01–0.02 lower on typical/loud/clean; hard cards easier.
+- Tried and dropped (Nov 2026): a second strip pass along the first
+  refit's spiral, refit again. Yellow's one-turn wave dropped ~0.14 →
+  ~0.01 px but the center didn't improve (20 cards: median 0.175 → 0.168
+  px, better on 9 of 20); drift-limited. `figures.offsets_mod_spacing`
+  still takes the strip and model to show.
 - Results (Python, 5 seeds, symmetry center; J0 fit before it gave
   0.01–0.16 px and the same trace and sound): typical — low-res center
-  0.15–0.33 px, trace 0.40–0.66 px, no wrong groove, sound corr 0.89–0.92;
-  clean 0.98–0.99; loud 0.94–0.96; hard center 0.3–2.0 px, trace
+  0.12–0.50 px, refit 0.09–0.33 px, trace 0.54–0.83 px, no wrong groove,
+  sound corr 0.89–0.91 (drift 3.2 px from Nov 2026; before: trace
+  0.39–0.63, sound 0.89–0.92);
+  (results before the drift change:) clean 0.98–0.99; loud 0.94–0.96; hard center 0.3–2.0 px, trace
   1.1–2.7 px, 0–1.9% wrong groove, sound
   0.75–0.81. Lower sound correlation than the JS version (0.93–0.96 for
   typical): the grain spectrum differs (white noise blurred vs value noise).

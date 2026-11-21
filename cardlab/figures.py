@@ -282,8 +282,10 @@ def offsets_explainer(path):
     save(figure, path)
 
 
-def offsets_mod_spacing(run, path, every=40):
-    strip, spacing = run.strip, run.strip.spiral.spacing
+def offsets_mod_spacing(run, path, strip, model, every=40):  # strip and model: those of the pass to show
+    spacing = strip.spiral.spacing
+    # true groove: distance from each column's point on the strip's spiral to the nearest groove centerline
+    true_offset = run.card.nearest_groove(*spiral_points(strip.spiral, strip.theta))[0]
     columns = np.arange(len(strip.theta))
     smoothed, confidence = offsets_from(strip.demod, spacing, 24 / strip.step)  # smoothed over 24 px for display
     figure = new_figure(900, 900)
@@ -291,9 +293,9 @@ def offsets_mod_spacing(run, path, every=40):
     shown = columns[::every]
     brightness = np.clip(2 * confidence[shown] / confidence[shown].max(), 0.15, 1)
     axes.scatter(shown, wrap(smoothed[shown], spacing), s=3, c=np.stack([brightness] * 3, axis=1))
-    axes.plot(shown, wrap(run.score.true_offset[shown], spacing), ".", color=COLORS["true"], ms=1.5)
+    axes.plot(shown, wrap(true_offset[shown], spacing), ".", color=COLORS["true"], ms=1.5)
     axes.plot(columns[::5], wrap(ideal_offset(run.card, strip)[::5], spacing), ".", color=COLORS["truth"], ms=1)
-    axes.plot(columns[::5], wrap(run.model[::5], spacing), ".", color=COLORS["refit"], ms=1)
+    axes.plot(columns[::5], wrap(model[::5], spacing), ".", color=COLORS["refit"], ms=1)
     axes.set_ylim(-spacing / 2, spacing / 2)
     axes.set_xlabel("column (inner turns left)")
     axes.set_ylabel("offset from the strip's spiral, px (mod spacing)")

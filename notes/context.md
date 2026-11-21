@@ -93,6 +93,11 @@ correlation ~0.9 (limited by the measured grain level).
   radius); the full-res refit fits the spacing anyway.
 - Better sound readout: fit the groove cross-section per column (matched
   filter), filter along the groove with the grain's spectrum.
+- Drift: the real card's groove offsets (Tomaz's images 21, 26) are ~3 px
+  rms and change almost completely from one turn to the next; the model
+  now matches (3.2 px rms, periods 0.3–1 turn). Wobble was removed. A
+  second strip pass along the refitted spiral flattened step f but didn't
+  improve the center (drift-limited), so it was dropped (Nov 2026).
 - Put card imperfections back one at a time (warp, slow height drift, dust,
   damage) once the idealized pipeline is settled.
 - Stretched cards: the low-res center now survives up to 3% stretch, but

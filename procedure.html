@@ -661,9 +661,30 @@ it. Lengths that should scale with resolution are set in spacings.
 and the full-res strip both come from it. The card is
 idealized: its surface is flat at height 0 (no warp, bend, dust or scratches),
 plus fine paper grain (white noise blurred to the measured correlation length). The groove is cut by a round stylus (a parabola) moving
-along r(&theta;) = b&theta; + &delta;(&theta;), b = S/2&pi;, one fixed winding; &delta; = slow drift
-(periods of 0.7&ndash;12 turns, 2 px rms) + a small, smooth lateral wobble (0.3 px
-rms, wavelengths 200&ndash;3000 px).</p>
+along r(&theta;) = b&theta; + &delta;(&theta;), b = S/2&pi;, one fixed winding; &delta; = drift
+(3.2 px rms, periods of 0.3&ndash;1 turn, so neighbouring turns are nearly
+independent; matched to the real card, below). A small lateral wobble along the groove
+(0.3 px rms, wavelengths 200&ndash;3000 px, assumed) was dropped in Nov 2026: it
+was below the trace error and nothing measured supported it.</p>
+<p><b>How the drift compares with the real card</b> (sonorine_001, measured on
+Tomaz's images 21 and 26: the centroid of his groove mask across each turn,
+relative to his fitted spiral, per turn): 2.9 px rms over 30 turns (image 21,
+700&sup2; px) and 3.5 px rms over ~41 turns (image 26, 1400&sup2; px), extremes
+&minus;7.8 to +4.7 px. Neighbouring turns are uncorrelated (the turn-to-turn
+difference has sd &radic;2 &times; the spread), while along one turn the offset
+changes only ~1.5 px over 1200 px (~0.1 turn). So the model's amplitude is a
+little low, and its periods too long: the real offsets change by about one
+turn's worth from one turn to the next. (Measured against a fitted spiral,
+so fit errors are included, but those would be smooth across turns, not
+turn to turn.) The model was changed to match (Nov 2026): 3.2 px rms (hard
+cards 5 px), periods 0.3&ndash;1 turn (60 waves), which gives a correlation of ~0
+one turn apart and ~1.6 px median change over 0.06 turn; before, it was 2 px
+rms over 0.7&ndash;12 turns. With it, the refitted center is 0.09&ndash;0.33 px
+from the truth (was 0.03&ndash;0.18: the per-turn drift leaks into the one-turn
+wave), the trace 0.54&ndash;0.83 px rms (was 0.39&ndash;0.63), sound correlation
+0.891&ndash;0.910 on typical cards (was 0.893&ndash;0.924); hard cards got easier
+(5 px fast drift instead of 6 px slow: trace 0.99&ndash;1.69 px, wrong groove
+&le; 0.41%).</p>
 <p>The sound is cut <b>vertically</b> (hill-and-dale): the stylus moves up and down,
 so the depth of the cut is D(s) = D<sub>0</sub>(1 + a(s)), a(s) the sound along the
 groove (0.4 rms, wavelengths 15&ndash;300 px). The stylus profile is
@@ -772,6 +793,14 @@ slip. Step f shows it: relative to the strip's spiral, the refitted model
 (yellow) has a one-turn wave whose amplitude is the center correction, next to
 the same curve for the true center, spacing and phase (red). Over only a few
 turns, spacing and drift can't be told apart (3 turns: &minus;3% spacing).</p>
+<p><b>Tried and not kept: a second pass</b> (Nov 2026): sample the strip again
+along the refitted spiral and refit, reading off any one-turn wave and slope
+still left. The fitted wave dropped from ~0.14 to ~0.01 px and yellow lay
+flat, but the center did not improve (20 cards: median 0.175 &rarr; 0.168 px, better on 9 of 20,
+mean change &minus;0.004 px). The first refit already reads the wave fully
+(the model is nearly linear in the center); what is left of the red curve is
+error the offsets can't reveal, set by the drift from turn to turn. The
+trace and sound don't change either.</p>
 <figure><img src="card/img/f_explain.png" alt=""><figcaption>How to read step f, a cartoon. Top: a toy card; the strip follows the cyan spiral (center 0.45 S and spacing 4% off), each column is a radial line &plusmn;S about it (grey), and the offset is the distance from the cyan spiral to the nearest groove (magenta dot, outward +). Middle: the offsets along the strip, unrolled: one wave per turn from the center error, a slow rise from the spacing error, and a copy for every turn of the groove, one spacing apart. Bottom: modulo the spacing, as in step f: only the nearest groove, in &minus;S/2&hellip;+S/2, wrapping when the next turn becomes nearer. A, B, C: the same three columns in all three panels.</figcaption></figure>
 
 <h2>P3.5 The trace</h2>

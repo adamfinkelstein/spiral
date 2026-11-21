@@ -109,7 +109,7 @@ def make_figures(run, folder, detail_size=256):
         "c_profile": lambda p: figures.radial_profile(run, p),
         "d_coherence": lambda p: figures.coherence_map(run, p),
         "f_explain": figures.offsets_explainer,
-        "f_offsets": lambda p: figures.offsets_mod_spacing(run, p),
+        "f_offsets": lambda p: figures.offsets_mod_spacing(run, p, run.strip, run.model),
         "g_strip": lambda p: figures.strip_image(run, p),
         "h_trace": lambda p: figures.trace_offset(run, p),
         "i_turns": lambda p: figures.errors_per_turn(run, p),
@@ -158,6 +158,7 @@ def write_report(path, run, summary, results, image_folder, spots):
     middle = len(run.strip.theta) // 2
     selected = int(np.argmin([abs(spot["column"] - middle) for spot in spots]))
     wrong_spots = sum(1 for spot in spots if spot["wrong"])
+    moved = float(np.hypot(run.refit.x - low.spiral.x, run.refit.y - low.spiral.y))
     body = f"""
 <h1>Spiral: an idealized card, whole pipeline</h1>
 <p class="note">Built by <code>python build_card.py</code> (cardlab/, Python) and committed as static images.
@@ -193,9 +194,9 @@ Showcase: preset <b>{escape(card.params.label)}</b>, seed {card.seed}. <a href="
       "Middle: the offsets along the strip, unrolled. A center error gives one wave per turn, a spacing error a slow rise. Every turn of the groove shows up, one spacing apart, because each column crosses several.",
       "Bottom: what step f plots. A column can't tell which turn it sees, only where the nearest groove sits, so the offsets are taken modulo the spacing, in −S/2…+S/2; when a curve passes ±S/2 the next turn is nearer and it wraps around. The refit (<span class='y'>yellow</span> in f) fits exactly this kind of curve, modulo S.")}
 {step(img("f_offsets"), "f. Strip offsets and the geometry refit",
-      f"Columns every {run.strip.step:g} px along the low-res spiral; each is a radial line sampled at ±1 spacing (cv2.remap), detrended and demodulated: Z = Σ v·e<sup>−2πid/S</sup> gives the groove's offset (mod S) and a confidence |Z|.",
-      "Relative to the strip's spiral a center error is a one-turn wave, a spacing error a slope, a phase error an offset. The refit (<span class='y'>yellow</span>) fits exactly that modulo S: a grid over spacing and center, then scipy least_squares with a robust loss. <span class='r'>Red</span>: the true geometry; <span class='g'>green</span>: true grooves; grey dots: measured (smoothed 24 px).",
-      f"<span class='num'>{s['columns']:,} columns, {s['turns']:.1f} turns. Refit center {s['refit_center_error']:.2f} px, spacing {pct(s['refit_spacing_error'], 3)}; spiral vs. grooves {s['refit_vs_grooves']:.2f} px rms.</span>")}
+      f"Columns every {run.strip.step:g} px along the low-res spiral; each is a radial line sampled at ±1 spacing (scipy map_coordinates), detrended and demodulated: Z = Σ v·e<sup>−2πid/S</sup> gives the groove's offset (mod S) and a confidence |Z|.",
+      "Relative to the strip's spiral a center error is a one-turn wave (its cos and sin amplitudes are the x and y errors), a spacing error a slope, a phase error an offset. The refit (<span class='y'>yellow</span>) fits exactly that modulo S: a grid over spacing and center, then scipy least_squares with a robust loss, and moves the spiral by what it reads off. <span class='r'>Red</span>: the true geometry; <span class='g'>green</span>: true grooves, which drift a few px from turn to turn; grey dots: measured (smoothed 24 px). A second pass along the refitted spiral flattens these curves but doesn't improve the center (it's limited by the drift), so it isn't used.",
+      f"<span class='num'>{s['columns']:,} columns, {s['turns']:.1f} turns. Wave read off: center moved {moved:.2f} px; the low-res center was {s['low_center_error']:.2f} px from the truth, the refitted one is {s['refit_center_error']:.2f} px; spacing {pct(s['refit_spacing_error'], 3)}; spiral vs. grooves {s['refit_vs_grooves']:.2f} px rms.</span>")}
 {step(img("g_strip"), "g. Unrolled strip around the spot",
       "Rows across the groove (1 px, outward up), each column's mean removed. <span class='y'>Yellow</span>: refitted spiral (±S faint); <span class='r'>red</span>: trace; <span class='g'>green</span>: true groove.")}
 {step(img("h_trace"), "h. The trace: offset from the refitted spiral",

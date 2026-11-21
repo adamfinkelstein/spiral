@@ -21,10 +21,8 @@ class CardParams:
     sound_wavelengths: tuple = (15, 300)
     grain: float = 0.52
     grain_size: float = 2.5
-    drift_rms: float = 2.0
-    drift_turns: tuple = (0.7, 12)
-    wobble_rms: float = 0.3
-    wobble_wavelengths: tuple = (200, 3000)
+    drift_rms: float = 3.2
+    drift_turns: tuple = (0.3, 1.0)
 
 
 TYPICAL = CardParams()
@@ -35,7 +33,7 @@ PRESETS = {
     "hard": replace(
         TYPICAL, label="Hard (more grain, drift, loud sound)", spacing_tolerance=0.02,
         mark_error=25, mark_radius_error=0.02, edge_fade=80, sound_rms=0.6, grain=1.0,
-        drift_rms=6.0, drift_turns=(0.5, 10), wobble_rms=0.6, wobble_wavelengths=(150, 3000),
+        drift_rms=5.0,
     ),
     "clean": replace(TYPICAL, label="Clean (no grain)", grain=0.0),
 }
@@ -56,8 +54,6 @@ PARAM_NOTES = {
     "sound_wavelengths": ("Sound wavelengths along the groove", "px", "assumed"),
     "grain": ("Grain (rms)", "× groove rms", "measured: 2.6 vs. groove 5.0 rms (image 21)"),
     "grain_size": ("Grain size", "px", "measured ACF 0.5 at ~3–5 px"),
-    "drift_rms": ("Groove drift from the spiral (rms)", "px", "phase between turns varies ±2 px (image 21)"),
-    "drift_turns": ("Drift periods", "turns", "assumed"),
-    "wobble_rms": ("Lateral wobble (rms)", "px", "assumed; small and smooth"),
-    "wobble_wavelengths": ("Wobble wavelengths", "px", "assumed"),
+    "drift_rms": ("Groove drift from the spiral (rms)", "px", "measured 2.9 / 3.5 px rms per turn vs. Tomaz's fitted spiral (images 21 / 26)"),
+    "drift_turns": ("Drift periods", "turns", "fit to the same: neighbouring turns uncorrelated, ~1.5 px change per 0.06 turn"),
 }

@@ -6,7 +6,7 @@ from scipy.ndimage import gaussian_filter
 from .geometry import TAU, Mark, Spiral, pitch_of, polar, smoothstep
 
 # An idealized card: flat at height 0 plus grain. A round stylus (a parabola)
-# follows r = pitch*theta + drift + wobble and moves up and down with the sound
+# follows r = pitch*theta + drift and moves up and down with the sound
 # (hill-and-dale): cut depth = 1 + sound. Where the stylus is above the card
 # nothing is cut, so the surface is min(0, stylus) over the nearest arms.
 
@@ -38,7 +38,6 @@ class Card:
     theta_grid: np.ndarray
     drift: np.ndarray
     arc_grid: np.ndarray
-    wobble: np.ndarray
     sound_track: np.ndarray
 
     @property
@@ -49,7 +48,7 @@ class Card:
         return self.spiral.pitch * theta**2 / 2
 
     def lateral_offset(self, theta):
-        return np.interp(theta, self.theta_grid, self.drift) + np.interp(self.arc_length(theta), self.arc_grid, self.wobble)
+        return np.interp(theta, self.theta_grid, self.drift)
 
     def sound(self, theta):
         return np.interp(self.arc_length(theta), self.arc_grid, self.sound_track)
@@ -103,11 +102,10 @@ def make_card(params, seed):
     margin = 6 * spacing
     theta_grid = np.arange(max(1, (params.r_inner - margin) / pitch), (params.r_outer + margin) / pitch, 0.005)
     drift_wavelengths = tuple(TAU * turns for turns in params.drift_turns)
-    drift = band_limited(rng, theta_grid, params.drift_rms, drift_wavelengths, n_waves=12)
+    drift = band_limited(rng, theta_grid, params.drift_rms, drift_wavelengths, n_waves=60)
     arc_grid = np.arange(pitch * theta_grid[0] ** 2 / 2, pitch * theta_grid[-1] ** 2 / 2, 1.0)
-    wobble = band_limited(rng, arc_grid, params.wobble_rms, params.wobble_wavelengths)
     sound_track = band_limited(rng, arc_grid, params.sound_rms, params.sound_wavelengths)
-    return Card(params, seed, spiral, mark, theta_grid, drift, arc_grid, wobble, sound_track)
+    return Card(params, seed, spiral, mark, theta_grid, drift, arc_grid, sound_track)
 
 
 def grain_image(card, size):
