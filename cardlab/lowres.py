@@ -116,12 +116,16 @@ def coherence_grid(x, y, values, center, pitch, radius, step):
     return centers_x, center[1] + offsets, scores
 
 
-def refine_center(x, y, values, start, pitch, step):
-    negative_coherence = lambda p: -np.abs(spiral_coherence(x, y, values, p[0], p[1], p[2]))
-    simplex = np.array([start, start + [step / 2, 0, 0], start + [0, step / 2, 0], start + [0, 0, 0.004 * pitch]])
-    result = minimize(negative_coherence, start, method="Nelder-Mead",
-                      options={"initial_simplex": simplex, "xatol": 0.002 * pitch * TAU, "fatol": 1e-9})
-    return result.x
+def refine_center(x, y, values, start, step, mid_turn):
+    # Nelder-Mead over (x, y, pitch * mid_turn): the third parameter is the
+    # mid radius in px, so all three are in px and one tolerance fits them all
+    to_params = lambda q: (q[0], q[1], q[2] / mid_turn)
+    negative_coherence = lambda q: -np.abs(spiral_coherence(x, y, values, *to_params(q)))
+    q0 = np.array([start[0], start[1], start[2] * mid_turn])
+    simplex = np.array([q0, q0 + [step / 2, 0, 0], q0 + [0, step / 2, 0], q0 + [0, 0, step / 2]])
+    result = minimize(negative_coherence, q0, method="Nelder-Mead",
+                      options={"initial_simplex": simplex, "xatol": 0.005, "fatol": 1e-6 * abs(negative_coherence(q0))})
+    return to_params(result.x)
 
 
 def find_center(image, mask, mark, scale, spacing, settings, rng):
@@ -132,7 +136,8 @@ def find_center(image, mask, mark, scale, spacing, settings, rng):
     start_center = np.array([mark.x, mark.y]) / scale
     xs, ys, scores = coherence_grid(x[subset], y[subset], values[subset], start_center, pitch, settings.search_radius / scale, step)
     row, col = np.unravel_index(np.argmax(scores), scores.shape)
-    cx, cy, pitch = refine_center(x, y, values, np.array([xs[col], ys[row], pitch]), pitch, step)
+    mid_turn = (mark.r_inner + mark.r_outer) / 2 / scale / pitch  # theta at the middle of the annulus
+    cx, cy, pitch = refine_center(x, y, values, np.array([xs[col], ys[row], pitch]), step, mid_turn)
     z = spiral_coherence(x, y, values, cx, cy, pitch)
     coherence = 2 * np.abs(z) / np.sum(np.abs(values)) / (np.pi / 2)
     grid_centers = np.stack(np.meshgrid(xs, ys), axis=-1) * scale

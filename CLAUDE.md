@@ -88,6 +88,22 @@ Pages serves them (nothing is built on GitHub).
   residuals, lock_trace), `readout.py` (sound), `scoring.py` (truth),
   `pipeline.py` (run_pipeline, summarize), `figures.py` (matplotlib, one
   function per step figure), `report.py` (HTML).
+- Sanity check against the JS version: `checks/compare_with_js.sh [preset]
+  [seed]` (needs node — on the Mac via nvm in Terminal; ~2 min) dumps the
+  Python pipeline's inputs and intermediates and feeds the same inputs to
+  each JS function. Results (typical 1–3, loud 1, hard 1, clean 1): FFT
+  spacing identical; strip demodulation identical to ~1e-8 (relative),
+  except the few hundred columns whose rows leave the 5551² frame (the JS
+  model was procedural beyond it; the image clamps); refit equal within
+  0.002–0.09 px (hard 1: 0.7 px — different robust losses on a noisy
+  card); trace within ~0.002 px rms; sound readout correlation ≥ 0.998.
+  The low-res center differs by 0.1–0.4 px (gap at mid radius) because
+  JS's pattern search stops early: Python's Nelder–Mead reaches a higher
+  |Z| every time (the truth has slightly lower |Z| still, from drift).
+  Two Python fixes came out of it: strip sampling uses
+  scipy.ndimage.map_coordinates (cv2.remap rounds bilinear weights to
+  1/32 px: 0.3% demodulation error), and Nelder–Mead runs over (x, y, mid
+  radius) so all three parameters are in px.
 - Not ported yet: the gradient-based centers (lines + RANSAC; tilt about
   the hand mark) — step e is a placeholder in the report.
 - Results (Python, 5 seeds): typical — low-res center 0.03–0.22 px, trace
@@ -392,7 +408,7 @@ Robustness (8 random offset sets, uniform in ±amp at each knot):
 
 ## Checking changes
 
-No Node on the Mac; the Linux VM used by Claude has Node. Syntax-check on the
+Node on the Mac is available through nvm in a Terminal bash shell (not in Claude's Cowork Linux VM, which has its own node). Syntax-check on the
 Mac with JavaScriptCore:
 
 ```sh

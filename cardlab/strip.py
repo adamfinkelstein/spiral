@@ -1,8 +1,7 @@
 from dataclasses import dataclass, replace
 
-import cv2
 import numpy as np
-from scipy.ndimage import gaussian_filter1d
+from scipy.ndimage import gaussian_filter1d, map_coordinates
 from scipy.optimize import least_squares
 
 from .geometry import TAU, spiral_points, wrap
@@ -42,15 +41,12 @@ def strip_columns(spiral, mark, step, turns=0):
     return np.sqrt(2 * arc / pitch)
 
 
-def sample_at(image, x, y, block=8192):
-    # bilinear samples at arbitrary points; cv2.remap maps must be < 32767 wide
-    shape = np.shape(x)
-    x, y = np.ravel(x), np.ravel(y)
-    padded = -len(x) % block
-    map_x = np.pad(x - 0.5, (0, padded)).astype(np.float32).reshape(-1, block)
-    map_y = np.pad(y - 0.5, (0, padded)).astype(np.float32).reshape(-1, block)
-    samples = cv2.remap(image, map_x, map_y, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
-    return samples.ravel()[: len(x)].reshape(shape)
+def sample_at(image, x, y):
+    # bilinear samples at arbitrary points (pixel centers at i + 0.5); scipy's
+    # map_coordinates interpolates exactly, where cv2.remap rounds the
+    # weights to 1/32 px
+    coords = np.stack([np.ravel(y) - 0.5, np.ravel(x) - 0.5])
+    return map_coordinates(image, coords, order=1, mode="nearest").reshape(np.shape(x))
 
 
 def sample_strip(image, spiral, theta, offsets, centers=0.0):
