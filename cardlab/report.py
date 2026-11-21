@@ -1,5 +1,8 @@
+import json
 from dataclasses import asdict
 from html import escape
+
+import numpy as np
 
 from . import figures
 from .params import PARAM_NOTES, PRESETS
@@ -21,6 +24,11 @@ th { color: #aaa; font-weight: 500; padding: 2px 8px; border-bottom: 1px solid #
 td { padding: 2px 8px; text-align: right; }
 th:first-child, td:first-child, td.src, th.src { text-align: left; }
 td.src { color: #888; }
+.pick { position: relative; width: 900px; border: 1px solid #333; line-height: 0; }
+.pick img { border: none; }
+.spot { position: absolute; box-sizing: border-box; border: 2px solid transparent; cursor: pointer; }
+.spot:hover { border-color: rgba(255,255,255,0.6); }
+.spot.on { border-color: #fff; }
 a { color: #8cf; } .note { color: #888; font-size: 12px; max-width: 1300px; }
 .w { color: #fff } .c { color: #4cf } .y { color: #fd3 } .r { color: #f44 } .g { color: #3e6 } .m { color: #f6f }
 """
@@ -72,31 +80,83 @@ def params_table(params):
     return "<table><tr><th>Parameter</th><th>Value</th><th class='src'>Source</th></tr>" + "".join(rows) + "</table>"
 
 
+def detail_spots(run, size):
+    # the spots of step e: position in the low-res image (fractions, for the
+    # clickable boxes in step a), and a description
+    spiral, scale, theta = run.refit, run.low.scale, run.strip.theta
+    trace_x, trace_y = figures.spiral_points(run.strip.spiral, theta, run.trace)
+    spots = []
+    for column in figures.detail_columns(run):
+        x, y = figures.detail_spot(run, column)
+        left, top = figures.detail_box(run, (x, y), size)
+        inside = (trace_x >= left) & (trace_x < left + size) & (trace_y >= top) & (trace_y < top + size)
+        spots.append({
+            "column": column, "x": float(x), "y": float(y),
+            "left": left / scale / run.low.image.shape[1], "top": top / scale / run.low.image.shape[0],
+            "size": size / scale / run.low.image.shape[0],
+            "turn": float((theta[column] - theta[0]) / figures.TAU + 1),
+            "radius": float(np.hypot(x - spiral.x, y - spiral.y)),
+            "wrong": int(np.sum(inside & run.score.wrong_groove)),
+        })
+    return spots
+
+
 def make_figures(run, folder, detail_size=256):
+    spots = detail_spots(run, detail_size)
     steps = {
-        "a_input": lambda p: figures.low_res_input(run, p, detail_size),
+        "a_input": lambda p: figures.low_res_input(run, p, detail_size, [(s["x"], s["y"]) for s in spots]),
         "b_fft": lambda p: figures.spectrum(run, p),
         "c_profile": lambda p: figures.radial_profile(run, p),
         "d_coherence": lambda p: figures.coherence_map(run, p),
-        "e_detail": lambda p: figures.detail(run, p, detail_size),
         "f_offsets": lambda p: figures.offsets_mod_spacing(run, p),
         "g_strip": lambda p: figures.strip_image(run, p),
         "h_trace": lambda p: figures.trace_offset(run, p),
         "i_turns": lambda p: figures.errors_per_turn(run, p),
         "j_sound": lambda p: figures.sound(run, p),
     }
-    paths = {}
+    for k, spot in enumerate(spots):
+        steps[f"e_detail_{k:02d}"] = lambda p, spot=spot: figures.detail(run, p, detail_size, (spot["x"], spot["y"]))
     for name, draw in steps.items():
-        path = folder / f"{name}.png"
-        draw(path)
-        paths[name] = path
-    return paths
+        draw(folder / f"{name}.png")
+    for k, spot in enumerate(spots):
+        spot["image"] = f"e_detail_{k:02d}"
+    return spots
 
 
-def write_report(path, run, summary, results, image_folder):
+def picker_step(image, spots, selected, title, *paragraphs):
+    # step a with a clickable box over each detail spot
+    boxes = "".join(
+        f'<div class="spot{" on" if k == selected else ""}" data-k="{k}" title="spot {k + 1}" style="left:{100 * s["left"]:.3f}%;'
+        f'top:{100 * s["top"]:.3f}%;width:{100 * s["size"]:.3f}%;height:{100 * s["size"]:.3f}%"></div>'
+        for k, s in enumerate(spots))
+    notes = "".join(f"<p>{p}</p>" for p in paragraphs)
+    return f'<div class="step"><div class="pick"><img src="{image}">{boxes}</div><div class="panel"><h4>{title}</h4>{notes}</div></div>'
+
+
+def spot_script(spots, image_folder, selected):
+    data = [{"src": f"{image_folder}/{s['image']}.png", "turn": round(s["turn"], 1), "radius": round(s["radius"]),
+             "wrong": s["wrong"]} for s in spots]
+    return f"""<script>
+const spots = {json.dumps(data)};
+function showSpot(k) {{
+  const s = spots[k];
+  document.getElementById('detail').src = s.src;
+  document.getElementById('detailInfo').textContent = `Spot ${{k + 1}} of ${{spots.length}}: turn ${{s.turn}}, radius ${{s.radius}} px` +
+    (s.wrong ? `; ${{s.wrong}} trace columns here on the wrong groove.` : '; no wrong-groove columns here.');
+  document.querySelectorAll('.spot').forEach(e => e.classList.toggle('on', +e.dataset.k === k));
+}}
+document.querySelectorAll('.spot').forEach(e => e.addEventListener('click', () => showSpot(+e.dataset.k)));
+showSpot({selected});
+</script>"""
+
+
+def write_report(path, run, summary, results, image_folder, spots):
     img = lambda name: f"{image_folder}/{name}.png"
     s = summary
     card, low = run.card, run.low
+    middle = len(run.strip.theta) // 2
+    selected = int(np.argmin([abs(spot["column"] - middle) for spot in spots]))
+    wrong_spots = sum(1 for spot in spots if spot["wrong"])
     body = f"""
 <h1>Spiral: an idealized card, whole pipeline</h1>
 <p class="note">Built by <code>python build_card.py</code> (cardlab/, Python) and committed as static images.
@@ -108,9 +168,9 @@ Showcase: preset <b>{escape(card.params.label)}</b>, seed {card.seed}. <a href="
 <p class="note">Errors against the simulated card's truth, full-resolution px. Ranges over the seeds listed.</p>
 
 <h2>1. Low resolution (1024², ×{low.scale:.2f}): spacing, center, phase</h2>
-{step(img("a_input"), "a. Input: masked to the hand-marked annulus",
+{picker_step(img("a_input"), spots, selected, "a. Input: masked to the hand-marked annulus",
       "The full-res height map averaged over each low-res pixel (cv2.INTER_AREA), times a soft mask from the hand-marked circles (dashed), minus its mean, unit rms. An idealized card: flat, grain only.",
-      "<span class='w'>White +</span> hand mark, <span class='c'>cyan</span> low-res fit, <span class='y'>yellow</span> refit, <span class='r'>red +</span> truth; red box: the detail spot.",
+      "<span class='w'>White +</span> hand mark, <span class='c'>cyan</span> low-res fit, <span class='y'>yellow</span> refit, <span class='r'>red +</span> truth. Red boxes: the {len(spots)} detail spots of step e (spread evenly along the groove{', some where the trace is on the wrong groove' if wrong_spots else ''}); <b>click one</b> to show it in step e.",
       f"<span class='num'>Hand mark {s['mark_error']:.1f} px from the true center.</span>")}
 {step(img("b_fft"), "b. FFT of a × 1/√r about the mark (central half of log |FFT|)",
       "Weighting by 1/√r keeps the outer turns from dominating. The rings sit at radius N/spacing. Dashed: the search window (±10% of nominal); <span class='c'>cyan</span>: the peak.")}
@@ -124,8 +184,9 @@ Showcase: preset <b>{escape(card.params.label)}</b>, seed {card.seed}. <a href="
       f"<span class='num'>Shown: |Z| around the answer. Answer {s['low_center_error']:.2f} px from the true center (hand mark {s['mark_error']:.1f} px); coherence {s['coherence']:.2f}.</span>")}
 
 <h2>2. Full resolution: unrolled strip, refit, groove trace</h2>
-{step(img("e_detail"), "e. Detail at full resolution",
-      "<span class='r'>Red</span>: trace (<span class='m'>magenta</span>: wrong groove); <span class='g'>green</span>: true centerline. Darker = deeper: the depth follows the sound.")}
+<div class="step"><img id="detail" src="{image_folder}/{spots[selected]['image']}.png"><div class="panel"><h4>e. Detail at full resolution (256 px)</h4>
+<p><span class='r'>Red</span>: trace (<span class='m'>magenta</span>: wrong groove); <span class='g'>green</span>: true centerline. Darker = deeper: the depth follows the sound.</p>
+<p>Click a red box in step a to choose the spot.</p><p class="num" id="detailInfo"></p></div></div>
 {step(img("f_offsets"), "f. Strip offsets and the geometry refit",
       f"Columns every {run.strip.step:g} px along the low-res spiral; each is a radial line sampled at ±1 spacing (cv2.remap), detrended and demodulated: Z = Σ v·e<sup>−2πid/S</sup> gives the groove's offset (mod S) and a confidence |Z|.",
       "Relative to the strip's spiral a center error is a one-turn wave, a spacing error a slope, a phase error an offset. The refit (<span class='y'>yellow</span>) fits exactly that modulo S: a grid over spacing and center, then scipy least_squares with a robust loss. <span class='r'>Red</span>: the true geometry; <span class='g'>green</span>: true grooves; grey dots: measured (smoothed 24 px).",
@@ -145,5 +206,6 @@ Showcase: preset <b>{escape(card.params.label)}</b>, seed {card.seed}. <a href="
 
 <h2>Card parameters ({escape(card.params.label)})</h2>
 {params_table(card.params)}
+{spot_script(spots, image_folder, selected)}
 """
     path.write_text(f"<!doctype html><html lang='en'><head><meta charset='utf-8'><title>Spiral: idealized card</title><style>{STYLE}</style></head><body>{body}</body></html>")

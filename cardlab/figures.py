@@ -51,9 +51,39 @@ def circle(axes, x, y, radius, color, dashed=True):
     axes.plot(x + radius * np.cos(angle), y + radius * np.sin(angle), "--" if dashed else "-", color=color, lw=1)
 
 
-def detail_spot(run):
-    middle = len(run.strip.theta) // 2
-    return spiral_points(run.strip.spiral, run.strip.theta[middle], run.trace[middle])
+def detail_spot(run, column=None):
+    column = len(run.strip.theta) // 2 if column is None else column
+    return spiral_points(run.strip.spiral, run.strip.theta[column], run.trace[column])
+
+
+def detail_box(run, spot, size):
+    # top-left corner of the size x size crop about a spot, kept inside the frame
+    height, width = run.image.shape
+    return (int(np.clip(spot[0] - size / 2, 0, width - size)), int(np.clip(spot[1] - size / 2, 0, height - size)))
+
+
+def wrong_runs(wrong):
+    # (start, end) column ranges where the trace is on the wrong groove, longest first
+    edges = np.flatnonzero(np.diff(np.concatenate([[0], wrong.astype(int), [0]])))
+    runs = list(zip(edges[::2], edges[1::2]))
+    return sorted(runs, key=lambda run: run[0] - run[1])
+
+
+def detail_columns(run, count=16, wrong_spots=4):
+    # spot k: turn (k + 1/2) / count of the way out, at angle k x the golden
+    # angle (evenly along the groove alone would repeat a few angles); up to
+    # `wrong_spots` of them replaced by the middles of the longest wrong-groove runs
+    theta = run.strip.theta
+    golden = TAU * (1 - 1 / ((1 + 5**0.5) / 2))
+    columns = []
+    for k in range(count):
+        target = theta[0] + (k + 0.5) / count * (theta[-1] - theta[0])
+        angle = target + run.strip.spiral.phase  # angle about the center, as in strip.refit_basis
+        target += wrap(k * golden - angle, TAU)
+        columns.append(int(np.clip(np.searchsorted(theta, target), 0, len(theta) - 1)))
+    for k, (start, end) in enumerate(wrong_runs(run.score.wrong_groove)[:wrong_spots]):
+        columns[count - 1 - k] = (start + end) // 2
+    return sorted(columns)
 
 
 def strip_window(run, columns):
@@ -65,7 +95,7 @@ def strip_window(run, columns):
 # ---------- Low resolution ----------
 
 
-def low_res_input(run, path, detail_size):
+def low_res_input(run, path, detail_size, spots):
     low, card, scale = run.low, run.card, run.low.scale
     figure = new_figure(900, 900)
     axes = image_axes(figure)
@@ -76,9 +106,9 @@ def low_res_input(run, path, detail_size):
     plot_ring(axes, low.spiral.x / scale, low.spiral.y / scale, COLORS["low"], 10)
     plot_ring(axes, run.refit.x / scale, run.refit.y / scale, COLORS["refit"], 16)
     plot_cross(axes, card.spiral.x / scale, card.spiral.y / scale, COLORS["truth"], 9)
-    spot_x, spot_y = detail_spot(run)
-    half = detail_size / 2 / scale
-    axes.add_patch(plt.Rectangle((spot_x / scale - half, spot_y / scale - half), 2 * half, 2 * half, fill=False, color=COLORS["truth"], lw=1.5))
+    for spot in spots:
+        left, top = detail_box(run, spot, detail_size)
+        axes.add_patch(plt.Rectangle((left / scale, top / scale), detail_size / scale, detail_size / scale, fill=False, color=COLORS["truth"], lw=1.2))
     axes.set_xlim(0, low.image.shape[1])
     axes.set_ylim(low.image.shape[0], 0)
     save(figure, path)
@@ -135,19 +165,20 @@ def coherence_map(run, path, half_width=30):
 # ---------- Full resolution ----------
 
 
-def detail(run, path, size):
-    spot_x, spot_y = detail_spot(run)
-    left, top = int(spot_x - size / 2), int(spot_y - size / 2)
+def detail(run, path, size, spot):
+    # the whole spiral as polylines (consecutive columns are neighbours along the
+    # groove), clipped by the axes; wrong-groove stretches in magenta, with dots
+    # so that a single wrong column still shows
+    left, top = detail_box(run, spot, size)
     figure = new_figure(900, 900)
     axes = image_axes(figure)
     show_grey(axes, run.image[top : top + size, left : left + size], extent=(left, left + size, top + size, top))
     trace_x, trace_y = spiral_points(run.strip.spiral, run.strip.theta, run.trace)
     true_x, true_y = spiral_points(run.strip.spiral, run.strip.theta, run.score.true_offset)
-    inside = (np.abs(trace_x - spot_x) < size / 2) & (np.abs(trace_y - spot_y) < size / 2)
-    axes.plot(true_x[inside], true_y[inside], ".", color=COLORS["true"], ms=4)
-    axes.plot(trace_x[inside], trace_y[inside], ".", color=COLORS["trace"], ms=4)
-    wrong = inside & run.score.wrong_groove
-    axes.plot(trace_x[wrong], trace_y[wrong], ".", color="#f0f", ms=5)
+    wrong = run.score.wrong_groove
+    axes.plot(true_x, true_y, "-", color=COLORS["true"], lw=1.5)
+    axes.plot(trace_x, trace_y, "-", color=COLORS["trace"], lw=1.5)
+    axes.plot(np.where(wrong, trace_x, np.nan), np.where(wrong, trace_y, np.nan), ".-", color="#f0f", lw=2, ms=4)
     axes.set_xlim(left, left + size)
     axes.set_ylim(top + size, top)
     save(figure, path)

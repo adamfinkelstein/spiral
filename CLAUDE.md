@@ -100,7 +100,14 @@ Pages serves them (nothing is built on GitHub).
   refit: grid start + scipy least_squares with soft_l1 on wrapped
   residuals, lock_trace), `readout.py` (sound), `scoring.py` (truth),
   `pipeline.py` (run_pipeline, summarize), `figures.py` (matplotlib, one
-  function per step figure), `report.py` (HTML).
+  function per step figure), `report.py` (HTML): step e is 16 pre-built
+  256-px details (`figures.detail_columns`: evenly spaced turns at golden-
+  angle steps, up to 4 replaced by the longest wrong-groove runs;
+  `e_detail_00..15.png`, crops clamped to the frame). Step a draws their
+  boxes; clicking one (HTML boxes over the image, small script) swaps step
+  e. The detail draws trace and truth as polylines over the whole spiral,
+  clipped by the axes (consecutive columns are neighbours along the
+  groove), wrong-groove columns in magenta.
 - Sanity check against the JS version: `checks/compare_with_js.sh [preset]
   [seed]` (needs node — on the Mac via nvm in Terminal; ~2 min) dumps the
   Python pipeline's inputs and intermediates and feeds the same inputs to

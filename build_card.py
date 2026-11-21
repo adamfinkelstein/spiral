@@ -62,8 +62,10 @@ def main():
     save_results(results)
 
     IMAGES.mkdir(parents=True, exist_ok=True)
-    make_figures(showcase, IMAGES)
-    write_report(ROOT / "card.html", showcase, results[showcase_key], list(results.values()), "card/img")
+    for old in IMAGES.glob("e_detail*.png"):
+        old.unlink()
+    spots = make_figures(showcase, IMAGES)
+    write_report(ROOT / "card.html", showcase, results[showcase_key], list(results.values()), "card/img", spots)
     print("wrote card.html")
 
 
