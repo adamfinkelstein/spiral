@@ -64,6 +64,9 @@ a seed instead of sliders.
 - Full resolution: an unrolled strip along that spiral, one demodulated
   column every 3 px of groove, a robust refit of the geometry, and the groove
   traced locked to the refitted spiral.
-- Shows the card, a full-res detail with the trace and the true groove, the
-  strip, the groove's offset, per-turn errors, estimate and trace errors
-  against the truth, and every card parameter with its source.
+- Audio: the sound is cut vertically (hill-and-dale), so it is read from the
+  groove's depth along the trace.
+- Shows every step (input, local contrast, FFT, radial profile, coherence
+  search, gradient-line center for comparison, full-res detail, the strip and
+  its offsets, per-turn errors, audio vs. truth), the errors against the
+  truth, and every card parameter with its source.

@@ -61,7 +61,8 @@ function lowResStage(img, F, nominal, ann, opts = { search: 60, gradient: false 
   // parabolically. The groove is nearly a cosine, so there are no useful
   // harmonics, and the profile has ripple of its own (from the annulus edges)
   // that throws off the harmonic sum's trough samples.
-  computeSpectrum(evenWeight(hp, a, sNom, 0.5));
+  const fftIn = Float32Array.from(evenWeight(hp, a, sNom, 0.5));
+  computeSpectrum(fftIn);
   const pr = smooth1d(Float64Array.from(profile), 1);
   const iLo = Math.floor(N / (1.1 * sNom)), iHi = Math.ceil(N / (0.9 * sNom));
   let bi = iLo;
@@ -79,7 +80,8 @@ function lowResStage(img, F, nominal, ann, opts = { search: 60, gradient: false 
   // center, spacing and phase: spiral coherence, searched about the mark
   const sp = spiralCoherence(hp, a, sLow, opts.search / k);
   return {
-    hp, spacing: sFFT * k, fftOK, gc: gc && { x: gc.c.x * k, y: gc.c.y * k }, coherence: sp.coh, grid: sp.grid,
+    hp, fftIn, mag: Float32Array.from(mag), profile: pr, fft: { iLo, iHi, rho }, spacing: sFFT * k, fftOK, coherence: sp.coh, grid: sp.grid,
+    gc: gc && { x: gc.c.x * k, y: gc.c.y * k, img: Float32Array.from(gc.img), X: gc.L.X, Y: gc.L.Y, inl: gc.inl, path: gc.path },
     geom: { x: sp.x * k, y: sp.y * k, b: sp.b * k, ph: sp.ph },
   };
 }
@@ -275,4 +277,29 @@ function lockTrack(oLocal, amp, model, S, sigma) {
     out[i] = ref[i] + d - S * Math.round(d / S);
   }
   return { o: out, ref };
+}
+
+// Audio readout (hill-and-dale: the audio is the groove's depth). Per column,
+// the depth at the traced bottom (mean over ±hb px) minus the ridges on both
+// sides (mean over ±hb px at ±S/2): r ≈ −A(2 + h) for groove amplitude A and
+// audio h. A varies slowly (fade, damage), so h ≈ 2(r/r̄ − 1) with r̄ = r
+// smoothed by σ 100 columns (300 px); 0 where the groove is too faint
+// (|r̄| < ¼ of its median), clipped to ±2; then smoothed by σ 1 column.
+// (Tested on typical: hb 3 best; smoothing the ridges along the groove made
+// it worse, 0.42 → 0.25 correlation.)
+async function readoutPass(card, geom, TH, o, S, progress, hb = 3) {
+  const n = TH.length, bot = new Float64Array(n), rid = new Float64Array(n), h = S / 2;
+  for (let i = 0; i < n; i++) {
+    const a = TH[i] + geom.ph, ca = Math.cos(a), sa = Math.sin(a), R = geom.b * TH[i] + o[i];
+    const at = d => card.sample(geom.x + (R + d) * ca, geom.y + (R + d) * sa);
+    let bs = 0, rs = 0;
+    for (let j = -hb; j <= hb; j++) { bs += at(j); rs += at(j - h) + at(j + h); }
+    bot[i] = bs / (2 * hb + 1); rid[i] = rs / (2 * (2 * hb + 1));
+    if ((i & 8191) === 8191) { progress && progress(i / n); await tick(); }
+  }
+  const r = Float64Array.from(bot, (v, i) => v - rid[i]);
+  const rs = smooth1d(r, 100), est = new Float64Array(n);
+  const md = median(Array.from(rs.filter((_, i) => i % 17 === 0), Math.abs));
+  for (let i = 0; i < n; i++) est[i] = rs[i] < -0.25 * md ? Math.max(-2, Math.min(2, 2 * (r[i] / rs[i] - 1))) : 0;
+  return { raw: r, smooth: rs, est: smooth1d(est, 1) };
 }

@@ -5,9 +5,11 @@
 //
 // Geometry (ideal card coordinates): the groove is r(θ) = b·θ + δ(θ),
 // b = spacing/2π, θ = α − φ + 2πn (α the angle about the true center), with
-// δ = slow drift (smooth over turns) + audio (band-limited along the groove).
+// δ = slow drift (smooth over turns) + wobble (smooth, along the groove). The
+// audio is vertical (hill-and-dale): extra depth at the groove bottom.
 // The observed image is that ideal card under a slight stretch and a smooth
 // warp. Depth = −A·contrast·cos(2π·ψ) (ψ integer on the groove centerline)
+// − A·contrast·h(s)·g(ψ) (audio h, g = 1 at the bottom, 0 on the ridges)
 // + slow depth drift + paper grain + banding + dust + scratches.
 
 const CARD_TAU = 2 * Math.PI;
@@ -27,7 +29,7 @@ const CARD_PRESETS = {
     centerJitter: 40, annotErr: 12, annotRadiusErr: 0.01,
     groove: 1.0, edgeFade: 60,
     grain: 0.37, grainCell: 2.5, slow: 1.54, slowCell: 90,
-    drift: 2.0, driftTurns: [0.7, 12], audio: 1.0, audioWave: [15, 300],
+    drift: 2.0, driftTurns: [0.7, 12], wobble: 0.3, wobbleWave: [200, 3000], audio: 0.2, audioWave: [15, 300],
     aspect: 0.001, warp: 3, warpScale: [1500, 4000],
     banding: 0.2, bandPeriod: 55,
     dust: 150, dustSize: [3, 14], dustAmp: 2.5,
@@ -40,7 +42,7 @@ const CARD_PRESETS = {
     centerJitter: 40, annotErr: 25, annotRadiusErr: 0.02,
     groove: 1.0, edgeFade: 80,
     grain: 0.6, grainCell: 2.5, slow: 2.2, slowCell: 90,
-    drift: 6.0, driftTurns: [0.5, 10], audio: 2.0, audioWave: [12, 300],
+    drift: 6.0, driftTurns: [0.5, 10], wobble: 0.6, wobbleWave: [150, 3000], audio: 0.2, audioWave: [15, 300],
     aspect: 0.002, warp: 6, warpScale: [1200, 3500],
     banding: 0.35, bandPeriod: 55,
     dust: 400, dustSize: [3, 20], dustAmp: 3,
@@ -53,7 +55,7 @@ const CARD_PRESETS = {
     centerJitter: 40, annotErr: 12, annotRadiusErr: 0.01,
     groove: 1.0, edgeFade: 60,
     grain: 0, grainCell: 2.5, slow: 0, slowCell: 90,
-    drift: 2.0, driftTurns: [0.7, 12], audio: 1.0, audioWave: [15, 300],
+    drift: 2.0, driftTurns: [0.7, 12], wobble: 0.3, wobbleWave: [200, 3000], audio: 0.2, audioWave: [15, 300],
     aspect: 0, warp: 0, warpScale: [1500, 4000],
     banding: 0, bandPeriod: 55,
     dust: 0, dustSize: [3, 14], dustAmp: 0,
@@ -90,24 +92,31 @@ function makeCard(presetName, seed) {
   }
   const driftAt = th => { const x = (th - th0) / DTH, i = Math.max(0, Math.min(nTh - 2, Math.floor(x))), f = Math.min(1, Math.max(0, x - i)); return drift[i] * (1 - f) + drift[i + 1] * f; };
 
-  // audio: band-limited lateral deviation along the groove (arc length s ≈ bθ²/2),
-  // a sum of sinusoids with wavelengths log-uniform in audioWave, tabulated per px
+  // band-limited signals along the groove (arc length s ≈ bθ²/2): sums of 40
+  // sinusoids with wavelengths log-uniform in `waves`, tabulated per px,
+  // scaled to `rms`. Lateral wobble (the groove's sideways wander, smooth) and
+  // the audio, which is cut vertically (hill-and-dale: the groove's depth
+  // varies along it), not sideways as on a vinyl record.
   const s0 = (b * th0 * th0) / 2, s1 = (b * th1 * th1) / 2, nS = Math.ceil(s1 - s0) + 2;
-  const audio = new Float32Array(nS);
-  if (P.audio > 0) {
+  const bandTable = (rms, waves) => {
+    const t = new Float32Array(nS);
+    if (!(rms > 0)) return t;
     const M = 40, re = new Float64Array(M), im = new Float64Array(M), cr = new Float64Array(M), ci = new Float64Array(M), amp = new Float64Array(M);
-    for (let j = 0; j < M; j++) { const w = CARD_TAU / logBetween(P.audioWave), ph = rnd() * CARD_TAU + w * s0; amp[j] = gauss(); re[j] = Math.cos(ph); im[j] = Math.sin(ph); cr[j] = Math.cos(w); ci[j] = Math.sin(w); }
+    for (let j = 0; j < M; j++) { const w = CARD_TAU / logBetween(waves), ph = rnd() * CARD_TAU + w * s0; amp[j] = gauss(); re[j] = Math.cos(ph); im[j] = Math.sin(ph); cr[j] = Math.cos(w); ci[j] = Math.sin(w); }
     let ss = 0;
     for (let k = 0; k < nS; k++) { // rotating phasors: sin(w·s + p) without a sin per sample
       let v = 0;
       for (let j = 0; j < M; j++) { v += amp[j] * im[j]; const r2 = re[j] * cr[j] - im[j] * ci[j]; im[j] = re[j] * ci[j] + im[j] * cr[j]; re[j] = r2; }
       if ((k & 4095) === 0) for (let j = 0; j < M; j++) { const n = Math.hypot(re[j], im[j]); re[j] /= n; im[j] /= n; }
-      audio[k] = v; ss += v * v;
+      t[k] = v; ss += v * v;
     }
-    const sc = P.audio / Math.sqrt(ss / nS);
-    for (let k = 0; k < nS; k++) audio[k] *= sc;
-  }
-  const audioAt = th => { const x = (b * th * th) / 2 - s0, i = Math.max(0, Math.min(nS - 2, Math.floor(x))), f = Math.min(1, Math.max(0, x - i)); return audio[i] * (1 - f) + audio[i + 1] * f; };
+    const sc = rms / Math.sqrt(ss / nS);
+    for (let k = 0; k < nS; k++) t[k] *= sc;
+    return t;
+  };
+  const lookS = (t, th) => { const x = (b * th * th) / 2 - s0, i = Math.max(0, Math.min(nS - 2, Math.floor(x))), f = Math.min(1, Math.max(0, x - i)); return t[i] * (1 - f) + t[i + 1] * f; };
+  const wobble = bandTable(P.wobble, P.wobbleWave), audio = bandTable(P.audio, P.audioWave);
+  const wobbleAt = th => lookS(wobble, th), audioAt = th => lookS(audio, th);
 
   // card distortion: stretch about the center (aspect) plus a smooth warp
   const aspect = 1 + (2 * rnd() - 1) * P.aspect;
@@ -198,7 +207,7 @@ function makeCard(presetName, seed) {
   const psiAt = (qx, qy) => {
     const dx = qx - C.x, dy = qy - C.y, r = Math.hypot(dx, dy), al = Math.atan2(dy, dx) - phi;
     const n = Math.round((r / b - al) / CARD_TAU), th = al + CARD_TAU * n;
-    const dev = driftAt(th) + audioAt(th);
+    const dev = driftAt(th) + wobbleAt(th);
     return { psi: ((r - dev) / b - al) / CARD_TAU, r, a: al + phi, th, dev };
   };
 
@@ -206,10 +215,14 @@ function makeCard(presetName, seed) {
     toIdealQ(x, y);
     const dx = QX - C.x, dy = QY - C.y, r = Math.hypot(dx, dy), a = Math.atan2(dy, dx), al = a - phi;
     const th = al + CARD_TAU * Math.round((r / b - al) / CARD_TAU);
-    const psi = ((r - driftAt(th) - audioAt(th)) / b - al) / CARD_TAU;
+    const psi = ((r - driftAt(th) - wobbleAt(th)) / b - al) / CARD_TAU;
     const dm = dmg ? damageAt(a) : 0;
     const contrast = P.groove * smooth01((r - P.rIn) / P.edgeFade) * smooth01((P.rOut - r) / P.edgeFade) * (1 - dm * (1 - (dmg ? dmg.groove : 1)));
-    let v = contrast > 0 ? -contrast * Math.cos(CARD_TAU * psi) : 0;
+    let v = 0;
+    if (contrast > 0) {
+      const cs = Math.cos(CARD_TAU * psi), g = 0.25 * (1 + cs) * (1 + cs); // g: 1 at the groove bottom, 0 on the ridges
+      v = -contrast * (cs + audioAt(al + CARD_TAU * Math.round(psi)) * g); // audio: extra depth at the bottom
+    }
     if (SL) v += lerpT(SL, x, y);
     if (P.grain) v += P.grain * nG * (1 + dm * ((dmg ? dmg.grain : 1) - 1)) * vnoise(x, y, P.grainCell, seedG);
     if (P.banding) v += P.banding * Math.sin((CARD_TAU * y) / P.bandPeriod + bandPh);
@@ -221,5 +234,5 @@ function makeCard(presetName, seed) {
   // positive) to the nearest groove centerline, in [−S/2, S/2]
   const trueOffset = (x, y) => { const [qx, qy] = toIdeal(x, y); const g = psiAt(qx, qy); return (Math.round(g.psi) - g.psi) * S; };
 
-  return { P, F, S, b, C, phi, ann, aspect, sample, trueOffset, psiAt, toIdeal, driftAt, audioAt, seed, preset: presetName };
+  return { P, F, S, b, C, phi, ann, aspect, sample, trueOffset, psiAt, toIdeal, driftAt, wobbleAt, audioAt, seed, preset: presetName };
 }

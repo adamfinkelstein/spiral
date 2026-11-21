@@ -59,8 +59,10 @@ each page's `ids` list and `params()` read them, and "Defaults" resets to them.
 
 - `makeCard(preset, seed)` (cardmodel.js): procedural depth `sample(x, y)` at
   any full-res point (frame 5551², ~200 ns/sample), so the low-res image and
-  the strip come from the same card. Groove r = bθ + drift(θ) + audio(arc
-  length), depth −cos(2πψ), observed through stretch + smooth warp (warp and
+  the strip come from the same card. Groove r = bθ + drift(θ) + wobble(arc
+  length) (lateral, small and smooth), depth −cos(2πψ) − h·g(ψ): the audio h
+  is vertical (hill-and-dale; sound is cut in depth, not sideways), g = 1 at
+  the groove bottom, 0 on the ridges. Depth observed through stretch + smooth warp (warp and
   slow depth drift are tabulated on a 16-px grid; audio by rotating phasors).
   Also `trueOffset`, `psiAt`, `toIdeal` for scoring. Presets typical / hard /
   clean in `CARD_PRESETS`; card.js `PARAM_INFO` lists each value's source
@@ -78,13 +80,21 @@ each page's `ids` list and `params()` read them, and "Defaults" resets to them.
   arg(−Z)/2π; optional smoothing and unwrapping), `refitGeometry` (grid over
   β, ex, ey on wrapped residuals, then wrapped IRLS), `lockTrack` (reference
   = model + amplitude-weighted circular mean of the residual over 100
-  columns, within ±S/2; trace = nearest groove), `truthAt` for scoring.
+  columns, within ±S/2; trace = nearest groove; default smoothing σ 16
+  columns = 48 px), `readoutPass` (audio: bottom ±3 px minus ridges at ±S/2,
+  normalized by its 300-px average), `truthAt` for scoring.
+- The page shows every step: (a) input, (b) local contrast, (c) FFT,
+  (d) radial profile, (e) coherence grid, (f) gradient-line center (if on),
+  (g) detail, (h) all columns' offsets mod S + model, (i) strip, (j) offset
+  plot, (k) per-turn error, (l) audio readout vs truth. `lowResStage` returns
+  copies of `mag`, the profile, the FFT input and the gradient-center data
+  for this.
   Dropped: unwrapping-based refit and lock (slips accumulate on hard cards),
   a narrow second demodulation pass (noisier).
-- Results (5 seeds): typical — center 0.7–1.7 px, trace rms 0.9–1.1 px, no
-  wrong-groove, audio band corr ~0.6–0.7 (grain-limited); hard — 4–21% on
-  the wrong groove; clean — corr 0.85–0.94 at σ 6 px smoothing (0.99 at
-  none). Node benchmarks: concatenate the scripts with `const N=1024` and
+- Results (5 seeds): typical — center 0.4–0.9 px, trace rms 0.45–0.65 px,
+  no wrong groove, audio readout corr 0.40–0.43 (grain-limited; audio 0.2 ×
+  groove amplitude is assumed); hard — trace 1.6–3.1 px, 2–7% on the wrong
+  groove, audio 0.22–0.25; clean — audio 0.97–0.99. Node benchmarks: concatenate the scripts with `const N=1024` and
   call the functions directly (all are DOM-free).
 
 ## Radius offsets (both pages)

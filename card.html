@@ -9,7 +9,10 @@
   figure { margin: 0; }
   figcaption { margin-bottom: 4px; color: #aaa; }
   canvas { display: block; border: 1px solid #333; background: #000; }
-  #card, #detail { width: 512px; height: 512px; cursor: crosshair; }
+  canvas.sq { width: 512px; height: 512px; }
+  .pair figure { width: 514px; }
+  canvas.pick { cursor: crosshair; }
+  h2 { margin: 6px 0 -6px; font-size: 15px; color: #ddd; font-weight: 600; }
   .pair { display: flex; gap: 16px; }
   .left { display: flex; flex-direction: column; gap: 18px; flex: none; }
   .note { color: #888; font-size: 12px; margin: 6px 0 0; max-width: 1040px; line-height: 1.4; }
@@ -33,40 +36,86 @@
 <body>
 <div class="row">
 <div class="left">
+  <h2>1. Low resolution (1024², ×5.42): spacing, center, phase</h2>
   <div class="pair">
     <figure>
-      <figcaption>Card at low resolution, 1024² (local contrast, annulus masked; click to pick the detail spot)</figcaption>
-      <canvas id="card" width="1024" height="1024"></canvas>
+      <figcaption>a. Input: the card downsampled (click any card view to pick the detail spot)</figcaption>
+      <canvas id="raw" class="sq pick" width="1024" height="1024"></canvas>
+      <p class="note">Depth, 2×2 point samples per pixel. The slow depth drift dominates; the ~5.4 px grooves are finer than this view.</p>
     </figure>
     <figure>
-      <figcaption>Detail at full resolution (<span id="detailSize"></span> px around the spot)</figcaption>
-      <canvas id="detail" width="512" height="512"></canvas>
+      <figcaption>b. Local contrast, annulus from the hand marks</figcaption>
+      <canvas id="card" class="sq pick" width="1024" height="1024"></canvas>
+      <p class="note">Minus a Gaussian (σ 1 spacing), unit rms, clipped at ±2.5, times a soft mask from the dashed hand-marked circles.
+        <span style="color:#fff">White +</span> hand mark, <span style="color:#4cf">cyan</span> low-res fit, <span style="color:#fd3">yellow</span> full-res refit, <span style="color:#f44">red +</span> truth.</p>
     </figure>
   </div>
-  <p class="note">
-    <span style="color:#fff">White +</span> and dashed circles: hand-marked center and annulus.
-    <span style="color:#4cf">Cyan</span>: low-res estimate.
-    <span style="color:#fd3">Yellow</span>: full-res refit.
-    <span style="color:#f44">Red +</span>: true center.
-    <span style="color:#f6f">Magenta</span>: gradient-line center (if on).
-    Detail: <span style="color:#f44">red</span> = traced groove, <span style="color:#3e6">green</span> = true groove centerline (shown on the traced turns only).
-  </p>
+  <div class="pair">
+    <figure>
+      <figcaption>c. FFT input (b × 1/√r about the hand mark) → log |FFT| (central half)</figcaption>
+      <canvas id="fft" class="sq" width="512" height="512"></canvas>
+      <p class="note">Dashed: the search window, ±10% of the nominal spacing. <span style="color:#4cf">Cyan</span>: the peak found.</p>
+    </figure>
+    <figure>
+      <figcaption>d. Radial profile of the FFT</figcaption>
+      <canvas id="prof" class="sq" width="512" height="512"></canvas>
+      <p class="note">Mean log |FFT| per radius (smoothed by 1 bin), labelled by spacing in full-res px. Grey band: the window;
+        <span style="color:#4cf">cyan</span>: peak (parabolic); white dashed: nominal; <span style="color:#f44">red</span>: true spacing. No harmonics: the groove is nearly a cosine.</p>
+    </figure>
+  </div>
+  <div class="pair">
+    <figure>
+      <figcaption>e. Center search: spiral coherence |Z| about the hand mark</figcaption>
+      <canvas id="coh" class="sq" width="512" height="512"></canvas>
+      <p class="note">|Σ v·e<sup>−i(r/b − α)</sup>| for candidate centers on a grid ±60 px about the hand mark (<span style="color:#fff">white +</span>), at the FFT spacing. The bright lobe is only ~0.4 spacing (~12 px) wide.
+        <span style="color:#4cf">Cyan</span>: after the pattern search (x, y, spacing); <span style="color:#f44">red +</span>: truth. <span id="cohOut"></span></p>
+    </figure>
+    <figure>
+      <figcaption>f. Gradient-line center (comparison; turn on at right)</figcaption>
+      <canvas id="grad" class="sq" width="1024" height="1024"></canvas>
+      <p class="note" id="gradNote">The Part 1 method: lines along the gradients of the tangentially blurred image, RANSAC for the point most of them pass through.
+        <span style="color:#3e6">Green</span>: lines within 2 px of its answer (<span style="color:#f6f">magenta</span>), <span style="color:#f44">red</span>: the rest; red +: truth.</p>
+    </figure>
+  </div>
+
+  <h2>2. Full resolution: unrolled strip, refit, groove trace</h2>
+  <div class="pair">
+    <figure>
+      <figcaption>g. Detail at full resolution (<span id="detailSize"></span> px around the spot; click to move)</figcaption>
+      <canvas id="detail" class="sq" width="512" height="512" style="cursor:crosshair"></canvas>
+      <p class="note"><span style="color:#f44">Red</span>: traced groove (<span style="color:#f6f">magenta</span> where on the wrong groove), <span style="color:#3e6">green</span>: true centerline.</p>
+    </figure>
+    <figure>
+      <figcaption>h. Strip offsets, all columns (mod S, relative to the low-res spiral)</figcaption>
+      <canvas id="wrap" class="sq" width="512" height="512"></canvas>
+      <p class="note">One dot per 40 columns, inner (left) to outer turns: the groove offset from the demodulation, smoothed over σ 24 px for display (brightness ∝ |Z|).
+        A center error shows as a one-turn wave, a spacing error as a slope, phase as an offset. <span style="color:#fd3">Yellow</span>: the refitted model (mod S); <span style="color:#3e6">green</span>: the true grooves.</p>
+    </figure>
+  </div>
   <figure>
-    <figcaption>Unrolled strip around the spot (columns along the groove every 3 px, rows across it, 1 px)</figcaption>
+    <figcaption>i. Unrolled strip around the spot (a column along the groove every 3 px; rows across it, 1 px, outward up)</figcaption>
     <canvas id="strip" width="1040" height="200"></canvas>
-    <p class="note">Each column is a radial line about the low-res spiral; the strip's middle row is that spiral.
-      <span style="color:#fd3">Yellow</span>: refitted spiral; <span style="color:#f44">red</span>: trace; <span style="color:#3e6">green</span>: true groove.</p>
+    <p class="note">Each column is a radial line about the low-res spiral (the middle row); each column's mean is removed for display.
+      <span style="color:#fd3">Yellow</span>: refitted spiral (±S faint); <span style="color:#f44">red</span>: trace; <span style="color:#3e6">green</span>: true groove.</p>
   </figure>
   <figure>
-    <figcaption>Groove offset from the refitted spiral, same stretch (px)</figcaption>
-    <canvas id="plot" width="1040" height="220"></canvas>
-    <p class="note"><span style="color:#f44">Red</span>: traced; <span style="color:#3e6">green</span>: true (the groove's drift, audio and the card's warp, as seen from the fitted spiral).</p>
+    <figcaption>j. Groove offset from the refitted spiral, same stretch (px)</figcaption>
+    <canvas id="plot" width="1040" height="200"></canvas>
+    <p class="note"><span style="color:#f44">Red</span>: traced; <span style="color:#3e6">green</span>: true (drift, wobble and the card's warp, as seen from the fitted spiral).</p>
   </figure>
   <figure>
-    <figcaption>Trace error per turn, inner to outer</figcaption>
-    <canvas id="turns" width="1040" height="150"></canvas>
+    <figcaption>k. Trace error per turn, inner to outer</figcaption>
+    <canvas id="turns" width="1040" height="130"></canvas>
     <p class="note">Bars: RMS distance from the traced point to the nearest true groove centerline (px; dotted line at S/4).
-      Red: share of the turn on the wrong groove (scale on the right, 0–100%).</p>
+      Red: share of the turn on the wrong groove (0–100% of the height).</p>
+  </figure>
+
+  <h2>3. Audio readout (the groove's depth along the trace)</h2>
+  <figure>
+    <figcaption>l. Depth at the groove bottom relative to the ridges, normalized (× groove amplitude), around the spot</figcaption>
+    <canvas id="audio" width="1040" height="200"></canvas>
+    <p class="note">The audio is cut vertically (hill-and-dale), so it is read from the depth along the traced centerline: bottom (±3 px) minus the ridges at ±S/2, divided by its own slow average.
+      <span style="color:#f44">Red</span>: read out; <span style="color:#3e6">green</span>: the true audio. <span id="audioSpan"></span></p>
   </figure>
 </div>
 <div class="side">
@@ -85,12 +134,14 @@
     <option value="10">10 middle turns</option>
     <option value="3">3 middle turns</option>
   </select>
-  <label for="smooth">Along-groove smoothing</label>
+  <label for="smooth">Trace smoothing</label>
   <select id="smooth">
     <option value="0">none</option>
-    <option value="1">σ 3 px</option>
-    <option value="2" selected>σ 6 px</option>
+    <option value="2">σ 6 px</option>
     <option value="4">σ 12 px</option>
+    <option value="8">σ 24 px</option>
+    <option value="16" selected>σ 48 px</option>
+    <option value="32">σ 96 px</option>
   </select>
   <label for="gradient">Gradient-line center too</label>
   <span><input id="gradient" type="checkbox"> <span class="note">(comparison only, ~1.5 s)</span></span>
@@ -99,7 +150,7 @@
 
 <h3>Estimates (errors vs. the true card)</h3>
 <table class="t" id="est"></table>
-<h3>Groove trace</h3>
+<h3>Groove trace and audio</h3>
 <table class="t" id="trace"></table>
 <h3>Card parameters (this preset)</h3>
 <table class="t" id="params"></table>
