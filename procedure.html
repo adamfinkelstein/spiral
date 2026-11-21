@@ -325,34 +325,65 @@ could set the expected variation automatically.</li>
 </ul>
 
 <h2 id="p1coh">8. Center and phase from the spiral coherence map</h2>
-<p>Given the spacing from steps 3&ndash;5, the page also runs the card
-pipeline's center search (<a href="#part3">Part 3</a>, P3.2), ported to JS
+<p>Given the spacing from steps 3&ndash;5, the page computes the card pipeline's
+coherence map (<a href="#part3">Part 3</a>, P3.2), ported to JS
 (<code>coherence.js</code>; "Coherence center", on by default). With b = S/2&pi;,
 Z(c) = &sum;<sub>p</sub> v(p) e<sup>&minus;i(|p &minus; c|/b &minus; angle(p &minus; c))</sup> (no minus sign here:
 the arms are bright, not grooves) is a correlation with a spiral-wave kernel,
 computed by three 512&sup2; FFTs (image, kernel, inverse; circular, kernel reach
-255 px, image mean subtracted). A Levenberg&ndash;Marquardt fit of
-a&middot;J<sub>0</sub>(2&pi;|c &minus; c<sub>0</sub>|/S) to Z within 2.5 spacings of its brightest
-pixel gives the center c<sub>0</sub> and the phase arg a. About 35&ndash;65 ms per frame
-(node), so it runs live while dragging.</p>
+255 px, image mean subtracted).</p>
+<p><b>Center: point symmetry of the map, not its peak.</b> A fit of
+a&middot;J<sub>0</sub>(2&pi;|c &minus; c<sub>0</sub>|/S) around the map's brightest pixel (the card
+pipeline's first method) fails as soon as the spiral is slightly stretched
+(Aspect &ne; 1): the turns no longer add in step at the center, the bright spot
+splits into lobes, and the fit locks onto the brightest lobe, 5 px off at
+aspect 0.98 and 20 px at 1.05. The map stays symmetric under a 180&deg; turn
+about the true center, though (Adam's observation), and the self-convolution
+finds that symmetry: for g = (|Z| &minus; its window mean) &times; a Gaussian window
+(&sigma; = 3 spacings) about the peak, C(s) = &sum;<sub>p</sub> g(p)&middot;g(s &minus; p) is largest
+at s = 2c<sub>0</sub>, where every term is g(p)&sup2;. It runs on a crop about the peak,
+M&times;M with M the power of two &ge; 6&sigma; (128&sup2; at spacing 5, 256&sup2; at 10, the
+whole 512&sup2; map from 20 up); the maximum is searched in half-pixel steps of c
+within &plusmn;M/4 and refined by a parabola. Point symmetry needs no axis: a
+stretch along any direction keeps it, while left&ndash;right and up&ndash;down mirror
+symmetry only hold for a stretch along the image axes. The phase is the angle
+of Z at that center (bilinear). About 46 ms per frame in all, almost all of it
+the map (node), so it runs live while dragging. In the zoom, the yellow
+square is the map's brightest pixel. Sub-pixel precision isn't needed
+downstream (the card pipeline's full-res refit searches &plusmn;1.5 spacings for the
+center and fits it), so the J<sub>0</sub> fit was dropped.</p>
 <table>
-<tr><th>Test (5&ndash;6 random centers and phases each, radius 50&ndash;200, true spacing)</th><th>Center error</th><th>Phase error</th></tr>
-<tr><td>Spacing 10, no noise / noise 0.3 / noise 1</td><td class="n">0.001 / &le; 0.016 / &le; 0.04 px</td><td class="n">&le; 0.9&deg;</td></tr>
-<tr><td>Spacing 20, no noise / noise 0.5</td><td class="n">0.004 / &le; 0.04 px</td><td class="n">&le; 1&deg;</td></tr>
-<tr><td>Spacing 5 / 40, no noise</td><td class="n">0.000 / &le; 0.07 px</td><td class="n">2.1&deg; / &le; 0.4&deg;</td></tr>
+<tr><th>Center error, median / max over 6 random centers and phases (radius 50&ndash;200, true spacing)</th><th>J<sub>0</sub> fit at the peak</th><th>Symmetry center</th></tr>
+<tr><td>Aspect 1, spacing 10, no noise</td><td class="n">0.001 / 0.00 px</td><td class="n">0.013 / 0.02 px</td></tr>
+<tr><td>Aspect 1, noise 0.5</td><td class="n">0.016 / 0.02</td><td class="n">0.017 / 0.03</td></tr>
+<tr><td>Aspect 0.98 (no noise / noise 0.5)</td><td class="n">5.3 / 5.3, 5.2 / 5.2</td><td class="n">0.03 / 0.04, 0.04 / 0.05</td></tr>
+<tr><td>Aspect 1.03</td><td class="n">10.3 / 10.3</td><td class="n">0.06 / 0.08</td></tr>
+<tr><td>Aspect 1.05 (no noise / noise 0.5)</td><td class="n">20.2 / 20.3, 20.2 / 20.3</td><td class="n">0.09 / 0.10, 0.09 / 0.11</td></tr>
+<tr><td>Offsets 0 / &minus;0.5 / 0 / 0.5</td><td class="n">0.20 / 0.20</td><td class="n">0.20 / 0.20</td></tr>
+<tr><td>Aspect 0.979, offsets 0 / &minus;0.7 / 0 / 0.55</td><td class="n">10.3 / 10.3</td><td class="n">0.20 / 0.22</td></tr>
+<tr><td>Spacing 20, aspect 0.98</td><td class="n">0.19 / 0.20</td><td class="n">0.05 / 0.06</td></tr>
 </table>
-<p>The small fixed phase bias (0.2&ndash;2&deg;) comes from the drawn arms not being
-sinusoidal; it was not pursued.</p>
-<p><b>Sensitivity to the spacing</b> (noise 0.3, 6 trials each, spacing off by
-&plusmn;&epsilon;): the center hardly moves &mdash; median 0.01, 0.03, 0.06, 0.08,
-0.14 px at &epsilon; = 0.5, 1, 2, 3, 5% (spacing 10 and 20 alike), and none
-failed &mdash; but the phase shifts by &asymp; 360&deg; &times; (mean radius / S) &times; &epsilon;:
-26&deg; per 0.5% at spacing 10 (~14 turns of mean radius), 14&deg; at spacing 20.
-The FFT's 0.5% spacing error on the default spiral (10.05 vs 10 px) gives a
-24&deg; phase error; with "Spacing for Z: true spacing" it is 0.8&deg;. On a card
-(mean radius &asymp; 76 spacings) 1% would shift the phase by ~270&deg;, so the
-low-res phase is only a start for the full-res refit, which fits the
-spacing too.</p>
+<p>With the symmetry center: spacing 5 / 20 (noise 0.5) / 40 give 0.05 / 0.03 /
+0.06 px; the phase (arg Z at the center) is within 0.5&ndash;1.8&deg; at aspect 1 (a
+small fixed bias from the arms not being sinusoidal) and 2.3&deg; at aspect 0.98,
+but meaningless at 1.05 (175&deg; off: no single phase fits a strongly stretched
+spiral). Radius
+offsets leave a 0.2 px error for any method: the turns are no longer
+symmetric about the center. Also tried: refining the symmetry center by a
+normalized asymmetry score (window centered on each trial center, |Z| or
+complex Z): at most 0.03 px better, for 26 ms more; not kept.</p>
+<p><b>Sensitivity to the spacing</b> (measured with the J<sub>0</sub> fit, aspect 1, noise
+0.3, 6 trials each, spacing off by &plusmn;&epsilon;): the center hardly moves &mdash;
+median 0.01, 0.03, 0.06, 0.08, 0.14 px at &epsilon; = 0.5, 1, 2, 3, 5% (spacing 10
+and 20 alike), none failed &mdash; but the phase shifts by &asymp; 360&deg; &times;
+(mean radius / S) &times; &epsilon;: 26&deg; per 0.5% at spacing 10 (~14 turns of mean
+radius), 14&deg; at spacing 20. The FFT's 0.5% spacing error on the default
+spiral (10.05 vs 10 px) gives a 24&deg; phase error; with "Spacing for Z: true
+spacing" it is 0.8&deg;. On a card (mean radius &asymp; 76 spacings) 1% would shift
+the phase by ~270&deg;, so the low-res phase is only a start for the full-res
+refit, which fits the spacing too.</p>
+<p>The card pipeline uses the same symmetry center (<a href="#part3">P3.2</a>), with
+a wider window for its larger spirals.</p>
 
 
 <h1 class="part" id="part2">Part 2 &mdash; Center and phase from chunks (<a href="center.html">center.html</a>)</h1>
@@ -615,8 +646,8 @@ found the shared stages agree to rounding.</p>
 into the groove's depth &rarr; <b>low-res stage</b> (1024&sup2;, ~5.4 px spacing):
 the image masked to the hand-marked annulus &rarr; spacing = FFT radial-profile
 peak within &plusmn;10% of the nominal &rarr; center and phase from the spiral
-coherence map (Z at every pixel by one FFT correlation, then a J<sub>0</sub>
-ring-pattern fit around its peak) &rarr; <b>full-res
+coherence map (Z at every pixel by one FFT correlation, then the map's
+center of point symmetry near its peak) &rarr; <b>full-res
 stage</b>: unrolled strip along that spiral (a column every 3 px of groove, rows
 &plusmn;S at 1 px) &rarr; per-column demodulation &rarr; robust refit of the geometry,
 modulo S &rarr; trace locked to the refitted spiral &rarr; <b>sound readout</b>: the
@@ -681,14 +712,35 @@ J<sub>0</sub>(2&pi;e/S): as a function of c,</p>
 <p>a bright spot ~0.4 spacing wide ringed by fainter rings half a spacing apart.
 Z(c) is a correlation of the image with a fixed "spiral wave" kernel
 K(q) = e<sup>&minus;i(|q|/b &minus; angle(q))</sup>, so <b>one FFT correlation gives Z at every
-pixel</b> (scipy fftconvolve, ~0.5 s at 1024&sup2;, all annulus pixels). The center
-is a least-squares fit of the J<sub>0</sub> pattern (complex a, center c<sub>0</sub>) to the
-map within 2.5 spacings of its brightest pixel; the phase is the angle of a.
-The spacing is the FFT's (the full-res refit tunes it). The hand mark only
-places the mask: the map covers the frame, so there is no search window.</p>
-<p>Tested offline (<code>experiments/center_search.py</code>, results in
-<code>experiments/center_search_results.md</code>): 32 cards &times; 10 simulated hand
-marks 5&ndash;100 px off. The FFT map + J<sub>0</sub> fit: median error 0.07 px, worst
+pixel</b> (scipy fftconvolve, ~0.5 s at 1024&sup2;, all annulus pixels). The spacing
+is the FFT's (the full-res refit tunes it). The hand mark only places the
+mask: the map covers the frame, so there is no search window.</p>
+<p><b>The center is the map's center of point symmetry</b> near its brightest
+pixel (<code>lowres.symmetry_center</code>): g = (|Z| &minus; its window mean) &times; a
+Gaussian window (&sigma; 10 spacings) about the peak, on a crop of &plusmn;3&sigma;, convolved
+with itself (scipy fftconvolve, ~7 ms); the maximum is at twice the center
+(half-pixel steps, then a parabola). The phase is the angle of Z there
+(bilinear). Why not the peak: a card stretched by only 1% (a slightly
+non-circular scan) no longer adds its turns in step at the center, since they
+reach ~95 spacings out; the bright spot splits into lobes and the brightest is
+2 spacings off at 1%, 4.5 at 2%, 7 at 3%. The map stays symmetric under a
+180&deg; turn about the center (Adam's observation on the spacing page, Part 1
+step 8). The window has to reach from the peak to the center: &sigma; 3 spacings
+handles 1%, &sigma; 10 up to 3%.</p>
+<p>Tested offline (<code>experiments/symmetry_center.py</code>, results in
+<code>experiments/symmetry_center_results.md</code>): 20 cards (4 presets &times; 5 seeds)
+&times; 3 hand marks, each warped by x &times; aspect, y / aspect about the true center.
+The J<sub>0</sub> fit at the peak (this step's earlier method) fails at every stretch
+of 1% or more (59 / 130 / 210 px at 1 / 2 / 3%). The symmetry center (&sigma; 10):
+typical, loud and clean cards 0.16&ndash;0.30 px median, none over 1 px, at any
+stretch up to 3%; unstretched 0.28 px vs. the J<sub>0</sub> fit's 0.04 px, which the
+full-res refit doesn't need (it searches &plusmn;1.5 spacings for the center and
+fits it). Hard cards (drift 6 px): ~0.8 px unstretched, fine at 1%, 1 of 5
+fails at 2%, nearly all at 3%. The full-res refit has no stretch term
+yet, so a stretched card would still fail there.</p>
+<p>Earlier test (<code>experiments/center_search.py</code>, results in
+<code>experiments/center_search_results.md</code>), before the symmetry center: 32
+cards &times; 10 simulated hand marks 5&ndash;100 px off. The FFT map + J<sub>0</sub> fit: median error 0.07 px, worst
 2.1 px (hard cards), never fails. The earlier grid (&plusmn;60 px about the mark, 0.15
 spacing) + Nelder&ndash;Mead on 5% of the pixels: median 0.17 px, and every mark
 beyond its window failed; Nelder&ndash;Mead on all pixels matches the fit but takes
@@ -743,7 +795,7 @@ floored at &minus;1 (where nothing was cut, the depth carries no information).
 &plusmn;3 px was best of &plusmn;1&ndash;3 (typical: correlation 0.935 / 0.948 / 0.956).</p>
 
 <h2>P3.7 How well it works</h2>
-<figure><img class="wide" src="card/img/d_coherence.png" alt=""><figcaption>Step d: |Z| around the answer (typical card, seed 1). White +: hand mark; cyan ring: the J<sub>0</sub> fit; red +: truth.</figcaption></figure>
+<figure><img class="wide" src="card/img/d_coherence.png" alt=""><figcaption>Step d: |Z| around the answer (typical card, seed 1). White +: hand mark; cyan ring: the symmetry center; red +: truth.</figcaption></figure>
 <figure><img class="wide" src="card/img/e_detail.png" alt=""><figcaption>Step e: a 256-px full-res detail. The groove's depth follows the sound (dark: deep). Red: trace; green: true centerline.</figcaption></figure>
 <figure><img class="wide" src="card/img/j_sound.png" alt=""><figcaption>Step j: the sound read from the groove's depth (red) against the truth (green).</figcaption></figure>
 <table>

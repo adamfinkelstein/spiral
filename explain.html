@@ -120,9 +120,11 @@ a fraction of a pixel, and the spiral is drawn exactly there.</p>
   e<sup>&minus;i(|p &minus; c|/b &minus; angle(p &minus; c))</sup> over all pixels p (b = spacing/2&pi;):
   at the true center every turn adds in step. One FFT correlation gives Z at
   every pixel (the bottom-left panel shows |Z|, square-rooted so the faint
-  rings show). A fit of a&middot;J<sub>0</sub>(2&pi;|c &minus; c<sub>0</sub>|/S) to the map within 2.5
-  spacings of its peak (dashed circle in the zoom) gives the center (cyan +)
-  and the phase (the angle of a). The error against the true center and phase,
+  rings show). The center (cyan +) is where the map is symmetric under a
+  180&deg; turn, found near its brightest pixel (yellow square in the zoom) by
+  convolving the windowed map with itself: with Aspect &ne; 1 the bright spot
+  splits into lobes, but the symmetry stays. The phase is the angle of Z at
+  that center. The error against the true center and phase,
   and the time taken, are shown under the controls.
   <b>Spacing for Z</b>: the FFT's estimate (default, as in the pipeline) or the
   true spacing. The center barely depends on it, but the phase does: a spacing

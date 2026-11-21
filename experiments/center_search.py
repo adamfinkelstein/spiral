@@ -4,12 +4,13 @@ import time
 from pathlib import Path
 
 import numpy as np
-from scipy.optimize import minimize
+from scipy.optimize import least_squares, minimize
+from scipy.special import j0
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from cardlab.geometry import TAU, Mark, pitch_of
 from cardlab.lowres import (LOW_SIZE, LowResSettings, annulus_mask, coherence_map, downsample, fft_spacing,
-                            fit_ring_pattern, map_peak, map_points_near, normalize_in_mask)
+                            map_peak, normalize_in_mask)
 from cardlab.model import make_card, render
 from cardlab.params import PRESETS
 
@@ -21,8 +22,9 @@ from cardlab.params import PRESETS
 #   sparse+J0   Z on a coarse grid (0.45 S, +-60 px) about the mark, then a J0 fit to all of it
 #   sparse+J0+NM  the same, polished by Nelder-Mead
 # The complex map is Z(c) ~ a J0(2 pi |c - c0| / S) about the true center c0.
-# Result: fft+J0 won and is now cardlab's method (lowres.find_center); the grid,
-# direct sums and Nelder-Mead used by the other methods live here only.
+# Result: fft+J0 won and was cardlab's method until the symmetry center replaced
+# the J0 fit (experiments/symmetry_center.py); the grid, direct sums,
+# Nelder-Mead and the J0 fit live here only.
 
 CACHE = Path("/tmp/center_search_cards")
 MARK_ERRORS = (5, 15, 30, 60, 100)      # full-res px
@@ -51,6 +53,34 @@ def simulated_marks(card, rng):
             radius_errors = 1 + rng.standard_normal(2) * card.params.mark_radius_error
             yield error, Mark(card.spiral.x + error * np.cos(angle), card.spiral.y + error * np.sin(angle),
                               radii[0] * radius_errors[0], radii[1] * radius_errors[1])
+
+
+# ---------- J0 ring-pattern fit (cardlab's center until Nov 2026) ----------
+
+
+def map_points_near(z_map, center, radius):
+    rows, cols = np.mgrid[0 : z_map.shape[0], 0 : z_map.shape[1]]
+    near = np.hypot(cols + 0.5 - center[0], rows + 0.5 - center[1]) <= radius
+    return np.stack([cols[near] + 0.5, rows[near] + 0.5], axis=1), z_map[near]
+
+
+def ring_pattern(points, center, spacing):
+    return j0(TAU / spacing * np.hypot(points[:, 0] - center[0], points[:, 1] - center[1]))
+
+
+def best_amplitude(pattern, values):
+    return np.vdot(pattern, values) / np.vdot(pattern, pattern)
+
+
+def fit_ring_pattern(points, values, start, spacing):
+    # values ~ a J0(2 pi |c - c0| / S); for a given c0 the best complex a is linear
+    def residuals(center):
+        pattern = ring_pattern(points, center, spacing)
+        misfit = values - best_amplitude(pattern, values) * pattern
+        return np.concatenate([misfit.real, misfit.imag])
+
+    center = least_squares(residuals, start, x_scale=spacing / 4).x
+    return center, best_amplitude(ring_pattern(points, center, spacing), values)
 
 
 # ---------- Direct sums (the earlier method) ----------

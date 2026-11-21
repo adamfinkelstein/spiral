@@ -1,58 +1,80 @@
 // Center and phase from the spiral coherence map (JS port of
-// cardlab/lowres.py find_center). No DOM; uses N and fft1d from render.js /
-// fftspacing.js (load after both).
+// cardlab/lowres.py find_center). No DOM; uses N from render.js.
 //
 // About the true center the image has a component cos(r/b - angle + phase)
 // (bright arms; b = spacing / 2π), so
 //   Z(c) = Σ_p v(p) exp(-i (|p - c|/b - angle(p - c)))
-// is ≈ (n/2) e^{i phase} at c = center and small elsewhere. As a function of
-// c it is a sum of plane waves of one wavelength (the spacing S), so near the
-// center Z(c) ≈ a J0(2π |c - c0| / S): a bright spot ringed by fainter rings.
-// Z is a correlation of the image with a "spiral wave" kernel, so one FFT
-// gives it at every pixel; fitting the J0 pattern around its peak gives the
-// center to a fraction of a pixel, and arg(a) the phase.
+// is ≈ (n/2) e^{i phase} at c = center and small elsewhere: every turn adds in
+// step there. Z is a correlation of the image with a "spiral wave" kernel, so
+// one FFT gives it at every pixel. Near the center it is a bright spot ringed
+// by fainter rings, but if the spiral is stretched (aspect ≠ 1) the turns no
+// longer add in step, the spot splits into lobes and the brightest pixel is
+// off center. The map stays symmetric under a 180° turn about the center, so
+// the center is the map's center of point symmetry near its peak
+// (symmetryCenter), and the phase is arg Z there.
 //
-// Here the correlation is circular (N×N, no padding): the kernel reaches
+// The map's correlation is circular (N×N, no padding): the kernel reaches
 // N/2 - 1 px, so a candidate center sees the image as periodic. The only
 // peaks are at the true center (and its copies N px away), so the map near
 // the peak is unaffected.
 
-// J0, Abramowitz & Stegun 9.4.1 (|x| ≤ 3) and 9.4.3 (x > 3), |error| < 5e-8
-function besselJ0(x) {
-  x = Math.abs(x);
-  if (x <= 3) {
-    const t = (x / 3) ** 2;
-    return 1 + t * (-2.2499997 + t * (1.2656208 + t * (-0.3163866 + t * (0.0444479 + t * (-0.0039444 + t * 0.00021)))));
+// ---------- FFT of any power-of-two size M (tables cached per M) ----------
+
+const fftTables = {};
+function fftTablesFor(M) {
+  if (fftTables[M]) return fftTables[M];
+  const bits = Math.log2(M), rev = new Uint32Array(M), cos = new Float64Array(M / 2), sin = new Float64Array(M / 2);
+  for (let i = 0; i < M; i++) {
+    let r = 0;
+    for (let b = 0; b < bits; b++) r |= ((i >> b) & 1) << (bits - 1 - b);
+    rev[i] = r;
   }
-  const t = 3 / x;
-  const f0 = 0.79788456 + t * (-0.00000077 + t * (-0.0055274 + t * (-0.00009512 + t * (0.00137237 + t * (-0.00072805 + t * 0.00014476)))));
-  const th = x - 0.78539816 + t * (-0.04166397 + t * (-0.00003954 + t * (0.00262573 + t * (-0.00054125 + t * (-0.00029333 + t * 0.00013558)))));
-  return (f0 * Math.cos(th)) / Math.sqrt(x);
+  for (let i = 0; i < M / 2; i++) { cos[i] = Math.cos((2 * Math.PI * i) / M); sin[i] = -Math.sin((2 * Math.PI * i) / M); }
+  return (fftTables[M] = { rev, cos, sin, rowRe: new Float64Array(M), rowIm: new Float64Array(M) });
 }
+
+function fftLine(re, im, T, M) { // in place, iterative radix-2
+  for (let i = 0; i < M; i++) {
+    const j = T.rev[i];
+    if (j > i) { let t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; }
+  }
+  for (let size = 2; size <= M; size <<= 1) {
+    const half = size >> 1, step = M / size;
+    for (let start = 0; start < M; start += size) {
+      for (let k = 0; k < half; k++) {
+        const wr = T.cos[k * step], wi = T.sin[k * step], a = start + k, b = a + half;
+        const tr = re[b] * wr - im[b] * wi, ti = re[b] * wi + im[b] * wr;
+        re[b] = re[a] - tr; im[b] = im[a] - ti; re[a] += tr; im[a] += ti;
+      }
+    }
+  }
+}
+
+function fft2(re, im, M, inverse = false) { // M×M in place; inverse via conjugation, scaled 1/M²
+  const T = fftTablesFor(M), rRe = T.rowRe, rIm = T.rowIm;
+  if (inverse) for (let i = 0; i < M * M; i++) im[i] = -im[i];
+  for (let y = 0; y < M; y++) {
+    const o = y * M;
+    for (let x = 0; x < M; x++) { rRe[x] = re[o + x]; rIm[x] = im[o + x]; }
+    fftLine(rRe, rIm, T, M);
+    for (let x = 0; x < M; x++) { re[o + x] = rRe[x]; im[o + x] = rIm[x]; }
+  }
+  for (let x = 0; x < M; x++) {
+    for (let y = 0; y < M; y++) { rRe[y] = re[y * M + x]; rIm[y] = im[y * M + x]; }
+    fftLine(rRe, rIm, T, M);
+    for (let y = 0; y < M; y++) { re[y * M + x] = rRe[y]; im[y * M + x] = rIm[y]; }
+  }
+  if (inverse) {
+    const s = 1 / (M * M);
+    for (let i = 0; i < M * M; i++) { re[i] *= s; im[i] = -im[i] * s; }
+  }
+}
+
+// ---------- The coherence map ----------
 
 const zRe = new Float64Array(N * N), zIm = new Float64Array(N * N);
 const kRe = new Float64Array(N * N), kIm = new Float64Array(N * N);
 const zAbs = new Float64Array(N * N);
-const cohRowRe = new Float64Array(N), cohRowIm = new Float64Array(N);
-
-function fft2Of(re, im, inverse = false) { // in place; inverse via conjugation, scaled 1/N²
-  if (inverse) for (let i = 0; i < N * N; i++) im[i] = -im[i];
-  for (let y = 0; y < N; y++) {
-    const o = y * N;
-    for (let x = 0; x < N; x++) { cohRowRe[x] = re[o + x]; cohRowIm[x] = im[o + x]; }
-    fft1d(cohRowRe, cohRowIm);
-    for (let x = 0; x < N; x++) { re[o + x] = cohRowRe[x]; im[o + x] = cohRowIm[x]; }
-  }
-  for (let x = 0; x < N; x++) {
-    for (let y = 0; y < N; y++) { cohRowRe[y] = re[y * N + x]; cohRowIm[y] = im[y * N + x]; }
-    fft1d(cohRowRe, cohRowIm);
-    for (let y = 0; y < N; y++) { re[y * N + x] = cohRowRe[y]; im[y * N + x] = cohRowIm[y]; }
-  }
-  if (inverse) {
-    const s = 1 / (N * N);
-    for (let i = 0; i < N * N; i++) { re[i] *= s; im[i] = -im[i] * s; }
-  }
-}
 
 // Kernel G(q) = K(-q), K(q) = exp(-i (|q|/b - angle(q))), zero beyond `reach`,
 // stored with wraparound (q mod N), so that (v * G)(c) = Σ_p v(p) K(p - c).
@@ -76,14 +98,14 @@ function coherenceMap(src, spacing, reach = N / 2 - 1) {
   let sumAbs = 0;
   for (let i = 0; i < N * N; i++) { zRe[i] = src[i] - mean; zIm[i] = 0; sumAbs += Math.abs(zRe[i]); }
   spiralWaveKernel(spacing / (2 * Math.PI), reach);
-  fft2Of(zRe, zIm);
-  fft2Of(kRe, kIm);
+  fft2(zRe, zIm, N);
+  fft2(kRe, kIm, N);
   for (let i = 0; i < N * N; i++) {
     const a = zRe[i], c = zIm[i];
     zRe[i] = a * kRe[i] - c * kIm[i];
     zIm[i] = a * kIm[i] + c * kRe[i];
   }
-  fft2Of(zRe, zIm, true);
+  fft2(zRe, zIm, N, true);
   for (let i = 0; i < N * N; i++) zAbs[i] = Math.hypot(zRe[i], zIm[i]);
   return sumAbs;
 }
@@ -94,86 +116,69 @@ function mapPeak() {
   return { x: (best % N) + 0.5, y: Math.floor(best / N) + 0.5 };
 }
 
-function mapPointsNear(c, radius) {
-  const xs = [], ys = [], re = [], im = [];
-  const x0 = Math.max(0, Math.floor(c.x - radius)), x1 = Math.min(N - 1, Math.ceil(c.x + radius));
-  const y0 = Math.max(0, Math.floor(c.y - radius)), y1 = Math.min(N - 1, Math.ceil(c.y + radius));
-  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
-    if (Math.hypot(x + 0.5 - c.x, y + 0.5 - c.y) > radius) continue;
-    xs.push(x + 0.5); ys.push(y + 0.5); re.push(zRe[y * N + x]); im.push(zIm[y * N + x]);
+function mapAt(c) { // bilinear Z at a point (pixel i's center is i + 0.5; the map wraps)
+  const u = c.x - 0.5, v = c.y - 0.5, x0 = Math.floor(u), y0 = Math.floor(v), fx = u - x0, fy = v - y0;
+  let re = 0, im = 0;
+  for (const [dx, dy, w] of [[0, 0, (1 - fx) * (1 - fy)], [1, 0, fx * (1 - fy)], [0, 1, (1 - fx) * fy], [1, 1, fx * fy]]) {
+    const i = (((y0 + dy) % N + N) % N) * N + (((x0 + dx) % N + N) % N);
+    re += w * zRe[i]; im += w * zIm[i];
   }
-  return { xs, ys, re, im, n: xs.length };
+  return { re, im };
 }
 
-// For a trial center: the J0 pattern, the best complex amplitude a (linear least
-// squares; the pattern is real), and the misfit Σ |Z - a·J0|².
-function ringFit(P, cx, cy, spacing, pat) {
-  const k = (2 * Math.PI) / spacing;
-  let pp = 0, pr = 0, pi = 0;
-  for (let j = 0; j < P.n; j++) {
-    const v = besselJ0(k * Math.hypot(P.xs[j] - cx, P.ys[j] - cy));
-    pat[j] = v; pp += v * v; pr += v * P.re[j]; pi += v * P.im[j];
+// ---------- Center of point symmetry ----------
+
+// For g = (|Z| - its window mean) × a Gaussian window (σ = windowSpacings
+// spacings) about the peak, the self-convolution C(s) = Σ_p g(p) g(s - p) is
+// largest at s = 2 c0, where every term is g(p)². It runs on an M×M crop about
+// the peak, M = the power of two ≥ 6σ (at most N): circular, but the window
+// is ~1e-4 of its peak where the wrap could reach. The maximum is searched
+// within ±M/4 of the peak (≈ ±1.5σ; s in pixel-index sums, i.e. half-pixel
+// steps of c), then refined by a parabola along x and y.
+function symmetryCenter(peak, spacing, windowSpacings = 3) {
+  const sigma = windowSpacings * spacing;
+  const M = Math.min(N, 2 ** Math.ceil(Math.log2(6 * sigma)));
+  const ox = Math.floor(peak.x) - M / 2, oy = Math.floor(peak.y) - M / 2; // crop origin: the peak pixel is at M/2
+  const gRe = new Float64Array(M * M), gIm = new Float64Array(M * M), w = new Float64Array(M * M);
+  let sw = 0, swz = 0;
+  for (let y = 0; y < M; y++) for (let x = 0; x < M; x++) {
+    const i = (((oy + y) % N + N) % N) * N + (((ox + x) % N + N) % N);
+    const k = y * M + x;
+    w[k] = Math.exp(-((x - M / 2) ** 2 + (y - M / 2) ** 2) / (2 * sigma * sigma));
+    gRe[k] = zAbs[i]; sw += w[k]; swz += w[k] * zAbs[i];
   }
-  const ar = pr / pp, ai = pi / pp;
-  let cost = 0;
-  for (let j = 0; j < P.n; j++) cost += (P.re[j] - ar * pat[j]) ** 2 + (P.im[j] - ai * pat[j]) ** 2;
-  return { ar, ai, cost };
+  const mean = swz / sw;
+  for (let k = 0; k < M * M; k++) gRe[k] = w[k] * (gRe[k] - mean);
+  fft2(gRe, gIm, M);
+  for (let k = 0; k < M * M; k++) { const a = gRe[k], b = gIm[k]; gRe[k] = a * a - b * b; gIm[k] = 2 * a * b; }
+  fft2(gRe, gIm, M, true);
+  // crop sums b1 + b2 = M + d (mod M), d = 0 at the peak pixel; image sums i1 + i2 = M + d + 2·origin
+  const C = (dx, dy) => gRe[((dy % M + M) % M) * M + ((dx % M + M) % M)];
+  let bx = 0, by = 0;
+  for (let dy = -M / 4; dy < M / 4; dy++) for (let dx = -M / 4; dx < M / 4; dx++) if (C(dx, dy) > C(bx, by)) { bx = dx; by = dy; }
+  const parabola = (l, m, r) => { const cu = l - 2 * m + r; return cu < 0 ? (0.5 * (l - r)) / cu : 0; };
+  const fx = parabola(C(bx - 1, by), C(bx, by), C(bx + 1, by)), fy = parabola(C(bx, by - 1), C(bx, by), C(bx, by + 1));
+  return { x: (M + bx + fx + 2 * ox + 1) / 2, y: (M + by + fy + 2 * oy + 1) / 2, M };
 }
 
-// Levenberg–Marquardt over the center (2 parameters), residuals stacked
-// real/imaginary, forward-difference Jacobian.
-function fitRingPattern(P, start, spacing) {
-  const n = P.n, pat = new Float64Array(n), p1 = new Float64Array(n);
-  const resid = (cx, cy, out) => {
-    const f = ringFit(P, cx, cy, spacing, pat);
-    for (let j = 0; j < n; j++) { out[j] = P.re[j] - f.ar * pat[j]; out[n + j] = P.im[j] - f.ai * pat[j]; }
-    return f;
-  };
-  const r0 = new Float64Array(2 * n), rx = new Float64Array(2 * n), ry = new Float64Array(2 * n);
-  let cx = start.x, cy = start.y, lambda = 1e-3, f = resid(cx, cy, r0);
-  const h = 1e-4 * spacing;
-  for (let it = 0; it < 30; it++) {
-    resid(cx + h, cy, rx); resid(cx, cy + h, ry);
-    let a = 0, bb = 0, c = 0, gx = 0, gy = 0;
-    for (let j = 0; j < 2 * n; j++) {
-      const jx = (rx[j] - r0[j]) / h, jy = (ry[j] - r0[j]) / h;
-      a += jx * jx; bb += jx * jy; c += jy * jy; gx += jx * r0[j]; gy += jy * r0[j];
-    }
-    let moved = false;
-    for (let tries = 0; tries < 10 && !moved; tries++) {
-      const A = a * (1 + lambda), C = c * (1 + lambda), det = A * C - bb * bb;
-      const dx = -(C * gx - bb * gy) / det, dy = -(A * gy - bb * gx) / det;
-      const g = ringFit(P, cx + dx, cy + dy, spacing, p1);
-      if (g.cost < f.cost) {
-        cx += dx; cy += dy; lambda = Math.max(lambda / 10, 1e-9);
-        f = resid(cx, cy, r0); moved = true;
-        if (Math.hypot(dx, dy) < 1e-5) return { x: cx, y: cy, ar: f.ar, ai: f.ai };
-      } else lambda *= 10;
-    }
-    if (!moved) break;
-  }
-  return { x: cx, y: cy, ar: f.ar, ai: f.ai };
-}
-
-// The whole step: map, peak, J0 fit within fitRadius spacings of the peak.
-// Returns center, phase (radians, same convention as renderSpiral's p.phase),
-// the map peak, a coherence score (≈ 1 for a perfect sinusoidal spiral) and
-// timings in ms.
-function coherenceCenter(src, spacing, fitRadius = 2.5) {
+// The whole step: map, peak, symmetry center, phase = arg Z there. Returns
+// center, phase (radians, same convention as renderSpiral's p.phase), the map
+// peak, a relative coherence score, the crop size and timings in ms.
+function coherenceCenter(src, spacing, windowSpacings = 3) {
   const t0 = performance.now();
   const sumAbs = coherenceMap(src, spacing);
   const t1 = performance.now();
   const peak = mapPeak();
-  const P = mapPointsNear(peak, fitRadius * spacing);
-  const fit = fitRingPattern(P, peak, spacing);
+  const c = symmetryCenter(peak, spacing, windowSpacings);
+  const z = mapAt(c);
   const t2 = performance.now();
   return {
-    c: { x: fit.x, y: fit.y },
-    phase: Math.atan2(fit.ai, fit.ar),
+    c: { x: c.x, y: c.y },
+    phase: Math.atan2(z.im, z.re),
     peak,
-    coherence: (2 * Math.hypot(fit.ar, fit.ai)) / sumAbs / (Math.PI / 2),
-    nFit: P.n,
+    coherence: (2 * Math.hypot(z.re, z.im)) / sumAbs / (Math.PI / 2),
+    crop: c.M,
     msMap: t1 - t0,
-    msFit: t2 - t1,
+    msCenter: t2 - t1,
   };
 }

@@ -120,7 +120,7 @@ Showcase: preset <b>{escape(card.params.label)}</b>, seed {card.seed}. <a href="
       f"<span class='num'>Measured {low.fft_spacing:.3f} px ({pct(s['fft_spacing_error'])} vs. true {card.spacing:.3f}).</span>")}
 {step(img("d_coherence"), "d. Center, spacing and phase: the spiral coherence map",
       "Z(c) = −Σ v·e<sup>−i(|p−c|/b − angle(p−c))</sup> scores how well a spiral centered at c (spacing from c) lines up with the grooves. As a function of c it is a correlation of the image with a spiral-shaped kernel, so one FFT gives it at every pixel (~0.5 s); no search window, and the hand mark isn't needed.",
-      "Around the true center Z(c) ≈ a·J<sub>0</sub>(2π|c − c<sub>0</sub>|/S): a bright spot with fainter rings half a spacing apart. A least-squares fit of that pattern within 2.5 spacings of the brightest pixel gives the center; the phase is the angle of a.",
+      "Around the true center: a bright spot with fainter rings half a spacing apart. If the card is stretched (even 1%) the spot splits into lobes and the brightest pixel is off center, but the map stays symmetric under a 180° turn about the center. So the center is the map's center of point symmetry: |Z| minus its mean, times a Gaussian window (σ 10 spacings) about the brightest pixel, convolved with itself on a crop; the maximum is at twice the center. The phase is the angle of Z there.",
       f"<span class='num'>Shown: |Z| around the answer. Answer {s['low_center_error']:.2f} px from the true center (hand mark {s['mark_error']:.1f} px); coherence {s['coherence']:.2f}.</span>")}
 
 <h2>2. Full resolution: unrolled strip, refit, groove trace</h2>

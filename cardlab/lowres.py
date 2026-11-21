@@ -2,12 +2,10 @@ from dataclasses import dataclass
 
 import cv2
 import numpy as np
-from scipy.ndimage import gaussian_filter1d
-from scipy.optimize import least_squares
+from scipy.ndimage import gaussian_filter1d, map_coordinates
 from scipy.signal import fftconvolve
-from scipy.special import j0
 
-from .geometry import TAU, Spiral, pitch_of, smoothstep
+from .geometry import Spiral, pitch_of, smoothstep
 
 LOW_SIZE = 1024
 
@@ -17,7 +15,7 @@ class LowResSettings:
     turn_weight_power: float = 0.5   # FFT input weighted by r^-power about the mark
     spacing_window: float = 0.1      # search ± this fraction of the nominal spacing
     spacing_tolerance: float = 0.03  # farther than this from nominal: use nominal
-    fit_radius: float = 2.5          # spacings about the map's peak, for the ring-pattern fit
+    symmetry_window: float = 10      # spacings, Gaussian window (sigma) about the map's peak, for the symmetry center
 
 
 @dataclass
@@ -98,11 +96,14 @@ def fft_spacing(image, mask, mark, scale, nominal, settings):
 # ---------- Center, spacing and phase: the spiral coherence map ----------
 # About the true center the height has a component -cos(r/pitch - angle + phase),
 # so Z(c) = -sum_p v(p) exp(-i (|p - c|/pitch - angle(p - c))) is ~ (n/2) e^{i phase}
-# at c = center and small elsewhere. As a function of the candidate center it is
-# a sum of plane waves of one wavelength (the spacing S), Z(c) ~ a J0(2 pi |c - c0| / S):
-# a bright spot ringed by fainter rings. It is a correlation of the image with a
-# "spiral wave" kernel, so one FFT gives it at every pixel; a fit of the J0
-# pattern around its peak gives the center to a fraction of a pixel.
+# at c = center and small elsewhere: every turn adds in step there. It is a
+# correlation of the image with a "spiral wave" kernel, so one FFT gives it at
+# every pixel. Near the center it is a bright spot ringed by fainter rings, but
+# if the card is stretched even 1% (turns reach ~95 spacings out) the turns no
+# longer add in step, the spot splits into lobes and the brightest pixel is 2+
+# spacings off. The map stays symmetric under a 180-degree turn about the
+# center, so the center is the map's center of point symmetry near its peak,
+# and the phase is the angle of Z there.
 
 
 def spiral_wave_kernel(pitch, reach):
@@ -122,39 +123,45 @@ def map_peak(z_map):
     return np.array([col + 0.5, row + 0.5])
 
 
-def map_points_near(z_map, center, radius):
-    rows, cols = np.mgrid[0 : z_map.shape[0], 0 : z_map.shape[1]]
-    near = np.hypot(cols + 0.5 - center[0], rows + 0.5 - center[1]) <= radius
-    return np.stack([cols[near] + 0.5, rows[near] + 0.5], axis=1), z_map[near]
+def map_at(z_map, point):
+    # bilinear, pixel i's center at i + 0.5
+    coords = [[point[1] - 0.5], [point[0] - 0.5]]
+    return complex(map_coordinates(z_map.real, coords, order=1)[0], map_coordinates(z_map.imag, coords, order=1)[0])
 
 
-def ring_pattern(points, center, spacing):
-    return j0(TAU / spacing * np.hypot(points[:, 0] - center[0], points[:, 1] - center[1]))
+def parabola_offset(left, middle, right):
+    curvature = left - 2 * middle + right
+    return 0.5 * (left - right) / curvature if curvature < 0 else 0.0
 
 
-def best_amplitude(pattern, values):
-    return np.vdot(pattern, values) / np.vdot(pattern, pattern)
-
-
-def fit_ring_pattern(points, values, start, spacing):
-    # values ~ a J0(2 pi |c - c0| / S); for a given c0 the best complex a is linear
-    def residuals(center):
-        pattern = ring_pattern(points, center, spacing)
-        misfit = values - best_amplitude(pattern, values) * pattern
-        return np.concatenate([misfit.real, misfit.imag])
-
-    center = least_squares(residuals, start, x_scale=spacing / 4).x
-    return center, best_amplitude(ring_pattern(points, center, spacing), values)
+def symmetry_center(z_map, spacing, window_spacings):
+    # g = (|Z| - its window mean) * a Gaussian window about the peak, on a crop of
+    # +-3 sigma. C = g * g (self-convolution) is largest at index sums
+    # i1 + i2 = 2 c - 1, where every term is g^2; half-pixel steps of c, then a
+    # parabola along x and y.
+    peak = map_peak(z_map)
+    sigma = window_spacings * spacing
+    half = int(np.ceil(3 * sigma))
+    col0, row0 = max(int(peak[0]) - half, 0), max(int(peak[1]) - half, 0)
+    crop = np.abs(z_map[row0 : int(peak[1]) + half + 1, col0 : int(peak[0]) + half + 1])
+    rows, cols = np.mgrid[0 : crop.shape[0], 0 : crop.shape[1]]
+    window = np.exp(-((cols + col0 + 0.5 - peak[0]) ** 2 + (rows + row0 + 0.5 - peak[1]) ** 2) / (2 * sigma**2))
+    g = window * (crop - np.sum(window * crop) / np.sum(window))
+    conv = fftconvolve(g, g, mode="full")
+    row, col = np.unravel_index(np.argmax(conv[1:-1, 1:-1]), (conv.shape[0] - 2, conv.shape[1] - 2))
+    row, col = row + 1, col + 1
+    dx = parabola_offset(conv[row, col - 1], conv[row, col], conv[row, col + 1])
+    dy = parabola_offset(conv[row - 1, col], conv[row, col], conv[row + 1, col])
+    return (np.array([col + dx, row + dy]) + 2 * np.array([col0, row0]) + 1) / 2
 
 
 def find_center(image, mark, scale, spacing, settings):
     pitch = pitch_of(spacing)
     z_map = coherence_map(image, pitch, reach=int(mark.r_outer / scale + 100))
-    peak = map_peak(z_map)
-    points, values = map_points_near(z_map, peak, settings.fit_radius * spacing)
-    center, amplitude = fit_ring_pattern(points, values, peak, spacing)
-    coherence = 2 * np.abs(amplitude) / np.sum(np.abs(image)) / (np.pi / 2)
-    return Spiral(center[0], center[1], pitch, float(np.angle(amplitude))).scaled(scale), z_map, coherence
+    center = symmetry_center(z_map, spacing, settings.symmetry_window)
+    z = map_at(z_map, center)
+    coherence = 2 * np.abs(z) / np.sum(np.abs(image)) / (np.pi / 2)
+    return Spiral(center[0], center[1], pitch, float(np.angle(z))).scaled(scale), z_map, coherence
 
 
 def low_res_stage(full, mark, nominal_spacing, settings=LowResSettings()):

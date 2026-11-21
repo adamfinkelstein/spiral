@@ -43,13 +43,20 @@ calibrated from those images.
    led to the current method — the spiral coherence map Z at every pixel by
    one FFT correlation with a spiral-wave kernel, then a J0 ring-pattern fit
    (experiments/center_search.py: median 0.07 px, never fails, no search
-   window). Later ported to JS (coherence.js) and shown live on spacing.html. Gradient-based centers (RANSAC lines; Adam's "tilt" idea) were
+   window). Later ported to JS (coherence.js) and shown live on spacing.html.
+7. Symmetry center: on the spacing page Adam saw that a stretched spiral
+   (aspect ≠ 1) splits the map's bright spot into lobes (the J0 fit then
+   locks onto one) but the map stays point-symmetric about the true center.
+   The center is now that symmetry center (self-convolution of the windowed
+   |Z| on a crop), in JS and cardlab; the J0 fit is dropped (Adam: sub-pixel
+   accuracy isn't needed, the full-res refit fits the center anyway). Gradient-based centers (RANSAC lines; Adam's "tilt" idea) were
    tested and dropped (sound in the depth makes along-groove gradients).
 
 ## Current pipeline (cardlab, see procedure.html Part 3)
 
 Low res (1024²): mask to the hand-marked annulus → FFT spacing (peak within
-±10% of nominal) → coherence map + J0 fit (center, phase). Full res: unrolled
+±10% of nominal) → coherence map → its center of point symmetry (center),
+arg Z there (phase). Full res: unrolled
 strip along that spiral (a column every 3 px of groove, ±1 spacing),
 demodulation per column → geometry refit modulo the spacing (grid start +
 robust least squares) → trace locked to the refitted spiral (σ 48 px along
@@ -88,5 +95,8 @@ correlation ~0.9 (limited by the measured grain level).
   filter), filter along the groove with the grain's spectrum.
 - Put card imperfections back one at a time (warp, slow height drift, dust,
   damage) once the idealized pipeline is settled.
+- Stretched cards: the low-res center now survives up to 3% stretch, but
+  the full-res refit has no stretch term (r·cos 2α, r·sin 2α); needed if
+  real scans can be off by more than ~0.3%.
 - Run on real depth maps (sonorine_001) when available.
 - Adam's idea for later: RANSAC over N > 2 lines.

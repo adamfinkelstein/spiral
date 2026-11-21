@@ -23,11 +23,15 @@ Adam's preferences and open questions.
   `computeHarmonicScore`, `hBest`/`hStages`/`hWin`, `evenWeight`. Used by
   spacing.js (which keeps the drawing) and cardpipe.js.
 - `coherence.js` — center and phase from the spiral coherence map, a JS port
-  of `cardlab/lowres.py` find_center (used by spacing.html): `besselJ0`,
-  `coherenceMap` (three N² FFTs via `fft1d`, circular, kernel reach N/2 − 1,
-  fills `zRe`/`zIm`/`zAbs`), `mapPeak`, `fitRingPattern` (LM over the
-  center; complex amplitude by linear least squares), `coherenceCenter(src,
-  spacing)`. No DOM. Bright arms, so Z has no minus sign (Python's grooves do).
+  of `cardlab/lowres.py` find_center (used by spacing.html): `fft2(re, im,
+  M)` (radix-2, any power-of-two M, tables cached per M), `coherenceMap`
+  (three N² FFTs, circular, kernel reach N/2 − 1, fills `zRe`/`zIm`/`zAbs`),
+  `mapPeak`, `mapAt` (bilinear Z), `symmetryCenter` (point symmetry of the
+  map near its peak: self-convolution of the windowed zero-mean |Z| on an
+  M×M crop, M = power of two ≥ 6σ, at most N; max at twice the center),
+  `coherenceCenter(src, spacing, windowSpacings = 3)` (phase = arg Z at the
+  center). No DOM. Bright arms, so Z has no minus sign (Python's grooves
+  do). Same method as cardlab, which uses σ 10 spacings (bigger spirals).
 - `explain.html` — help page for `spacing.html` controls ("Explain"
   button). Keep it in sync when its controls change.
 - `procedure.html` + `procedure/*.png` — both methods step by step, in three
@@ -91,7 +95,7 @@ Pages serves them (nothing is built on GitHub).
   nearest_groove / sound, render → full-res float32 image ~6 s; grain is
   Gaussian-filtered white noise, unlike the JS value noise),
   `lowres.py` (cv2.INTER_AREA downsample, annulus mask, FFT spacing,
-  spiral coherence map by FFT + J0 ring-pattern fit), `strip.py` (strip columns by equal
+  spiral coherence map by FFT + center of point symmetry), `strip.py` (strip columns by equal
   arc length, cv2.remap sampling in blocks < 32767 wide, demodulation,
   refit: grid start + scipy least_squares with soft_l1 on wrapped
   residuals, lock_trace), `readout.py` (sound), `scoring.py` (truth),
@@ -129,14 +133,26 @@ Pages serves them (nothing is built on GitHub).
   marks 100 px off (the grid searches only ±60 px), same ~0.5 s. The gain is
   from using all pixels (NM on all pixels matches it but takes 1.4 s). A
   sparse 0.45-spacing grid + J0 fit is fast but locks onto side rings 3–6%
-  of the time. Adopted: lowres.find_center = coherence_map (fftconvolve
-  with spiral_wave_kernel, reach r_outer + 100 low-res px) → map_peak →
-  fit_ring_pattern (scipy least_squares within 2.5 spacings; complex
-  amplitude by linear least squares per trial center; phase = its angle).
+  of the time. Adopted then: coherence_map (fftconvolve with
+  spiral_wave_kernel, reach r_outer + 100 low-res px) → map_peak → J0 fit.
   No search window: the hand mark only places the annulus mask. The
-  spacing stays the FFT's. The old grid / direct sums / Nelder–Mead live
-  only in experiments/center_search.py. Report step d shows |Z| around
-  the answer; steps renumbered a–j.
+  spacing stays the FFT's. The old grid / direct sums / Nelder–Mead and
+  the J0 fit live only in experiments/center_search.py. Report step d
+  shows |Z| around the answer; steps renumbered a–j.
+- Symmetry center (Nov 2026, `experiments/symmetry_center.py`, results in
+  `experiments/symmetry_center_results.md`; 20 cards × 3 marks × aspect
+  1, ±1%, ±2%, 3%, low-res image warped by cv2): a card stretched ≥ 1%
+  breaks the J0 fit at the peak (59 / 130 / 210 px off at 1 / 2 / 3%: turns
+  reach ~95 spacings out, so the bright spot splits into lobes). Now
+  lowres.find_center = coherence_map → `symmetry_center` (self-convolution
+  of (|Z| − window mean) × Gaussian window σ = `symmetry_window` 10
+  spacings about the peak, crop ±3σ, ~7 ms; max at twice the center,
+  parabola) → phase = arg Z there (`map_at`, bilinear). Typical / loud /
+  clean: 0.16–0.30 px median at any stretch ≤ 3% (none > 1 px); unstretched
+  0.28 vs J0's 0.04 px, fine since the refit searches ±1.5 spacings and
+  fits the center (Adam: no need for sub-pixel here). σ 3 handles only 1%.
+  Hard cards: ~0.8 px unstretched, 1 of 5 fails at 2%. The full-res refit
+  has no stretch term yet (a 1% stretch moves outer turns ±28 px).
 - Gradient-based centers dropped (Adam's decision, Nov 2026): the spiral
   coherence map wins on every count we tested. RANSAC on gradient lines
   (Part 1) missed by 20–200 px on these cards (JS tests): the lines are
@@ -151,8 +167,9 @@ Pages serves them (nothing is built on GitHub).
   use the same pixels less directly than Z. Not in the procedure or report;
   card_js.html (frozen) still has the line method as an option. Possible
   future idea (Adam): RANSAC over N > 2 lines.
-- Results (Python, 5 seeds, FFT-map center): typical — low-res center
-  0.01–0.16 px, trace 0.40–0.66 px, no wrong groove, sound corr 0.89–0.92;
+- Results (Python, 5 seeds, symmetry center; J0 fit before it gave
+  0.01–0.16 px and the same trace and sound): typical — low-res center
+  0.15–0.33 px, trace 0.40–0.66 px, no wrong groove, sound corr 0.89–0.92;
   clean 0.98–0.99; loud 0.94–0.96; hard center 0.3–2.0 px, trace
   1.1–2.7 px, 0–1.9% wrong groove, sound
   0.75–0.81. Lower sound correlation than the JS version (0.93–0.96 for
@@ -317,11 +334,18 @@ Robustness (8 random offset sets, uniform in ±amp at each knot):
   `coherenceCenter` in coherence.js): the card pipeline's center search on
   the noisy image with the FFT's spacing estimate ("Spacing for Z" select:
   FFT estimate / true). Panels below the profile: |Z| (square-rooted) and a
-  ±3-spacing zoom with the 2.5-spacing fit circle; cyan + also on the image.
-  ~35–65 ms per frame (node). Tests (true spacing, random centers/phases):
-  spacing 10: 0.001 px clean, ≤ 0.04 px at noise 1; spacing 20 ≤ 0.04 px at
-  noise 0.5; phase ≤ 1° (2° at spacing 5; fixed bias from non-sinusoidal
-  arms). Spacing off by 0.5–5% (noise 0.3): center median 0.01–0.14 px, no
+  ±3-spacing zoom (yellow square: map peak); cyan + also on the image.
+  ~46 ms per frame (node), almost all the map; crop 128² / 256² / 512² at
+  spacing 5 / 10 / ≥ 20.
+  Center = point symmetry of the map (Adam's idea, Nov 2026), replacing the
+  J0 fit at the peak, which locks onto a side lobe once the spiral is
+  stretched: aspect 0.98 / 1.03 / 1.05 → J0 fit 5 / 10 / 20 px off, symmetry
+  0.03 / 0.06 / 0.09 px. Aspect 1: 0.013 vs 0.001 px (noise 0.5: equal,
+  0.017). Radius offsets: 0.2 px either way. A normalized-asymmetry refine
+  (window per trial center) gained ≤ 0.03 px for 26 ms: dropped; so was the
+  J0 fit (Adam: sub-pixel isn't needed). Phase = arg Z at the center:
+  ≤ 1.8° at aspect 1, meaningless at 1.05.
+  Spacing off by 0.5–5% (J0 fit, noise 0.3): center median 0.01–0.14 px, no
   failures; phase shifts ≈ 360° × (mean radius / S) × ε (26° per 0.5% at
   spacing 10), so the FFT's 0.5% error on the default spiral gives 24°.
 - Tried and rejected: tangential blur (σ 3, along circles about the
@@ -497,4 +521,5 @@ gradient-line method are dropped in favor of the spiral coherence map; see
 
 Done since: the card pipeline is ported to Python (cardlab/, card.html is
 the generated report; the JS page lives on as card_js.html); the center
-search is the FFT coherence map + J0 fit.
+search is the FFT coherence map + its center of point symmetry (both the
+spacing page and cardlab).

@@ -284,7 +284,7 @@ function drawPlus(ctx, c, a, color, width = 2) {
   ctx.beginPath(); ctx.moveTo(c.x - a, c.y); ctx.lineTo(c.x + a, c.y); ctx.moveTo(c.x, c.y - a); ctx.lineTo(c.x, c.y + a); ctx.stroke();
 }
 
-// |Z| / max, square-rooted so the faint J0 rings show.
+// |Z| / max, square-rooted so the faint rings show.
 const zShade = (v, max) => Math.round(255 * Math.sqrt(Math.min(1, v / max)));
 
 function drawCoherence(r, spacing) {
@@ -308,12 +308,9 @@ function drawCoherence(r, spacing) {
   }
   zoomCtx.putImageData(zoomImage, 0, 0);
   const toZoom = q => ({ x: (q.x - r.c.x + half) / s, y: (q.y - r.c.y + half) / s });
-  zoomCtx.save();
-  zoomCtx.setLineDash([5, 4]);
-  zoomCtx.strokeStyle = 'rgba(63,240,255,0.6)';
-  zoomCtx.lineWidth = 1.5;
-  zoomCtx.beginPath(); zoomCtx.arc(W / 2, W / 2, 2.5 * spacing / s, 0, 2 * Math.PI); zoomCtx.stroke();
-  zoomCtx.restore();
+  const pk = toZoom(r.peak); // the map's brightest pixel
+  zoomCtx.strokeStyle = '#ffd23f'; zoomCtx.lineWidth = 1.5;
+  zoomCtx.strokeRect(pk.x - 5, pk.y - 5, 10, 10);
   const t = toZoom(center);
   zoomCtx.fillStyle = 'rgba(255,40,40,0.8)';
   zoomCtx.beginPath(); zoomCtx.arc(t.x, t.y, 5, 0, 2 * Math.PI); zoomCtx.fill();
@@ -332,8 +329,9 @@ function coherenceText(p, r, spacing) {
   const err = Math.hypot(r.c.x - center.x, r.c.y - center.y);
   return `Coherence center (cyan +): (${r.c.x.toFixed(2)}, ${r.c.y.toFixed(2)}), ${err.toFixed(3)} px from the true center (red); ` +
     `phase ${((deg(r.phase) + 360) % 360).toFixed(1)}° (true ${deg(p.phase).toFixed(0)}°, error ${wrapDeg(r.phase - p.phase).toFixed(1)}°). ` +
-    `Spacing used: ${spacing.toFixed(2)} px (${p.cohTrue ? 'true' : 'the FFT estimate'}). J0 fit over ${r.nFit} map pixels within 2.5 spacings of the peak (dashed). ` +
-    `Map ${r.msMap.toFixed(0)} ms, fit ${r.msFit.toFixed(0)} ms.`;
+    `Spacing used: ${spacing.toFixed(2)} px (${p.cohTrue ? 'true' : 'the FFT estimate'}). Center: point symmetry of |Z| near its peak (yellow square, ` +
+    `${Math.hypot(r.peak.x - r.c.x, r.peak.y - r.c.y).toFixed(1)} px away), on a ${r.crop}² crop; phase: the angle of Z there. ` +
+    `Map ${r.msMap.toFixed(0)} ms, center and phase ${r.msCenter.toFixed(0)} ms.`;
 }
 
 // Blue plus through the canvas center (overlay only; not part of FFT input).

@@ -30,8 +30,9 @@ Estimate the ring spacing from the 2D Fourier transform.
   dominate.
 - Coherence center (default on, spiral only): the card pipeline's center
   search ported to JS (`coherence.js`): the spiral coherence map |Z| by one
-  FFT correlation and a J0 ring-pattern fit around its peak, giving center
-  and phase live (~50 ms); shown with a zoom below the profile.
+  FFT correlation; the center is the map's center of point symmetry near its
+  peak (self-convolution on a crop, robust to a stretched spiral), the phase
+  the angle of Z there; live (~50 ms), shown with a zoom below the profile.
 - "Explain" opens a description of every control.
 
 ## Center and phase (`center.html`)
