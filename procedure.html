@@ -34,13 +34,14 @@
 </head>
 <body>
 <h1>Spiral experiments: procedure</h1>
-<p class="src">The methods behind the two experiment pages, step by step: every step,
+<p class="src">The methods behind the three experiment pages, step by step: every step,
 its parameters, what was tried, and how well it works. For what each control
 on the spacing page does, see <a href="explain.html">Explain controls</a>.
 Source: <a href="https://github.com/adamfinkelstein/spiral">github.com/adamfinkelstein/spiral</a>.</p>
 <ul class="toc">
 <li><a href="#part1"><b>Part 1 &mdash; Ring spacing</b></a> (<a href="spacing.html">spacing.html</a>): from an image of a whole spiral to its ring spacing, and a rough center.</li>
 <li><a href="#part2"><b>Part 2 &mdash; Center and phase from chunks</b></a> (<a href="center.html">center.html</a>): given the spacing, the center and phase from only pieces of the spiral.</li>
+<li><a href="#part3"><b>Part 3 &mdash; A realistic card, whole pipeline</b></a> (<a href="card.html">card.html</a>): a simulated card calibrated from real scans, from a hand-marked center to a traced groove.</li>
 </ul>
 
 <h1 class="part" id="part1">Part 1 &mdash; Ring spacing (<a href="spacing.html">spacing.html</a>)</h1>
@@ -570,6 +571,142 @@ the fraction of the groove followed without slipping onto a neighboring
 turn.</li>
 </ul>
 
-<p><a href="explain.html">Explain controls</a> &middot; <a href="spacing.html">Spacing page</a> &middot; <a href="center.html">Center page</a></p>
+<h1 class="part" id="part3">Part 3 &mdash; A realistic card, whole pipeline (<a href="card.html">card.html</a>)</h1>
+
+<div class="box">
+<b>Current procedure.</b> Simulated card calibrated from sonorine_001 &rarr;
+<b>low-res stage</b> (1024&sup2;, ~5.4 px spacing): local contrast, annulus mask
+from the hand marks &rarr; spacing = FFT radial-profile peak within &plusmn;10% of
+the nominal &rarr; center, spacing and phase by maximizing spiral coherence
+near the hand-marked center &rarr; <b>full-res stage</b>: unrolled strip along
+that spiral (a column every 3 px of groove, rows &plusmn;S at 1 px) &rarr; per-column
+demodulation &rarr; robust refit of the geometry, modulo S &rarr; trace locked to
+the refitted spiral. Scored against the card's truth.
+</div>
+
+<h2>P3.0 The card model (cardmodel.js)</h2>
+<p>A procedural depth map, evaluated at any full-resolution point, so the
+low-res image and the full-res strip are sampled from the same card. Ideal
+groove: r(&theta;) = b&theta; + &delta;(&theta;), b = S/2&pi;, one fixed winding, with &delta; = slow
+drift (sinusoids with periods of 0.7&ndash;12 turns) + &ldquo;audio&rdquo; (band-limited,
+wavelengths 15&ndash;300 px along the groove). The observed card is the ideal one
+under a slight stretch and a smooth warp. Depth = &minus;cos(2&pi;&psi;) (&psi; integer on
+the groove centerline; a near-sinusoidal profile, as measured), faded at the
+inner and outer ends, plus slow depth drift, fine grain, scanner banding, dust,
+scratches and a damaged sector (weaker groove, more grain). The hand marks
+(center, inner and outer radius) are the truth plus noise.</p>
+<p>Values in the <b>typical</b> preset were measured on the presentation's
+700-px full-resolution patch of sonorine_001 (image 21) and its annulus
+(image 22): spacing 29.0 px; groove rms 5.0 vs. fine grain rms 2.6
+(correlation ~3&ndash;5 px) and slow drift rms 10.9 (correlation ~90 px) in the
+local-contrast depth; turns wander ~&plusmn;2 px in phase; wobble along the arc
+~1.3 px (an upper bound on the audio, since it includes noise). The
+annulus runs from r &asymp; 1600 to 2770 px (~40 turns). The rest (hand-mark error,
+warp, dust, scratches, damage) is assumed. The page lists every value with its
+source. <b>Hard</b> raises drift (6 px), grain, dust, scratches, warp and damage;
+<b>clean</b> keeps only the geometry.</p>
+
+<h2>P3.1 Low-res stage: spacing</h2>
+<p>The low-res image (2&times;2 point samples per 1024&sup2; pixel, scale
+5551/1024 &asymp; 5.42) minus a Gaussian blur of &sigma; = 1 spacing (removes the slow
+depth drift), times a soft annulus mask from the hand marks, scaled to unit
+rms and clipped at &plusmn;2.5 (dust, scratches). Weighted 1/&radic;r about the hand
+mark and transformed as in Part 1, but the spacing is simply the peak of
+the radial profile within &plusmn;10% of the nominal, refined parabolically: the
+groove is nearly a cosine, so there are no useful harmonics, and the
+profile's own ripple (from the annulus edges) spoiled the harmonic sum's
+trough samples (it locked &minus;11% off on some cards). If the peak is on the
+window's edge or &gt; 3% from the nominal, the nominal is used instead.</p>
+
+<h2>P3.2 Low-res stage: center, spacing and phase</h2>
+<p>The depth about the true center is &asymp; &minus;cos(r/b &minus; &alpha; + &phi;), so</p>
+<p class="eq">Z(c, b) = &minus;&sum; v &middot; e<sup>&minus;i(r/b &minus; &alpha;)</sup> &asymp; (n/2) e<sup>i&phi;</sup></p>
+<p>peaks in |Z| at the true center and spacing, and arg Z is the phase. A center
+off by e shifts each turn by up to e, so |Z| falls like J<sub>0</sub>(2&pi;e/S): the main
+lobe is only ~0.4 spacing wide, narrower than the hand mark's error. Hence a
+grid over &plusmn;60 px about the hand mark (step 0.15 spacing, ~8000 pixels), then a
+pattern search on (x, y, b) with ~27 000 pixels. Typical cards: center within
+1&ndash;2 px of the truth (hand mark 10&ndash;32 px off), spacing within 0.15%.
+Coherence (|Z| relative to a perfect cosine groove) is ~0.6 on typical cards,
+~0.1 on hard ones.</p>
+<p>The <b>gradient-line center</b> of Part 1 (optional on the page, for comparison)
+does not work here: with ~5.4 px spacing, 40 turns and an empty middle, the
+lines are extrapolated ~300&ndash;500 px from where they are measured, so small
+angle errors miss the center by more than the RANSAC tolerance; dust specks,
+whose gradients all point at their own centers, win instead (errors of
+20&ndash;60 px clean, 60&ndash;500 px typical).</p>
+
+<h2>P3.3 Full-res stage: the unrolled strip</h2>
+<p>Columns along the low-res spiral every 3 px of groove, from 1.5 turns inside
+the marked inner edge to 1.5 turns inside the outer one (~160 000 columns,
+~35 turns, ~3 s). Each column samples the full-res depth along the radius at
+d = &minus;S..S (1 px), removes a linear trend, clips at 2 rms, and correlates with
+e<sup>&minus;2&pi;id/S</sup> under a cos&sup2; window of half-width S. A groove at offset o gives
+depth &asymp; &minus;cos(2&pi;(d &minus; o)/S), so o = &minus;S &middot; arg(&minus;Z)/2&pi; (mod S), and |Z| is a
+confidence.</p>
+
+<h2>P3.4 Refit of the geometry</h2>
+<p>About the strip's spiral, a center error (e<sub>x</sub>, e<sub>y</sub>), a spacing error &beta; and
+a phase error appear as</p>
+<p class="eq">o(&theta;) &asymp; a + &beta;(&theta; &minus; &theta;<sub>0</sub>) + e<sub>x</sub> cos &alpha; + e<sub>y</sub> sin &alpha; &nbsp; (mod S)</p>
+<p>Start: a grid over &beta; (&plusmn;2.5%, steps that move the outermost turn by S/4)
+and (e<sub>x</sub>, e<sub>y</sub>) (&plusmn;1.5 S, steps of S/4) on every 20th column, scoring
+|&sum; |Z| e<sup>2&pi;i(o &minus; model)/S</sup>| (the constant a comes out as its arg). Then 10
+rounds of IRLS on wrapped residuals (Tukey, 4.7 MAD, weights |Z|). Comparing
+modulo S makes slips to a neighboring turn cost nothing; fitting unwrapped
+offsets instead failed on hard cards, where weak stretches made the
+unwrapping slip and the spacing came out 8&ndash;13% off. The refit hardly improves
+on the low-res fit for typical cards; it matters when the low-res answer is off
+by more than S/2 somewhere. Over only a few turns, spacing and drift can't be
+told apart (3 turns: &minus;3% spacing).</p>
+
+<h2>P3.5 The trace</h2>
+<p>Local offsets: Z smoothed along the strip (Gaussian, default &sigma; 2 columns = 6
+px). Reference: the refitted spiral plus the slowly varying residual (circular
+mean of |Z|e<sup>2&pi;i(o &minus; model)/S</sup> over &sigma; 100 columns = 300 px, kept within &plusmn;S/2 of
+the spiral). Each column's trace is the groove nearest the reference. Groove
+identity comes from the fitted spiral, so noise can't cause lasting slips; the
+price is that grooves must stay within S/2 of one spiral. (Unwrapping the
+slow residual can follow larger drift, but in weak stretches it slipped turns
+and never came back: up to 6 turns off by the outer edge on hard cards.) A
+narrow second pass (window &plusmn;S/2 about the first trace) was tried and dropped:
+noisier on typical cards (rms 1.4 vs. 1.0 px).</p>
+
+<h2>P3.6 How well it works</h2>
+<figure><img class="wide" src="procedure/14_card.png" alt=""><figcaption>card.html, typical card (seed 1). Top: the low-res card after local contrast, and a 256-px full-res detail with the trace (red) and the true groove (green). Middle: the unrolled strip and the groove's offset from the refitted spiral. Bottom: trace error per turn.</figcaption></figure>
+<table>
+<tr><th>Preset (seeds 1&ndash;5)</th><th>Hand mark</th><th>Low-res center</th><th>Spacing</th><th>Trace rms</th><th>Wrong groove</th><th>Audio band err / corr</th></tr>
+<tr><td>Clean</td><td class="n">10&ndash;32 px</td><td class="n">0.02&ndash;0.14 px</td><td class="n">&le; 0.1%</td><td class="n">0.5&ndash;0.65 px</td><td class="n">0</td><td class="n">0.4&ndash;0.6 / 0.85&ndash;0.94</td></tr>
+<tr><td>Typical</td><td class="n">10&ndash;32 px</td><td class="n">0.7&ndash;1.7 px</td><td class="n">&le; 0.16%</td><td class="n">0.9&ndash;1.1 px</td><td class="n">&le; 0.01%</td><td class="n">0.8&ndash;1.0 / 0.59&ndash;0.71</td></tr>
+<tr><td>Hard</td><td class="n">20&ndash;68 px</td><td class="n">1&ndash;11 px</td><td class="n">0.1&ndash;0.8%</td><td class="n">3.2&ndash;4.0 px</td><td class="n">4&ndash;21%</td><td class="n">3.0&ndash;3.7 / 0.63&ndash;0.75</td></tr>
+</table>
+<p class="muted">All turns, smoothing &sigma; 6 px. Trace rms: distance from each traced
+point to the nearest true groove centerline. Audio band: traced and true offsets
+minus their own smoothing over 300 px; the true audio is 1 px rms (typical).
+Clean with no smoothing: audio error 0.13 px, correlation 0.99 &mdash; the smoothing
+costs that much, and is needed once grain is present.</p>
+<ul>
+<li><b>Geometry is not the problem</b> on typical cards: the hand mark plus spiral
+coherence gets the center to ~1 px and the spacing to ~0.1%, and tracking never
+leaves the groove.</li>
+<li><b>Grain limits the audio</b>: with the measured grain, each column's offset is
+uncertain by ~1 px, the same as the assumed audio. Whether real audio is
+recoverable depends on its true amplitude and on the grain at the scale of the
+groove, which the depth data should settle.</li>
+<li><b>Hard cards fail where the groove drifts beyond S/2 of one spiral or fades
+(damaged sector)</b>: the trace jumps to a neighboring groove there.</li>
+</ul>
+
+<h3>Next steps</h3>
+<ul>
+<li>Run the strip on real depth maps (sonorine_001) starting from a hand mark.</li>
+<li>A reference that follows larger drift: a spline in &theta; per turn, or carrying
+each turn's track over to the next (neighboring turns drift together).</li>
+<li>A better local estimator than one demodulation per column: a 2-D groove model
+along the strip (profile shape, width), or a Kalman/Viterbi tracker with the
+audio's spectrum as the prior.</li>
+</ul>
+
+<p><a href="explain.html">Explain controls</a> &middot; <a href="spacing.html">Spacing page</a> &middot; <a href="center.html">Center page</a> &middot; <a href="card.html">Card page</a></p>
 </body>
 </html>

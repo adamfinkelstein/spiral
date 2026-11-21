@@ -7,19 +7,24 @@ work from `file://`. Deployed to GitHub Pages on every push to `main`.
 
 ## Files
 
-- `index.html` — landing page linking to the two experiments.
-- `render.js` — shared by all pages: `N`, `erf`, `edgeStep`, `renderSpiral`,
+- `index.html` — landing page linking to the three experiments.
+- `render.js` — shared by all pages: `N` (512, or `SPIRAL_N` if a page sets
+  it first: card.html uses 1024), `erf`, `edgeStep`, `renderSpiral`,
   `gaussianBlur`, `toImageData`. Defines globals, so page scripts must not
   redeclare them (e.g. no `const N` in a page script).
 - `spacing.html` / `spacing.js` — ring-spacing experiment: spiral (or rings)
   on the left, log-magnitude 2D FFT on the right, radial profile and
   harmonic-sum spacing estimate below.
+- `fftspacing.js` — the FFT and spacing estimate, no DOM: FFT tables,
+  `computeSpectrum(src, removeDC, useWindow)` (fills `mag` and `profile`),
+  `computeHarmonicScore`, `hBest`/`hStages`/`hWin`, `evenWeight`. Used by
+  spacing.js (which keeps the drawing) and cardpipe.js.
 - `explain.html` — help page for `spacing.html` controls ("Explain"
   button). Keep it in sync when its controls change.
-- `procedure.html` + `procedure/*.png` — both methods step by step, in two
-  parts: Part 1 (spacing page: spacing and rough center) and Part 2 (center
-  page: center and phase from chunks, incl. options under evaluation and
-  next steps toward real cards). Inputs, each step with parameters, what was
+- `procedure.html` + `procedure/*.png` — both methods step by step, in three
+  parts: Part 1 (spacing page: spacing and rough center), Part 2 (center
+  page: center and phase from chunks, incl. options under evaluation) and
+  Part 3 (card page: realistic card, whole pipeline, results, next steps). Inputs, each step with parameters, what was
   tried, result tables, limits ("Procedure" buttons on both pages; linked
   from explain.html and index.html). Figures were rendered from the app in headless Chromium
   (canvas data → PNG, 384 px). Update it when the method or defaults change.
@@ -43,6 +48,44 @@ work from `file://`. Deployed to GitHub Pages on every push to `main`.
 
 Controls and their defaults live in the HTML `value` / `checked` attributes;
 each page's `ids` list and `params()` read them, and "Defaults" resets to them.
+
+- `card.html` / `card.js` (UI), `cardmodel.js`, `cardpipe.js` — realistic
+  card, whole pipeline (see "Card page" below). Scripts: `var SPIRAL_N = 1024`,
+  render.js, fftspacing.js, gradcenter.js, chunkfit.js, cardmodel.js,
+  cardpipe.js, card.js. No sliders: presets + seed; runs ~8 s (progress in the
+  status line; a newer run cancels an older one via `runId`).
+
+## Card page (card.html)
+
+- `makeCard(preset, seed)` (cardmodel.js): procedural depth `sample(x, y)` at
+  any full-res point (frame 5551², ~200 ns/sample), so the low-res image and
+  the strip come from the same card. Groove r = bθ + drift(θ) + audio(arc
+  length), depth −cos(2πψ), observed through stretch + smooth warp (warp and
+  slow depth drift are tabulated on a 16-px grid; audio by rotating phasors).
+  Also `trueOffset`, `psiAt`, `toIdeal` for scoring. Presets typical / hard /
+  clean in `CARD_PRESETS`; card.js `PARAM_INFO` lists each value's source
+  (measured on sonorine_001 image 21/22, or assumed). Keep both in sync.
+- Low res (cardpipe.js `lowResStage`): 2×2 point samples per pixel; minus
+  Gaussian σ 1 spacing; annulus mask from the hand marks; unit rms, clipped
+  ±2.5. Spacing: FFT radial-profile peak within ±10% of nominal (falls back
+  to nominal if > 3% off or on the edge; the harmonic sum failed here, −11%).
+  Center/spacing/phase: `spiralCoherence` maximizes |Σ v e^{−i(r/b−α)}| (grid
+  ±60 px about the mark, step 0.15 S, then pattern search on x, y, b); phase
+  = arg. ~1 px on typical cards. The gradient-line center fails here
+  (optional comparison only).
+- Full res: `stripColumns` (every 3 px of groove), `demodPass` (rows ±S,
+  detrend, clip 2 rms, cos² window, Z per column), `unwrapOffsets` (o = −S
+  arg(−Z)/2π; optional smoothing and unwrapping), `refitGeometry` (grid over
+  β, ex, ey on wrapped residuals, then wrapped IRLS), `lockTrack` (reference
+  = model + amplitude-weighted circular mean of the residual over 100
+  columns, within ±S/2; trace = nearest groove), `truthAt` for scoring.
+  Dropped: unwrapping-based refit and lock (slips accumulate on hard cards),
+  a narrow second demodulation pass (noisier).
+- Results (5 seeds): typical — center 0.7–1.7 px, trace rms 0.9–1.1 px, no
+  wrong-groove, audio band corr ~0.6–0.7 (grain-limited); hard — 4–21% on
+  the wrong groove; clean — corr 0.85–0.94 at σ 6 px smoothing (0.99 at
+  none). Node benchmarks: concatenate the scripts with `const N=1024` and
+  call the functions directly (all are DOM-free).
 
 ## Radius offsets (both pages)
 

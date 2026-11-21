@@ -1,7 +1,8 @@
 // Shared spiral renderer, used by spacing.html and center.html.
 // Plain global script (no modules), so pages still open via file://.
 
-const N = 512; // canvas / image size in pixels
+// canvas / image size in pixels (a page may set SPIRAL_N before loading this)
+const N = typeof SPIRAL_N !== 'undefined' ? SPIRAL_N : 512;
 
 // Archimedean spiral r = b * theta, with b = spacing / (2π) so that
 // successive rings are `spacing` pixels apart, for r in [rStart, rEnd].

@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spiral: realistic card, whole pipeline</title>
+<style>
+  body { margin: 0; padding: 16px; background: #111; color: #ddd; font: 14px system-ui, sans-serif; }
+  .row { display: flex; gap: 28px; align-items: flex-start; }
+  figure { margin: 0; }
+  figcaption { margin-bottom: 4px; color: #aaa; }
+  canvas { display: block; border: 1px solid #333; background: #000; }
+  #card, #detail { width: 512px; height: 512px; cursor: crosshair; }
+  .pair { display: flex; gap: 16px; }
+  .left { display: flex; flex-direction: column; gap: 18px; flex: none; }
+  .note { color: #888; font-size: 12px; margin: 6px 0 0; max-width: 1040px; line-height: 1.4; }
+  .side { width: 440px; position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow-y: auto; }
+  .controls { display: grid; grid-template-columns: 165px 1fr; gap: 8px 10px; align-items: center; margin-top: 14px; }
+  .controls h4 { grid-column: 1 / -1; margin: 10px 0 0; color: #aaa; font-weight: 600; }
+  .controls select, .controls input[type=number] { background: #222; color: #ddd; border: 1px solid #555; border-radius: 3px; padding: 2px 4px; font: inherit; }
+  .button { display: inline-block; margin-top: 18px; margin-right: 6px; padding: 5px 12px; border: 1px solid #555; border-radius: 4px; background: #222; color: #ddd; text-decoration: none; font: inherit; cursor: pointer; }
+  .button:hover { background: #333; border-color: #777; }
+  #status { margin-top: 14px; color: #ccc; min-height: 1.4em; }
+  table.t { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; margin-top: 8px; }
+  table.t th { text-align: right; color: #aaa; font-weight: 500; padding: 2px 4px; border-bottom: 1px solid #333; }
+  table.t td { text-align: right; padding: 2px 4px; }
+  table.t th:first-child, table.t td:first-child { text-align: left; }
+  table.t td.src { text-align: left; color: #888; white-space: normal; }
+  table.t tr.h td { color: #aaa; padding-top: 8px; font-weight: 600; text-align: left; }
+  .k { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: -1px; margin-right: 3px; }
+  h3 { margin: 18px 0 0; font-size: 14px; color: #ccc; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="row">
+<div class="left">
+  <div class="pair">
+    <figure>
+      <figcaption>Card at low resolution, 1024² (local contrast, annulus masked; click to pick the detail spot)</figcaption>
+      <canvas id="card" width="1024" height="1024"></canvas>
+    </figure>
+    <figure>
+      <figcaption>Detail at full resolution (<span id="detailSize"></span> px around the spot)</figcaption>
+      <canvas id="detail" width="512" height="512"></canvas>
+    </figure>
+  </div>
+  <p class="note">
+    <span style="color:#fff">White +</span> and dashed circles: hand-marked center and annulus.
+    <span style="color:#4cf">Cyan</span>: low-res estimate.
+    <span style="color:#fd3">Yellow</span>: full-res refit.
+    <span style="color:#f44">Red +</span>: true center.
+    <span style="color:#f6f">Magenta</span>: gradient-line center (if on).
+    Detail: <span style="color:#f44">red</span> = traced groove, <span style="color:#3e6">green</span> = true groove centerline (shown on the traced turns only).
+  </p>
+  <figure>
+    <figcaption>Unrolled strip around the spot (columns along the groove every 3 px, rows across it, 1 px)</figcaption>
+    <canvas id="strip" width="1040" height="200"></canvas>
+    <p class="note">Each column is a radial line about the low-res spiral; the strip's middle row is that spiral.
+      <span style="color:#fd3">Yellow</span>: refitted spiral; <span style="color:#f44">red</span>: trace; <span style="color:#3e6">green</span>: true groove.</p>
+  </figure>
+  <figure>
+    <figcaption>Groove offset from the refitted spiral, same stretch (px)</figcaption>
+    <canvas id="plot" width="1040" height="220"></canvas>
+    <p class="note"><span style="color:#f44">Red</span>: traced; <span style="color:#3e6">green</span>: true (the groove's drift, audio and the card's warp, as seen from the fitted spiral).</p>
+  </figure>
+  <figure>
+    <figcaption>Trace error per turn, inner to outer</figcaption>
+    <canvas id="turns" width="1040" height="150"></canvas>
+    <p class="note">Bars: RMS distance from the traced point to the nearest true groove centerline (px; dotted line at S/4).
+      Red: share of the turn on the wrong groove (scale on the right, 0–100%).</p>
+  </figure>
+</div>
+<div class="side">
+<a class="button" href="index.html">&larr; Experiments</a><a class="button" href="procedure.html#part3" target="_blank">Procedure</a><button class="button" id="newCard" type="button">New card</button><button class="button" id="run" type="button">Run again</button>
+<div class="controls">
+  <h4>Card</h4>
+  <label for="preset">Preset</label>
+  <select id="preset"></select>
+  <label for="seed">Seed</label>
+  <input id="seed" type="number" min="1" step="1" value="1">
+
+  <h4>Pipeline</h4>
+  <label for="turnsSel">Trace</label>
+  <select id="turnsSel">
+    <option value="0" selected>All turns</option>
+    <option value="10">10 middle turns</option>
+    <option value="3">3 middle turns</option>
+  </select>
+  <label for="smooth">Along-groove smoothing</label>
+  <select id="smooth">
+    <option value="0">none</option>
+    <option value="1">σ 3 px</option>
+    <option value="2" selected>σ 6 px</option>
+    <option value="4">σ 12 px</option>
+  </select>
+  <label for="gradient">Gradient-line center too</label>
+  <span><input id="gradient" type="checkbox"> <span class="note">(comparison only, ~1.5 s)</span></span>
+</div>
+<div id="status"></div>
+
+<h3>Estimates (errors vs. the true card)</h3>
+<table class="t" id="est"></table>
+<h3>Groove trace</h3>
+<table class="t" id="trace"></table>
+<h3>Card parameters (this preset)</h3>
+<table class="t" id="params"></table>
+<p class="note">Full-resolution pixels; depth in units of the groove's cosine amplitude.</p>
+</div>
+</div>
+<script>var SPIRAL_N = 1024;</script>
+<script src="render.js"></script>
+<script src="fftspacing.js"></script>
+<script src="gradcenter.js"></script>
+<script src="chunkfit.js"></script>
+<script src="cardmodel.js"></script>
+<script src="cardpipe.js"></script>
+<script src="card.js"></script>
+</body>
+</html>
