@@ -371,3 +371,43 @@ adding controls. To see a page, take a headless Chrome screenshot:
   --disable-gpu --hide-scrollbars --window-size=1150,1000 \
   --screenshot=/path/to/shot.png "file://$PWD/center.html"
 ```
+
+## Handoff (Nov 2026, from a Cowork session)
+
+State: all work is committed locally; `main` is 6 commits ahead of
+origin/main (card page work 9eecd25..9406574, plus this note) — not yet pushed.
+
+Open experiment — "gradient tilt" center for card.html step e (not
+committed; work in progress saved, gitignored, in
+`Claude outputs/cardpipe_tilt_wip.js`, with the node harness
+`Claude outputs/tilt_test_harness.js`; run harnesses by concatenating
+chunkfit.js, render.js, fftspacing.js, gradcenter.js, cardmodel.js,
+cardpipe.js and the test with `const N=1024` prepended):
+- Idea (Adam's): at each pixel take the gradient's component perpendicular
+  to the direction to the hand-marked center H, and blur it along circles
+  about H. Implemented as: P = g_t·g_r, Q = g_r² blurred tangentially;
+  τ = P̃/Q̃ ≈ (−b + e_x sin α − e_y cos α)/r for a true center H + e; a
+  weighted least-squares fit of r·τ gives e; repeat with H ← H + e.
+  Variants in the WIP: reference direction = the spiral's normal about H
+  (SPIRREF), κ correction 1 − ⟨g_t²⟩/⟨g_r²⟩ (KAPPA), radial pre-blur
+  (RADB), exact FFT gradients instead of Sobel (SPECTRAL).
+- Findings so far (clean card, seed 3, hand mark 12 px off, full-res px):
+  with no sound it converges in one pass to 0.01–0.03 px (drift doesn't
+  matter). With sound it converges in 1–2 passes but to a biased point
+  (~1.9 px at sound rms 0.4; bias ∝ sound², 0.07 px at 0.1). Not from the
+  mask, radial cross terms, pitch coupling or κ. Residual r·τ vs α at the
+  true center shows a strong 4-fold (90°) pattern of ±7 px → Sobel's
+  direction error vs orientation acting on the along-groove (sound)
+  gradient, leaking ~D'²·δ(α). Next test (was running when stopped):
+  SPECTRAL = 1 (exact derivatives).
+- The RANSAC line method (Part 1) fails here for the same root cause: the
+  sound makes along-groove gradients (clean card, exact derivatives: median
+  line misses the true center by ~90 low-res px at sound 0.4, 1.9 px with
+  no sound). Adam's future idea: RANSAC over N > 2 lines.
+
+Planned next: port the card pipeline (third app) to Python (numpy, scipy,
+OpenCV, scikit-image) — precomputed images + a static report page, built
+locally and committed for GitHub Pages; requirements.txt committed, `.venv/`
+gitignored (Adam uses pyenv on the Mac). Open question for Adam: replace
+card.html or keep it frozen beside the new report. First experiment there:
+redo the tilt-center test with exact gradients.
