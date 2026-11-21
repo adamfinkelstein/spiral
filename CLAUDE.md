@@ -104,6 +104,12 @@ Pages serves them (nothing is built on GitHub).
   scipy.ndimage.map_coordinates (cv2.remap rounds bilinear weights to
   1/32 px: 0.3% demodulation error), and Nelder–Mead runs over (x, y, mid
   radius) so all three parameters are in px.
+- FFT window (tested Nov 2026, 4 presets × 10 seeds): the soft annulus mask
+  is the only window — no Hann on top (it starved the outer turns: spacing
+  rms error 0.071 → 0.046 % on typical/loud/clean, peak 11 → 8 bins wide;
+  hard about the same, rms 0.21 vs 0.22 %, worst 0.31 → 0.48 %). The mean
+  is subtracted inside the mask only (made no measurable difference, but
+  keeps the frame outside exactly 0).
 - Not ported yet: the gradient-based centers (lines + RANSAC; tilt about
   the hand mark) — step e is a placeholder in the report.
 - Results (Python, 5 seeds): typical — low-res center 0.03–0.22 px, trace
