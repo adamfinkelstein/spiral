@@ -39,7 +39,7 @@ its parameters, what was tried, and how well it works. For what each control
 on the spacing page does, see <a href="explain.html">Explain controls</a>.
 Source: <a href="https://github.com/adamfinkelstein/spiral">github.com/adamfinkelstein/spiral</a>.</p>
 <ul class="toc">
-<li><a href="#part1"><b>Part 1 &mdash; Ring spacing</b></a> (<a href="spacing.html">spacing.html</a>): from an image of a whole spiral to its ring spacing, and a rough center.</li>
+<li><a href="#part1"><b>Part 1 &mdash; Ring spacing</b></a> (<a href="spacing.html">spacing.html</a>): from an image of a whole spiral to its ring spacing, then its center and phase.</li>
 <li><a href="#part2"><b>Part 2 &mdash; Center and phase from chunks</b></a> (<a href="center.html">center.html</a>): given the spacing, the center and phase from only pieces of the spiral.</li>
 <li><a href="#part3"><b>Part 3 &mdash; An idealized card, whole pipeline</b></a> (<a href="card.html">card.html</a>): a simulated card (grain and groove spacing from real scans, sound cut into the groove depth), from a hand-marked center to a traced groove and its sound.</li>
 </ul>
@@ -57,6 +57,8 @@ well its harmonics stand above the troughs between them, searching only
 broad bands down to the expected spacing variation. Precision: about
 0.3&ndash;0.7% when the spiral is perfect, even with heavy noise; about
 0.5&ndash;2.5% when the local spacing varies by up to &plusmn;15&ndash;30%.
+Then, as in the card pipeline, the spiral coherence map gives the center to
+a few hundredths of a pixel and the phase (step 8).
 </div>
 
 <h2>0. Inputs and assumptions</h2>
@@ -321,6 +323,36 @@ them robustly; this would also measure how much the spacing varies, which
 could set the expected variation automatically.</li>
 <li>Correcting for a non-circular drawing (fitting an ellipse to the rings).</li>
 </ul>
+
+<h2 id="p1coh">8. Center and phase from the spiral coherence map</h2>
+<p>Given the spacing from steps 3&ndash;5, the page also runs the card
+pipeline's center search (<a href="#part3">Part 3</a>, P3.2), ported to JS
+(<code>coherence.js</code>; "Coherence center", on by default). With b = S/2&pi;,
+Z(c) = &sum;<sub>p</sub> v(p) e<sup>&minus;i(|p &minus; c|/b &minus; angle(p &minus; c))</sup> (no minus sign here:
+the arms are bright, not grooves) is a correlation with a spiral-wave kernel,
+computed by three 512&sup2; FFTs (image, kernel, inverse; circular, kernel reach
+255 px, image mean subtracted). A Levenberg&ndash;Marquardt fit of
+a&middot;J<sub>0</sub>(2&pi;|c &minus; c<sub>0</sub>|/S) to Z within 2.5 spacings of its brightest
+pixel gives the center c<sub>0</sub> and the phase arg a. About 35&ndash;65 ms per frame
+(node), so it runs live while dragging.</p>
+<table>
+<tr><th>Test (5&ndash;6 random centers and phases each, radius 50&ndash;200, true spacing)</th><th>Center error</th><th>Phase error</th></tr>
+<tr><td>Spacing 10, no noise / noise 0.3 / noise 1</td><td class="n">0.001 / &le; 0.016 / &le; 0.04 px</td><td class="n">&le; 0.9&deg;</td></tr>
+<tr><td>Spacing 20, no noise / noise 0.5</td><td class="n">0.004 / &le; 0.04 px</td><td class="n">&le; 1&deg;</td></tr>
+<tr><td>Spacing 5 / 40, no noise</td><td class="n">0.000 / &le; 0.07 px</td><td class="n">2.1&deg; / &le; 0.4&deg;</td></tr>
+</table>
+<p>The small fixed phase bias (0.2&ndash;2&deg;) comes from the drawn arms not being
+sinusoidal; it was not pursued.</p>
+<p><b>Sensitivity to the spacing</b> (noise 0.3, 6 trials each, spacing off by
+&plusmn;&epsilon;): the center hardly moves &mdash; median 0.01, 0.03, 0.06, 0.08,
+0.14 px at &epsilon; = 0.5, 1, 2, 3, 5% (spacing 10 and 20 alike), and none
+failed &mdash; but the phase shifts by &asymp; 360&deg; &times; (mean radius / S) &times; &epsilon;:
+26&deg; per 0.5% at spacing 10 (~14 turns of mean radius), 14&deg; at spacing 20.
+The FFT's 0.5% spacing error on the default spiral (10.05 vs 10 px) gives a
+24&deg; phase error; with "Spacing for Z: true spacing" it is 0.8&deg;. On a card
+(mean radius &asymp; 76 spacings) 1% would shift the phase by ~270&deg;, so the
+low-res phase is only a start for the full-res refit, which fits the
+spacing too.</p>
 
 
 <h1 class="part" id="part2">Part 2 &mdash; Center and phase from chunks (<a href="center.html">center.html</a>)</h1>

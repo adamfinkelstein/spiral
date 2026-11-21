@@ -43,7 +43,7 @@ calibrated from those images.
    led to the current method — the spiral coherence map Z at every pixel by
    one FFT correlation with a spiral-wave kernel, then a J0 ring-pattern fit
    (experiments/center_search.py: median 0.07 px, never fails, no search
-   window). Gradient-based centers (RANSAC lines; Adam's "tilt" idea) were
+   window). Later ported to JS (coherence.js) and shown live on spacing.html. Gradient-based centers (RANSAC lines; Adam's "tilt" idea) were
    tested and dropped (sound in the depth makes along-groove gradients).
 
 ## Current pipeline (cardlab, see procedure.html Part 3)
@@ -79,8 +79,11 @@ correlation ~0.9 (limited by the measured grain level).
 
 - Robustness of the coherence map when the spacing wobbles over the card
   (untested): idea — sum |Z| over radial bands with free phase per band.
-- Sensitivity of the center search to a wrong spacing (estimated ±2.5%
-  breaking point; untested): idea — try a few spacings.
+- Sensitivity of the center search to a wrong spacing: tested on the
+  spacing page's spirals (7–15 turns, JS port): the center stays within
+  ~0.15 px up to ±5% with no failures, but the phase shifts by ≈ 360° ×
+  (mean radius / S) × ε. Untested on cards (~40 turns, ~76 spacings of mean
+  radius); the full-res refit fits the spacing anyway.
 - Better sound readout: fit the groove cross-section per column (matched
   filter), filter along the groove with the grain's spectrum.
 - Put card imperfections back one at a time (warp, slow height drift, dust,

@@ -22,6 +22,12 @@ Adam's preferences and open questions.
   `computeSpectrum(src, removeDC, useWindow)` (fills `mag` and `profile`),
   `computeHarmonicScore`, `hBest`/`hStages`/`hWin`, `evenWeight`. Used by
   spacing.js (which keeps the drawing) and cardpipe.js.
+- `coherence.js` — center and phase from the spiral coherence map, a JS port
+  of `cardlab/lowres.py` find_center (used by spacing.html): `besselJ0`,
+  `coherenceMap` (three N² FFTs via `fft1d`, circular, kernel reach N/2 − 1,
+  fills `zRe`/`zIm`/`zAbs`), `mapPeak`, `fitRingPattern` (LM over the
+  center; complex amplitude by linear least squares), `coherenceCenter(src,
+  spacing)`. No DOM. Bright arms, so Z has no minus sign (Python's grooves do).
 - `explain.html` — help page for `spacing.html` controls ("Explain"
   button). Keep it in sync when its controls change.
 - `procedure.html` + `procedure/*.png` — both methods step by step, in three
@@ -46,8 +52,8 @@ Adam's preferences and open questions.
 - `chunkfit.js` — the estimation; no DOM, uses only `N` from render.js: `labelComponents`, `fitChunk`, `fitComponents`, `combineChunks`
   (with `chunkData`, `evalLoss`, `phaseFor`, `fitJoint`), `costMap`, plus
   `mulberry32`, `lm`, `solve`. Scripts load in the order render.js,
-  gradcenter.js, chunkfit.js, center.js (spacing page: render.js, gradcenter.js,
-  spacing.js).
+  gradcenter.js, chunkfit.js, center.js (spacing page: render.js, fftspacing.js,
+  gradcenter.js, coherence.js, spacing.js).
 
 Controls and their defaults live in the HTML `value` / `checked` attributes;
 each page's `ids` list and `params()` read them, and "Defaults" resets to them.
@@ -307,6 +313,17 @@ Robustness (8 random offset sets, uniform in ±amp at each knot):
   worst cases most (spacing 20 ±0.25: max 11.6 → 4.0, with noise 10.9 → 3.7;
   spacing 10 ±0.5: 14.6 → 8.2, with noise 24 → 12.8). Spacing 20 ±0.5 stays
   ~16% / 35% for all. Default: 1/√r (the center costs ~0.2–0.4 s per frame).
+- Coherence center (checkbox "Coherence center", default on; spiral only;
+  `coherenceCenter` in coherence.js): the card pipeline's center search on
+  the noisy image with the FFT's spacing estimate ("Spacing for Z" select:
+  FFT estimate / true). Panels below the profile: |Z| (square-rooted) and a
+  ±3-spacing zoom with the 2.5-spacing fit circle; cyan + also on the image.
+  ~35–65 ms per frame (node). Tests (true spacing, random centers/phases):
+  spacing 10: 0.001 px clean, ≤ 0.04 px at noise 1; spacing 20 ≤ 0.04 px at
+  noise 0.5; phase ≤ 1° (2° at spacing 5; fixed bias from non-sinusoidal
+  arms). Spacing off by 0.5–5% (noise 0.3): center median 0.01–0.14 px, no
+  failures; phase shifts ≈ 360° × (mean radius / S) × ε (26° per 0.5% at
+  spacing 10), so the FFT's 0.5% error on the default spiral gives 24°.
 - Tried and rejected: tangential blur (σ 3, along circles about the
   gradient-line center) on the FFT input. Test (advanced 10%, 1/√r, radii
   50–200 and 30–100, spacing 10/20, noise 0–1.5, 6 patterns): differences

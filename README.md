@@ -28,6 +28,10 @@ Estimate the ring spacing from the 2D Fourier transform.
   (RANSAC over pairs of lines, with blur along the rings to resist noise),
   used to weight turns (default 1/√r) before the FFT so outer turns don't
   dominate.
+- Coherence center (default on, spiral only): the card pipeline's center
+  search ported to JS (`coherence.js`): the spiral coherence map |Z| by one
+  FFT correlation and a J0 ring-pattern fit around its peak, giving center
+  and phase live (~50 ms); shown with a zoom below the profile.
 - "Explain" opens a description of every control.
 
 ## Center and phase (`center.html`)

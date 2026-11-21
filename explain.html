@@ -113,6 +113,20 @@ a fraction of a pixel, and the spiral is drawn exactly there.</p>
   rings (0 = none). <b>Show blurred image</b> replaces the left image with the
   blurred image the final lines came from; the Fourier transform still uses
   the unblurred image.</dd>
+  <dt>Coherence center</dt>
+  <dd>The center and phase from the spiral coherence map, the method of the
+  card pipeline (<a href="procedure.html#p1coh">Procedure</a>, step 8; spiral
+  only). For every candidate center c, Z(c) adds up the image times
+  e<sup>&minus;i(|p &minus; c|/b &minus; angle(p &minus; c))</sup> over all pixels p (b = spacing/2&pi;):
+  at the true center every turn adds in step. One FFT correlation gives Z at
+  every pixel (the bottom-left panel shows |Z|, square-rooted so the faint
+  rings show). A fit of a&middot;J<sub>0</sub>(2&pi;|c &minus; c<sub>0</sub>|/S) to the map within 2.5
+  spacings of its peak (dashed circle in the zoom) gives the center (cyan +)
+  and the phase (the angle of a). The error against the true center and phase,
+  and the time taken, are shown under the controls.
+  <b>Spacing for Z</b>: the FFT's estimate (default, as in the pipeline) or the
+  true spacing. The center barely depends on it, but the phase does: a spacing
+  error &epsilon; shifts it by about 360&deg; &times; (mean radius / spacing) &times; &epsilon;.</dd>
   <dt>Turn weighting</dt>
   <dd>In the Fourier transform every turn counts in proportion to its length,
   so outer turns dominate ("by length"). "1/r" multiplies the image by 1/r

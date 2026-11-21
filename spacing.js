@@ -12,7 +12,7 @@ const octx = off.getContext('2d', { willReadFrequently: true });
 const center = { x: N / 2, y: N / 2 };
 const HANDLE_R = 7;
 
-const ids = ['spacing', 'rStart', 'rEnd', 'phase', 'aspect', 'off20', 'off40', 'off60', 'off80', 'lineWidth', 'softness', 'blur', 'noise', 'gain', 'advanced', 'hVar', 'gradVote', 'gvPerBin', 'gvFloor', 'gvTang', 'gvShow', 'evenW', 'isSpiral', 'smooth', 'removeDC', 'window', 'showRing'];
+const ids = ['spacing', 'rStart', 'rEnd', 'phase', 'aspect', 'off20', 'off40', 'off60', 'off80', 'lineWidth', 'softness', 'blur', 'noise', 'gain', 'advanced', 'hVar', 'gradVote', 'gvPerBin', 'gvFloor', 'gvTang', 'gvShow', 'cohOn', 'cohSp', 'evenW', 'isSpiral', 'smooth', 'removeDC', 'window', 'showRing'];
 const el = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
 
 function params() {
@@ -36,6 +36,8 @@ function params() {
     gvPerBin: +el.gvPerBin.value,
     gvFloor: +el.gvFloor.value / 100,
     gvShow: el.gvShow.checked,
+    cohOn: el.cohOn.checked,
+    cohTrue: el.cohSp.value === 'true',
     evenW: +el.evenW.value, // weight exponent: 0 none, 0.5 1/√r, 1 1/r
     gvTang: +el.gvTang.value,
     removeDC: el.removeDC.checked,
@@ -266,6 +268,74 @@ function drawGradientMarkers(ctx, r) { // path of the tangential-blur rounds, fi
   ctx.beginPath(); ctx.moveTo(c.x - a, c.y); ctx.lineTo(c.x + a, c.y); ctx.moveTo(c.x, c.y - a); ctx.lineTo(c.x, c.y + a); ctx.stroke();
 }
 
+// ---------- Coherence center: see coherence.js ----------
+
+const cohCanvas = document.getElementById('coh');
+const cohCtx = cohCanvas.getContext('2d');
+const cohImage = cohCtx.createImageData(N, N);
+const zoomCanvas = document.getElementById('cohZoom');
+const zoomCtx = zoomCanvas.getContext('2d');
+const zoomImage = zoomCtx.createImageData(zoomCanvas.width, zoomCanvas.height);
+const CYAN = '#3ff0ff';
+
+function drawPlus(ctx, c, a, color, width = 2) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.beginPath(); ctx.moveTo(c.x - a, c.y); ctx.lineTo(c.x + a, c.y); ctx.moveTo(c.x, c.y - a); ctx.lineTo(c.x, c.y + a); ctx.stroke();
+}
+
+// |Z| / max, square-rooted so the faint J0 rings show.
+const zShade = (v, max) => Math.round(255 * Math.sqrt(Math.min(1, v / max)));
+
+function drawCoherence(r, spacing) {
+  const max = zAbs[Math.floor(r.peak.y) * N + Math.floor(r.peak.x)];
+  const d = cohImage.data;
+  for (let i = 0; i < N * N; i++) {
+    d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = zShade(zAbs[i], max);
+    d[i * 4 + 3] = 255;
+  }
+  cohCtx.putImageData(cohImage, 0, 0);
+  drawPlus(cohCtx, r.c, 9, CYAN);
+
+  // zoom: ±3 spacings about the fitted center, nearest pixel of the map
+  const W = zoomCanvas.width, half = 3 * spacing, s = (2 * half) / W;
+  const z = zoomImage.data;
+  for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) {
+    const mx = Math.floor(r.c.x - half + (x + 0.5) * s), my = Math.floor(r.c.y - half + (y + 0.5) * s);
+    const v = mx >= 0 && mx < N && my >= 0 && my < N ? zShade(zAbs[my * N + mx], max) : 0;
+    const k = (y * W + x) * 4;
+    z[k] = z[k + 1] = z[k + 2] = v; z[k + 3] = 255;
+  }
+  zoomCtx.putImageData(zoomImage, 0, 0);
+  const toZoom = q => ({ x: (q.x - r.c.x + half) / s, y: (q.y - r.c.y + half) / s });
+  zoomCtx.save();
+  zoomCtx.setLineDash([5, 4]);
+  zoomCtx.strokeStyle = 'rgba(63,240,255,0.6)';
+  zoomCtx.lineWidth = 1.5;
+  zoomCtx.beginPath(); zoomCtx.arc(W / 2, W / 2, 2.5 * spacing / s, 0, 2 * Math.PI); zoomCtx.stroke();
+  zoomCtx.restore();
+  const t = toZoom(center);
+  zoomCtx.fillStyle = 'rgba(255,40,40,0.8)';
+  zoomCtx.beginPath(); zoomCtx.arc(t.x, t.y, 5, 0, 2 * Math.PI); zoomCtx.fill();
+  drawPlus(zoomCtx, toZoom(r.c), 12, CYAN);
+}
+
+function clearCoherence() {
+  cohCtx.fillStyle = '#000'; cohCtx.fillRect(0, 0, N, N);
+  zoomCtx.fillStyle = '#000'; zoomCtx.fillRect(0, 0, zoomCanvas.width, zoomCanvas.height);
+}
+
+const deg = a => (a * 180) / Math.PI;
+const wrapDeg = a => deg(Math.atan2(Math.sin(a), Math.cos(a)));
+
+function coherenceText(p, r, spacing) {
+  const err = Math.hypot(r.c.x - center.x, r.c.y - center.y);
+  return `Coherence center (cyan +): (${r.c.x.toFixed(2)}, ${r.c.y.toFixed(2)}), ${err.toFixed(3)} px from the true center (red); ` +
+    `phase ${((deg(r.phase) + 360) % 360).toFixed(1)}° (true ${deg(p.phase).toFixed(0)}°, error ${wrapDeg(r.phase - p.phase).toFixed(1)}°). ` +
+    `Spacing used: ${spacing.toFixed(2)} px (${p.cohTrue ? 'true' : 'the FFT estimate'}). J0 fit over ${r.nFit} map pixels within 2.5 spacings of the peak (dashed). ` +
+    `Map ${r.msMap.toFixed(0)} ms, fit ${r.msFit.toFixed(0)} ms.`;
+}
+
 // Blue plus through the canvas center (overlay only; not part of FFT input).
 function drawCrosshair(ctx) {
   ctx.strokeStyle = 'rgb(60,130,255)';
@@ -329,6 +399,22 @@ function render() {
     drawCrosshair(fctx);
     computeHarmonicScore({ advanced: p.advanced, vMin: p.hVar, target: p.spacing });
     drawProfile(p);
+
+    // Coherence center, with the FFT's spacing estimate (spiral only)
+    el.cohOn.disabled = !p.spiral;
+    el.cohSp.disabled = !p.spiral || !p.cohOn;
+    document.getElementById('cohRow').style.display = p.cohOn && p.spiral ? '' : 'none';
+    const cohOut = document.getElementById('cohOut');
+    if (p.cohOn && p.spiral) {
+      const sp = p.cohTrue || !isFinite(hBest.spacing) ? p.spacing : hBest.spacing;
+      const r = coherenceCenter(img, sp);
+      drawCoherence(r, sp);
+      drawPlus(sctx, r.c, 9, CYAN);
+      cohOut.textContent = coherenceText(p, r, sp);
+    } else {
+      clearCoherence();
+      cohOut.textContent = p.cohOn ? 'Coherence center: spiral only (rings have no winding).' : '';
+    }
   });
 }
 
