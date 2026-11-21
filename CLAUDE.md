@@ -110,6 +110,15 @@ Pages serves them (nothing is built on GitHub).
   hard about the same, rms 0.21 vs 0.22 %, worst 0.31 → 0.48 %). The mean
   is subtracted inside the mask only (made no measurable difference, but
   keeps the frame outside exactly 0).
+- Center search experiment (offline, `experiments/center_search.py`,
+  results in `experiments/center_search_results.md`; 32 cards × 10 simulated
+  hand marks): computing Z at every pixel with one FFT correlation (spiral-
+  wave kernel) and fitting a·J0(2π|c−c0|/S) around the map's peak beat the
+  current grid + Nelder–Mead — median 0.07 vs 0.17 px, no failures even for
+  marks 100 px off (the grid searches only ±60 px), same ~0.5 s. The gain is
+  from using all pixels (NM on all pixels matches it but takes 1.4 s). A
+  sparse 0.45-spacing grid + J0 fit is fast but locks onto side rings 3–6%
+  of the time. Not yet adopted in lowres.py.
 - Not ported yet: the gradient-based centers (lines + RANSAC; tilt about
   the hand mark) — step e is a placeholder in the report.
 - Results (Python, 5 seeds): typical — low-res center 0.03–0.22 px, trace
