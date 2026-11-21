@@ -3,7 +3,9 @@ from dataclasses import dataclass
 import cv2
 import numpy as np
 from scipy.ndimage import gaussian_filter1d
-from scipy.optimize import minimize
+from scipy.optimize import least_squares
+from scipy.signal import fftconvolve
+from scipy.special import j0
 
 from .geometry import TAU, Spiral, pitch_of, smoothstep
 
@@ -15,9 +17,7 @@ class LowResSettings:
     turn_weight_power: float = 0.5   # FFT input weighted by r^-power about the mark
     spacing_window: float = 0.1      # search ± this fraction of the nominal spacing
     spacing_tolerance: float = 0.03  # farther than this from nominal: use nominal
-    search_radius: float = 60        # full-res px about the mark
-    grid_step: float = 0.15          # spacings
-    sample_fraction: float = 0.05    # of the annulus pixels, for the coherence
+    fit_radius: float = 2.5          # spacings about the map's peak, for the ring-pattern fit
 
 
 @dataclass
@@ -31,8 +31,7 @@ class LowResResult:
     peak_radius: float
     fft_spacing: float
     fft_ok: bool
-    grid_centers: np.ndarray
-    grid_scores: np.ndarray
+    coherence_map: np.ndarray        # complex Z at every low-res pixel
     coherence: float
     spiral: Spiral
 
@@ -96,65 +95,74 @@ def fft_spacing(image, mask, mark, scale, nominal, settings):
     return spectrum, profile, (low, high), peak, spacing, ok
 
 
-def sample_annulus(image, mask, fraction, rng):
-    rows, cols = np.nonzero(mask > 0)
-    keep = rng.random(len(rows)) < fraction
-    return cols[keep] + 0.5, rows[keep] + 0.5, image[rows[keep], cols[keep]]
+# ---------- Center, spacing and phase: the spiral coherence map ----------
+# About the true center the height has a component -cos(r/pitch - angle + phase),
+# so Z(c) = -sum_p v(p) exp(-i (|p - c|/pitch - angle(p - c))) is ~ (n/2) e^{i phase}
+# at c = center and small elsewhere. As a function of the candidate center it is
+# a sum of plane waves of one wavelength (the spacing S), Z(c) ~ a J0(2 pi |c - c0| / S):
+# a bright spot ringed by fainter rings. It is a correlation of the image with a
+# "spiral wave" kernel, so one FFT gives it at every pixel; a fit of the J0
+# pattern around its peak gives the center to a fraction of a pixel.
 
 
-def spiral_coherence(x, y, values, cx, cy, pitch):
-    # the height has a component -cos(r/pitch - angle + phase) about the true
-    # center, so this sum is ~ (n/2) e^{i phase} there and small elsewhere
-    dx, dy = x - cx, y - cy
-    u = np.hypot(dx, dy) / pitch - np.arctan2(dy, dx)
-    return -np.sum(values * np.exp(-1j * u), axis=-1)
+def spiral_wave_kernel(pitch, reach):
+    # K(-q) for K(q) = exp(-i (|q|/pitch - angle(q))), zero beyond `reach` px
+    q = np.arange(-reach, reach + 1, dtype=float)
+    qx, qy = np.meshgrid(-q, -q)
+    radius = np.hypot(qx, qy)
+    return np.where(radius <= reach, np.exp(-1j * (radius / pitch - np.arctan2(qy, qx))), 0)
 
 
-def coherence_grid(x, y, values, center, pitch, radius, step):
-    offsets = np.arange(-np.ceil(radius / step), np.ceil(radius / step) + 1) * step
-    centers_x = center[0] + offsets
-    scores = np.empty((len(offsets), len(offsets)))
-    for row, cy in enumerate(center[1] + offsets):
-        scores[row] = np.abs(spiral_coherence(x, y, values, centers_x[:, None], cy, pitch))
-    return centers_x, center[1] + offsets, scores
+def coherence_map(image, pitch, reach):
+    return -fftconvolve(image, spiral_wave_kernel(pitch, reach), mode="same")
 
 
-def refine_center(x, y, values, start, step, mid_turn):
-    # Nelder-Mead over (x, y, pitch * mid_turn): the third parameter is the
-    # mid radius in px, so all three are in px and one tolerance fits them all
-    to_params = lambda q: (q[0], q[1], q[2] / mid_turn)
-    negative_coherence = lambda q: -np.abs(spiral_coherence(x, y, values, *to_params(q)))
-    q0 = np.array([start[0], start[1], start[2] * mid_turn])
-    simplex = np.array([q0, q0 + [step / 2, 0, 0], q0 + [0, step / 2, 0], q0 + [0, 0, step / 2]])
-    result = minimize(negative_coherence, q0, method="Nelder-Mead",
-                      options={"initial_simplex": simplex, "xatol": 0.005, "fatol": 1e-6 * abs(negative_coherence(q0))})
-    return to_params(result.x)
+def map_peak(z_map):
+    row, col = np.unravel_index(np.argmax(np.abs(z_map)), z_map.shape)
+    return np.array([col + 0.5, row + 0.5])
 
 
-def find_center(image, mask, mark, scale, spacing, settings, rng):
-    x, y, values = sample_annulus(image, mask, settings.sample_fraction, rng)
+def map_points_near(z_map, center, radius):
+    rows, cols = np.mgrid[0 : z_map.shape[0], 0 : z_map.shape[1]]
+    near = np.hypot(cols + 0.5 - center[0], rows + 0.5 - center[1]) <= radius
+    return np.stack([cols[near] + 0.5, rows[near] + 0.5], axis=1), z_map[near]
+
+
+def ring_pattern(points, center, spacing):
+    return j0(TAU / spacing * np.hypot(points[:, 0] - center[0], points[:, 1] - center[1]))
+
+
+def best_amplitude(pattern, values):
+    return np.vdot(pattern, values) / np.vdot(pattern, pattern)
+
+
+def fit_ring_pattern(points, values, start, spacing):
+    # values ~ a J0(2 pi |c - c0| / S); for a given c0 the best complex a is linear
+    def residuals(center):
+        pattern = ring_pattern(points, center, spacing)
+        misfit = values - best_amplitude(pattern, values) * pattern
+        return np.concatenate([misfit.real, misfit.imag])
+
+    center = least_squares(residuals, start, x_scale=spacing / 4).x
+    return center, best_amplitude(ring_pattern(points, center, spacing), values)
+
+
+def find_center(image, mark, scale, spacing, settings):
     pitch = pitch_of(spacing)
-    step = settings.grid_step * spacing
-    subset = slice(None, None, max(1, len(x) // 8000))
-    start_center = np.array([mark.x, mark.y]) / scale
-    xs, ys, scores = coherence_grid(x[subset], y[subset], values[subset], start_center, pitch, settings.search_radius / scale, step)
-    row, col = np.unravel_index(np.argmax(scores), scores.shape)
-    mid_turn = (mark.r_inner + mark.r_outer) / 2 / scale / pitch  # theta at the middle of the annulus
-    cx, cy, pitch = refine_center(x, y, values, np.array([xs[col], ys[row], pitch]), step, mid_turn)
-    z = spiral_coherence(x, y, values, cx, cy, pitch)
-    coherence = 2 * np.abs(z) / np.sum(np.abs(values)) / (np.pi / 2)
-    grid_centers = np.stack(np.meshgrid(xs, ys), axis=-1) * scale
-    return Spiral(cx, cy, pitch, float(np.angle(z))).scaled(scale), grid_centers, scores, coherence
+    z_map = coherence_map(image, pitch, reach=int(mark.r_outer / scale + 100))
+    peak = map_peak(z_map)
+    points, values = map_points_near(z_map, peak, settings.fit_radius * spacing)
+    center, amplitude = fit_ring_pattern(points, values, peak, spacing)
+    coherence = 2 * np.abs(amplitude) / np.sum(np.abs(image)) / (np.pi / 2)
+    return Spiral(center[0], center[1], pitch, float(np.angle(amplitude))).scaled(scale), z_map, coherence
 
 
-def low_res_stage(full, mark, nominal_spacing, settings=LowResSettings(), seed=0):
+def low_res_stage(full, mark, nominal_spacing, settings=LowResSettings()):
     scale = full.shape[0] / LOW_SIZE
     nominal = nominal_spacing / scale
     mask = annulus_mask(LOW_SIZE, mark, scale, ramp=nominal)
     image = normalize_in_mask(downsample(full), mask)
     spectrum, profile, window, peak, measured, ok = fft_spacing(image, mask, mark, scale, nominal, settings)
     spacing = measured if ok else nominal
-    rng = np.random.default_rng(seed)
-    spiral, grid_centers, grid_scores, coherence = find_center(image, mask, mark, scale, spacing, settings, rng)
-    return LowResResult(scale, image, mask, spectrum, profile, window, peak, measured * scale, ok,
-                        grid_centers, grid_scores, coherence, spiral)
+    spiral, z_map, coherence = find_center(image, mark, scale, spacing, settings)
+    return LowResResult(scale, image, mask, spectrum, profile, window, peak, measured * scale, ok, z_map, coherence, spiral)

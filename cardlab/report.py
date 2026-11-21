@@ -77,13 +77,13 @@ def make_figures(run, folder, detail_size=256):
         "a_input": lambda p: figures.low_res_input(run, p, detail_size),
         "b_fft": lambda p: figures.spectrum(run, p),
         "c_profile": lambda p: figures.radial_profile(run, p),
-        "d_coherence": lambda p: figures.coherence_grid(run, p),
-        "f_detail": lambda p: figures.detail(run, p, detail_size),
-        "g_offsets": lambda p: figures.offsets_mod_spacing(run, p),
-        "h_strip": lambda p: figures.strip_image(run, p),
-        "i_trace": lambda p: figures.trace_offset(run, p),
-        "j_turns": lambda p: figures.errors_per_turn(run, p),
-        "k_sound": lambda p: figures.sound(run, p),
+        "d_coherence": lambda p: figures.coherence_map(run, p),
+        "e_detail": lambda p: figures.detail(run, p, detail_size),
+        "f_offsets": lambda p: figures.offsets_mod_spacing(run, p),
+        "g_strip": lambda p: figures.strip_image(run, p),
+        "h_trace": lambda p: figures.trace_offset(run, p),
+        "i_turns": lambda p: figures.errors_per_turn(run, p),
+        "j_sound": lambda p: figures.sound(run, p),
     }
     paths = {}
     for name, draw in steps.items():
@@ -118,28 +118,28 @@ Showcase: preset <b>{escape(card.params.label)}</b>, seed {card.seed}. <a href="
       "Mean log |FFT| per radius; the spacing is the peak inside the window (grey), refined parabolically; more than 3% from the nominal → nominal used.",
       "White dashed: nominal; <span class='r'>red</span>: true; <span class='c'>cyan</span>: measured.",
       f"<span class='num'>Measured {low.fft_spacing:.3f} px ({pct(s['fft_spacing_error'])} vs. true {card.spacing:.3f}).</span>")}
-{step(img("d_coherence"), "d. Center search: spiral coherence",
-      "|Z| = |Σ v·e<sup>−i(r/b − α)</sup>| for candidate centers on a grid about the hand mark (step 0.15 spacing, ±60 px), then Nelder–Mead (scipy) over center and spacing. The bright lobe is only ~0.4 spacing wide. arg Z is the phase.",
-      f"<span class='num'>Answer {s['low_center_error']:.2f} px from the true center, spacing {pct(s['low_spacing_error'], 3)}; coherence {s['coherence']:.2f}.</span>")}
-<p class="note">e. Gradient-based centers (lines + RANSAC; tilt about the hand mark) are not ported yet.</p>
+{step(img("d_coherence"), "d. Center, spacing and phase: the spiral coherence map",
+      "Z(c) = −Σ v·e<sup>−i(|p−c|/b − angle(p−c))</sup> scores how well a spiral centered at c (spacing from c) lines up with the grooves. As a function of c it is a correlation of the image with a spiral-shaped kernel, so one FFT gives it at every pixel (~0.5 s); no search window, and the hand mark isn't needed.",
+      "Around the true center Z(c) ≈ a·J<sub>0</sub>(2π|c − c<sub>0</sub>|/S): a bright spot with fainter rings half a spacing apart. A least-squares fit of that pattern within 2.5 spacings of the brightest pixel gives the center; the phase is the angle of a.",
+      f"<span class='num'>Shown: |Z| around the answer. Answer {s['low_center_error']:.2f} px from the true center (hand mark {s['mark_error']:.1f} px); coherence {s['coherence']:.2f}.</span>")}
 
 <h2>2. Full resolution: unrolled strip, refit, groove trace</h2>
-{step(img("f_detail"), "f. Detail at full resolution",
+{step(img("e_detail"), "e. Detail at full resolution",
       "<span class='r'>Red</span>: trace (<span class='m'>magenta</span>: wrong groove); <span class='g'>green</span>: true centerline. Darker = deeper: the depth follows the sound.")}
-{step(img("g_offsets"), "g. Strip offsets and the geometry refit",
+{step(img("f_offsets"), "f. Strip offsets and the geometry refit",
       f"Columns every {run.strip.step:g} px along the low-res spiral; each is a radial line sampled at ±1 spacing (cv2.remap), detrended and demodulated: Z = Σ v·e<sup>−2πid/S</sup> gives the groove's offset (mod S) and a confidence |Z|.",
       "Relative to the strip's spiral a center error is a one-turn wave, a spacing error a slope, a phase error an offset. The refit (<span class='y'>yellow</span>) fits exactly that modulo S: a grid over spacing and center, then scipy least_squares with a robust loss. <span class='r'>Red</span>: the true geometry; <span class='g'>green</span>: true grooves; grey dots: measured (smoothed 24 px).",
       f"<span class='num'>{s['columns']:,} columns, {s['turns']:.1f} turns. Refit center {s['refit_center_error']:.2f} px, spacing {pct(s['refit_spacing_error'], 3)}; spiral vs. grooves {s['refit_vs_grooves']:.2f} px rms.</span>")}
-{step(img("h_strip"), "h. Unrolled strip around the spot",
+{step(img("g_strip"), "g. Unrolled strip around the spot",
       "Rows across the groove (1 px, outward up), each column's mean removed. <span class='y'>Yellow</span>: refitted spiral (±S faint); <span class='r'>red</span>: trace; <span class='g'>green</span>: true groove.")}
-{step(img("i_trace"), "i. The trace: offset from the refitted spiral",
+{step(img("h_trace"), "h. The trace: offset from the refitted spiral",
       "Z smoothed along the groove (σ 48 px); the trace takes the groove nearest a reference = refitted spiral + slowly varying residual (σ 300 px, within ±S/2), so noise and gaps can't move it to another turn.",
       f"<span class='num'>Trace rms {s['trace_rms']:.2f} px; wrong groove {100 * s['wrong_groove']:.2f}%.</span>")}
-{step(img("j_turns"), "j. Trace error per turn",
+{step(img("i_turns"), "i. Trace error per turn",
       "Bars: rms distance to the nearest true groove centerline (dotted: S/4). Red: share of the turn on the wrong groove.")}
 
 <h2>3. Sound readout (hill-and-dale)</h2>
-{step(img("k_sound"), "k. Depth at the groove bottom",
+{step(img("j_sound"), "j. Depth at the groove bottom",
       "The land at ±S/2 minus the traced bottom (each ±3 px), relative to its own 300-px average, minus 1; a gap (nothing cut) reads −1.",
       f"<span class='num'>Correlation with the true sound {s['sound_correlation']:.3f}; error rms {s['sound_error']:.3f} (true rms {s['sound_rms']:.3f}); not cut {100 * s['not_cut']:.1f}%.</span>")}
 

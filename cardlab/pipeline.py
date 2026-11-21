@@ -33,7 +33,7 @@ class Run:
 def run_pipeline(preset, seed, settings=Settings()):
     card = make_card(PRESETS[preset], seed)
     image = render(card)
-    low = low_res_stage(image, card.mark, card.params.spacing, settings.low, seed)
+    low = low_res_stage(image, card.mark, card.params.spacing, settings.low)
     strip = build_strip(image, low.spiral, card.mark, settings.strip)
     refit, model = refit_geometry(strip, settings.strip)
     trace = lock_trace(strip, model, settings.strip)

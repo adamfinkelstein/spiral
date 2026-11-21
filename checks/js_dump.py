@@ -9,14 +9,14 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from cardlab.params import PRESETS
 from cardlab.model import make_card, render
-from cardlab.lowres import LowResSettings, low_res_stage, downsample
+from cardlab.lowres import low_res_stage, downsample
 from cardlab.strip import StripSettings, build_strip, refit_geometry, lock_trace
 from cardlab.readout import read_sound
 
 preset, seed, out = sys.argv[1], int(sys.argv[2]), sys.argv[3].rstrip('/') + '/'
 card = make_card(PRESETS[preset], seed)
 image = render(card)
-low = low_res_stage(image, card.mark, card.params.spacing, LowResSettings(sample_fraction=1.0), seed)
+low = low_res_stage(image, card.mark, card.params.spacing)
 settings = StripSettings()
 strip = build_strip(image, low.spiral, card.mark, settings)
 refit, model = refit_geometry(strip, settings)

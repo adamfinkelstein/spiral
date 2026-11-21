@@ -115,16 +115,20 @@ def radial_profile(run, path):
     save(figure, path)
 
 
-def coherence_grid(run, path):
-    low, card = run.low, run.card
-    centers = low.grid_centers
+def coherence_map(run, path, half_width=30):
+    # |Z| around the answer (low-res px half-width), in full-res coordinates
+    low, card, scale = run.low, run.card, run.low.scale
+    cx, cy = int(low.spiral.x / scale), int(low.spiral.y / scale)
+    crop = np.abs(low.coherence_map[cy - half_width : cy + half_width, cx - half_width : cx + half_width])
+    extent = tuple(np.array([cx - half_width, cx + half_width, cy + half_width, cy - half_width]) * scale)
     figure = new_figure(900, 900)
     axes = image_axes(figure)
-    extent = (centers[0, 0, 0], centers[0, -1, 0], centers[-1, 0, 1], centers[0, 0, 1])
-    axes.imshow(low.grid_scores, cmap="inferno", extent=extent, interpolation="nearest")
+    axes.imshow(crop, cmap="inferno", extent=extent, interpolation="nearest")
     plot_cross(axes, card.mark.x, card.mark.y, COLORS["mark"], 16)
     plot_ring(axes, low.spiral.x, low.spiral.y, COLORS["low"], 14)
     plot_cross(axes, card.spiral.x, card.spiral.y, COLORS["truth"], 14)
+    axes.set_xlim(extent[0], extent[1])
+    axes.set_ylim(extent[2], extent[3])
     save(figure, path)
 
 

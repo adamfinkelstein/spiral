@@ -82,7 +82,7 @@ Pages serves them (nothing is built on GitHub).
   nearest_groove / sound, render → full-res float32 image ~6 s; grain is
   Gaussian-filtered white noise, unlike the JS value noise),
   `lowres.py` (cv2.INTER_AREA downsample, annulus mask, FFT spacing,
-  coherence grid + scipy Nelder–Mead), `strip.py` (strip columns by equal
+  spiral coherence map by FFT + J0 ring-pattern fit), `strip.py` (strip columns by equal
   arc length, cv2.remap sampling in blocks < 32767 wide, demodulation,
   refit: grid start + scipy least_squares with soft_l1 on wrapped
   residuals, lock_trace), `readout.py` (sound), `scoring.py` (truth),
@@ -97,9 +97,11 @@ Pages serves them (nothing is built on GitHub).
   model was procedural beyond it; the image clamps); refit equal within
   0.002–0.09 px (hard 1: 0.7 px — different robust losses on a noisy
   card); trace within ~0.002 px rms; sound readout correlation ≥ 0.998.
-  The low-res center differs by 0.1–0.4 px (gap at mid radius) because
-  JS's pattern search stops early: Python's Nelder–Mead reaches a higher
+  The low-res center differed by 0.1–0.4 px (gap at mid radius) because
+  JS's pattern search stops early: Python's Nelder–Mead reached a higher
   |Z| every time (the truth has slightly lower |Z| still, from drift).
+  Since then the Python center search is a different method (below), so
+  that line of the check now compares two methods.
   Two Python fixes came out of it: strip sampling uses
   scipy.ndimage.map_coordinates (cv2.remap rounds bilinear weights to
   1/32 px: 0.3% demodulation error), and Nelder–Mead runs over (x, y, mid
@@ -118,12 +120,32 @@ Pages serves them (nothing is built on GitHub).
   marks 100 px off (the grid searches only ±60 px), same ~0.5 s. The gain is
   from using all pixels (NM on all pixels matches it but takes 1.4 s). A
   sparse 0.45-spacing grid + J0 fit is fast but locks onto side rings 3–6%
-  of the time. Not yet adopted in lowres.py.
-- Not ported yet: the gradient-based centers (lines + RANSAC; tilt about
-  the hand mark) — step e is a placeholder in the report.
-- Results (Python, 5 seeds): typical — low-res center 0.03–0.22 px, trace
-  0.40–0.70 px, no wrong groove, sound corr 0.89–0.92; clean 0.98–0.99;
-  loud 0.94–0.96; hard trace 1.1–2.7 px, 0–1.9% wrong groove, sound
+  of the time. Adopted: lowres.find_center = coherence_map (fftconvolve
+  with spiral_wave_kernel, reach r_outer + 100 low-res px) → map_peak →
+  fit_ring_pattern (scipy least_squares within 2.5 spacings; complex
+  amplitude by linear least squares per trial center; phase = its angle).
+  No search window: the hand mark only places the annulus mask. The
+  spacing stays the FFT's. The old grid / direct sums / Nelder–Mead live
+  only in experiments/center_search.py. Report step d shows |Z| around
+  the answer; steps renumbered a–j.
+- Gradient-based centers dropped (Adam's decision, Nov 2026): the spiral
+  coherence map wins on every count we tested. RANSAC on gradient lines
+  (Part 1) missed by 20–200 px on these cards (JS tests): the lines are
+  extrapolated 300–500 px on a ~5.4-px pattern, and the hill-and-dale sound
+  gives the gradients a big along-groove component (clean card, exact
+  derivatives: median line misses the true center by ~90 low-res px at
+  sound 0.4 vs 1.9 px with no sound), so only 2–4% of lines agree on any
+  point. The "tilt" variant (gradient component across the direction to the
+  hand mark, blurred along circles, sine fit) converged but stayed ~1.9 px
+  off at sound 0.4 (bias ∝ sound², likely Sobel's orientation error on the
+  along-groove gradient; exact derivatives untested). Even if fixed, both
+  use the same pixels less directly than Z. Not in the procedure or report;
+  card_js.html (frozen) still has the line method as an option. Possible
+  future idea (Adam): RANSAC over N > 2 lines.
+- Results (Python, 5 seeds, FFT-map center): typical — low-res center
+  0.01–0.16 px, trace 0.40–0.66 px, no wrong groove, sound corr 0.89–0.92;
+  clean 0.98–0.99; loud 0.94–0.96; hard center 0.3–2.0 px, trace
+  1.1–2.7 px, 0–1.9% wrong groove, sound
   0.75–0.81. Lower sound correlation than the JS version (0.93–0.96 for
   typical): the grain spectrum differs (white noise blurred vs value noise).
 
@@ -446,39 +468,13 @@ adding controls. To see a page, take a headless Chrome screenshot:
 
 ## Handoff (Nov 2026, from a Cowork session)
 
-State: all work is committed locally; `main` is 6 commits ahead of
-origin/main (card page work 9eecd25..9406574, plus this note) — not yet pushed.
+State: check `git status -sb` for commits not yet pushed to GitHub.
 
-Open experiment — "gradient tilt" center for step e (JS, not
-committed; work in progress saved, gitignored, in
-`Claude outputs/cardpipe_tilt_wip.js`, with the node harness
-`Claude outputs/tilt_test_harness.js`; run harnesses by concatenating
-chunkfit.js, render.js, fftspacing.js, gradcenter.js, cardmodel.js,
-cardpipe.js and the test with `const N=1024` prepended):
-- Idea (Adam's): at each pixel take the gradient's component perpendicular
-  to the direction to the hand-marked center H, and blur it along circles
-  about H. Implemented as: P = g_t·g_r, Q = g_r² blurred tangentially;
-  τ = P̃/Q̃ ≈ (−b + e_x sin α − e_y cos α)/r for a true center H + e; a
-  weighted least-squares fit of r·τ gives e; repeat with H ← H + e.
-  Variants in the WIP: reference direction = the spiral's normal about H
-  (SPIRREF), κ correction 1 − ⟨g_t²⟩/⟨g_r²⟩ (KAPPA), radial pre-blur
-  (RADB), exact FFT gradients instead of Sobel (SPECTRAL).
-- Findings so far (clean card, seed 3, hand mark 12 px off, full-res px):
-  with no sound it converges in one pass to 0.01–0.03 px (drift doesn't
-  matter). With sound it converges in 1–2 passes but to a biased point
-  (~1.9 px at sound rms 0.4; bias ∝ sound², 0.07 px at 0.1). Not from the
-  mask, radial cross terms, pitch coupling or κ. Residual r·τ vs α at the
-  true center shows a strong 4-fold (90°) pattern of ±7 px → Sobel's
-  direction error vs orientation acting on the along-groove (sound)
-  gradient, leaking ~D'²·δ(α). Next test (was running when stopped):
-  SPECTRAL = 1 (exact derivatives).
-- The RANSAC line method (Part 1) fails here for the same root cause: the
-  sound makes along-groove gradients (clean card, exact derivatives: median
-  line misses the true center by ~90 low-res px at sound 0.4, 1.9 px with
-  no sound). Adam's future idea: RANSAC over N > 2 lines.
+Closed: the "gradient tilt" center experiment (JS work in progress, gitignored,
+in `Claude outputs/cardpipe_tilt_wip.js` and `tilt_test_harness.js`) and the
+gradient-line method are dropped in favor of the spiral coherence map; see
+"Gradient-based centers dropped" above for the findings.
 
 Done since: the card pipeline is ported to Python (cardlab/, card.html is
-the generated report; the JS page lives on as card_js.html). Next: port the
-tilt center to cardlab and redo the test with exact gradients (e.g.
-spectral derivatives or scipy.ndimage.gaussian_gradient_magnitude-style
-Gaussian derivatives), then the line method with skimage.measure.ransac.
+the generated report; the JS page lives on as card_js.html); the center
+search is the FFT coherence map + J0 fit.

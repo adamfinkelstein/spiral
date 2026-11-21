@@ -572,32 +572,32 @@ turn.</li>
 </ul>
 
 <h1 class="part" id="part3">Part 3 &mdash; An idealized card, whole pipeline (<a href="card.html">card.html</a>)</h1>
-<p class="src">Now built in Python (<code>cardlab/</code>, <code>build_card.py</code>): <a href="card.html">card.html</a>
-is the generated report with results over many seeds. The text below describes the method as first developed
-in the browser (<a href="card_js.html">card_js.html</a>); the Python port follows it, with library equivalents
-(cv2.remap for the strip, scipy Nelder&ndash;Mead and least_squares for the fits) and a different grain texture,
-so its numbers differ slightly.</p>
+<p class="src">Built in Python (<code>cardlab/</code>, <code>build_card.py</code>): <a href="card.html">card.html</a>
+is the generated report, with results over many seeds. The method was first developed in the browser
+(<a href="card_js.html">card_js.html</a>, frozen); the Python version differs in the center search (P3.2), the FFT
+window (P3.1) and the grain texture. A stage-by-stage check against the JS (<code>checks/compare_with_js.sh</code>)
+found the shared stages agree to rounding.</p>
 
 <div class="box">
 <b>Current procedure.</b> Idealized card (flat, grain only) with the sound cut
 into the groove's depth &rarr; <b>low-res stage</b> (1024&sup2;, ~5.4 px spacing):
 the image masked to the hand-marked annulus &rarr; spacing = FFT radial-profile
-peak within &plusmn;10% of the nominal &rarr; center, spacing and phase by
-maximizing spiral coherence near the hand-marked center &rarr; <b>full-res
+peak within &plusmn;10% of the nominal &rarr; center and phase from the spiral
+coherence map (Z at every pixel by one FFT correlation, then a J<sub>0</sub>
+ring-pattern fit around its peak) &rarr; <b>full-res
 stage</b>: unrolled strip along that spiral (a column every 3 px of groove, rows
 &plusmn;S at 1 px) &rarr; per-column demodulation &rarr; robust refit of the geometry,
 modulo S &rarr; trace locked to the refitted spiral &rarr; <b>sound readout</b>: the
-groove's depth along the trace. Scored against the card's truth. The page shows
-each step (a&ndash;k) large, in one column, with that step's settings beside it;
-changing a setting re-runs from that step. Lengths that should scale with
-resolution are set in spacings.
+groove's depth along the trace. Scored against the card's truth. The report
+shows each step (a&ndash;j) large, in one column, with notes and numbers beside
+it. Lengths that should scale with resolution are set in spacings.
 </div>
 
-<h2>P3.0 The card model (cardmodel.js)</h2>
-<p>A procedural height map, evaluated at any full-resolution point, so the
-low-res image and the full-res strip come from the same card. The card is
+<h2>P3.0 The card model (cardlab/model.py)</h2>
+<p>A height map rendered at full resolution (5551&sup2;, ~6 s); the low-res image
+and the full-res strip both come from it. The card is
 idealized: its surface is flat at height 0 (no warp, bend, dust or scratches),
-plus fine paper grain. The groove is cut by a round stylus (a parabola) moving
+plus fine paper grain (white noise blurred to the measured correlation length). The groove is cut by a round stylus (a parabola) moving
 along r(&theta;) = b&theta; + &delta;(&theta;), b = S/2&pi;, one fixed winding; &delta; = slow drift
 (periods of 0.7&ndash;12 turns, 2 px rms) + a small, smooth lateral wobble (0.3 px
 rms, wavelengths 200&ndash;3000 px).</p>
@@ -620,45 +620,49 @@ value with its source.</p>
 
 <h2>P3.1 Low-res stage: input and spacing</h2>
 <p>The low-res image is the full-res height averaged over each 1024&sup2; pixel
-(scale 5551/1024 &asymp; 5.42; 2&times;2 samples per pixel, with the grain, the only
-structure finer than a pixel, averaged over 6&times;6, as downsampling by area
-would), times a soft mask from the hand-marked circles (ramps over one spacing
+(scale 5551/1024 &asymp; 5.42; cv2.INTER_AREA), times a soft mask from the hand-marked circles (ramps over one spacing
 inside them), minus its mean and scaled to unit rms. No high-pass or clipping:
 the idealized card has no slow height drift, dust or scratches.</p>
-<p>Weighted 1/&radic;r about the hand mark and transformed as in Part 1; the
+<p>Weighted 1/&radic;r about the hand mark and transformed as in Part 1, with the
+soft annulus mask as the only window (a Hann window on top starved the outer
+turns: over 40 cards, spacing rms error 0.071 &rarr; 0.046% and the peak 11 &rarr; 8
+bins wide without it); the mean is subtracted inside the mask only. The
 spacing is the peak of the radial profile within &plusmn;10% of the nominal,
 refined parabolically. The groove has few useful harmonics, and the profile's
 own ripple (from the annulus edges) spoiled the harmonic sum's trough samples
 (it locked &minus;11% off on some cards). If the peak is on the window's edge or
-&gt; 3% from the nominal, the nominal is used instead (this happened once in 20
-runs, on a hard card).</p>
+&gt; 3% from the nominal, the nominal is used instead (no test card has needed
+it; the FFT spacing is within 0.1% on typical cards, 0.5% on hard ones).</p>
 
-<h2>P3.2 Low-res stage: center, spacing and phase</h2>
-<p>For a groove of period S the height about the true center has a component
-&asymp; &minus;cos(r/b &minus; &alpha; + &phi;), so</p>
-<p class="eq">Z(c, b) = &minus;&sum; v &middot; e<sup>&minus;i(r/b &minus; &alpha;)</sup></p>
-<p>peaks in |Z| at the true center and spacing, and arg Z is the phase. A center
-off by e shifts each turn by up to e, so |Z| falls like J<sub>0</sub>(2&pi;e/S): the main
-lobe is only ~0.4 spacing wide, narrower than the hand mark's error. Hence a
-grid over &plusmn;60 px about the hand mark (step 0.15 spacing, ~8000 pixels), then a
-pattern search on (x, y, b) with ~27 000 pixels. Typical cards: center within
-0.2 px of the truth (hand mark 10&ndash;32 px off), spacing within 0.15%.</p>
-<p>The <b>gradient-line center</b> of Part 1 (optional on the page, step e, for
-comparison) does not work here: with ~5.4 px spacing, 40 turns and an empty
-middle, the lines are extrapolated ~300&ndash;500 px from where they are measured,
-so small angle errors miss the center by more than the RANSAC tolerance; only
-~2&ndash;3% of the lines agree on any point. Its tangential blur and RANSAC
-tolerance are set in spacings (default 0.5 and 0.4; Part 1's 3 px and 2 px were
-0.15&ndash;0.3 and 0.1&ndash;0.2 spacings there), and its first pass is already blurred
-along circles about the hand-marked center (not left unblurred). The main reason
-it fails here is the sound itself: the groove's depth changes along the groove,
-so the gradients have a large along-groove component and the lines don't point
-at the center. On a clean card, with exact (spectral) derivatives and lines
-taken at the strongest 10% of gradients, the median line misses the true center
-by ~90 low-res px with the sound at 0.4, 23 px at 0.1, and 1.9 px with no
-sound (Sobel: 7 px). A wider tangential blur averages more of the sound away
-(lines agreeing within 0.4 spacing: 4% at σ 0.5 spacing, ~17% at 2, ~25% at
-10), but the answer was still 19&ndash;200 px off.</p>
+<h2>P3.2 Low-res stage: center and phase (the spiral coherence map)</h2>
+<p>With b = S/2&pi;, the spiral is r = b(&alpha; &minus; &phi; + 2&pi;n), so u = r/b &minus; &alpha; is
+constant along a groove and grows by 2&pi; per spacing outward: (u + &phi;)/2&pi; mod 1
+is a pixel's position across the groove pattern. Whatever the groove's shape,
+the height has a once-per-turn Fourier component &asymp; &minus;cos(u + &phi;), so for a
+candidate center c</p>
+<p class="eq">Z(c) = &minus;&sum;<sub>p</sub> v(p) &middot; e<sup>&minus;i(|p &minus; c|/b &minus; angle(p &minus; c))</sup></p>
+<p>adds that component up in step over all ~40 turns at the true center
+(Z &asymp; (n/2)&middot;|a<sub>1</sub>|&middot;e<sup>i&phi;</sup>; everything else, and the noise, cancels) and
+less elsewhere. Off by e, each turn shifts by up to e, and Z falls like
+J<sub>0</sub>(2&pi;e/S): as a function of c,</p>
+<p class="eq">Z(c) &asymp; a &middot; J<sub>0</sub>(2&pi; |c &minus; c<sub>0</sub>| / S)</p>
+<p>a bright spot ~0.4 spacing wide ringed by fainter rings half a spacing apart.
+Z(c) is a correlation of the image with a fixed "spiral wave" kernel
+K(q) = e<sup>&minus;i(|q|/b &minus; angle(q))</sup>, so <b>one FFT correlation gives Z at every
+pixel</b> (scipy fftconvolve, ~0.5 s at 1024&sup2;, all annulus pixels). The center
+is a least-squares fit of the J<sub>0</sub> pattern (complex a, center c<sub>0</sub>) to the
+map within 2.5 spacings of its brightest pixel; the phase is the angle of a.
+The spacing is the FFT's (the full-res refit tunes it). The hand mark only
+places the mask: the map covers the frame, so there is no search window.</p>
+<p>Tested offline (<code>experiments/center_search.py</code>, results in
+<code>experiments/center_search_results.md</code>): 32 cards &times; 10 simulated hand
+marks 5&ndash;100 px off. The FFT map + J<sub>0</sub> fit: median error 0.07 px, worst
+2.1 px (hard cards), never fails. The earlier grid (&plusmn;60 px about the mark, 0.15
+spacing) + Nelder&ndash;Mead on 5% of the pixels: median 0.17 px, and every mark
+beyond its window failed; Nelder&ndash;Mead on all pixels matches the fit but takes
+1.4 s. A sparse grid (0.45 spacing) + J<sub>0</sub> fit is fast but locks onto a side ring
+3&ndash;6% of the time. The ring pattern carries no extra information; the FFT
+just makes using all the data cheap.</p>
 
 <h2>P3.3 Full-res stage: the unrolled strip</h2>
 <p>Columns along the low-res spiral every 3 px of groove, from 1.5 turns inside
@@ -675,11 +679,12 @@ a phase error appear as</p>
 <p class="eq">o(&theta;) &asymp; a + &beta;(&theta; &minus; &theta;<sub>0</sub>) + e<sub>x</sub> cos &alpha; + e<sub>y</sub> sin &alpha; &nbsp; (mod S)</p>
 <p>Start: a grid over &beta; (&plusmn;2.5%, steps that move the outermost turn by S/4)
 and (e<sub>x</sub>, e<sub>y</sub>) (&plusmn;1.5 S, steps of S/4) on every 20th column, scoring
-|&sum; |Z| e<sup>2&pi;i(o &minus; model)/S</sup>| (the constant a comes out as its arg). Then 10
-rounds of IRLS on wrapped residuals (Tukey, 4.7 MAD, weights |Z|). Comparing
+|&sum; |Z| e<sup>2&pi;i(o &minus; model)/S</sup>| (the constant a comes out as its arg). Then a
+robust least-squares fit on wrapped residuals (scipy least_squares, soft-L1
+loss, weights |Z|). Comparing
 modulo S makes slips to a neighboring turn cost nothing; fitting unwrapped
 offsets instead failed on hard cards, where weak stretches made the unwrapping
-slip. Step g shows it: relative to the strip's spiral, the refitted model
+slip. Step f shows it: relative to the strip's spiral, the refitted model
 (yellow) has a one-turn wave whose amplitude is the center correction, next to
 the same curve for the true center, spacing and phase (red). Over only a few
 turns, spacing and drift can't be told apart (3 turns: &minus;3% spacing).</p>
@@ -706,26 +711,26 @@ floored at &minus;1 (where nothing was cut, the depth carries no information).
 &plusmn;3 px was best of &plusmn;1&ndash;3 (typical: correlation 0.935 / 0.948 / 0.956).</p>
 
 <h2>P3.7 How well it works</h2>
-<figure><img class="wide" src="procedure/14_card_low.png" alt=""><figcaption>card.html, typical card (seed 1): step f, a 256-px full-res detail. The groove's depth varies with the sound (dark: deep). Red: trace; green: true centerline.</figcaption></figure>
-<figure><img class="wide" src="procedure/15_card_full.png" alt=""><figcaption>Step k: the sound read from the groove's depth (red) against the truth (green), with its settings.</figcaption></figure>
+<figure><img class="wide" src="card/img/d_coherence.png" alt=""><figcaption>Step d: |Z| around the answer (typical card, seed 1). White +: hand mark; cyan ring: the J<sub>0</sub> fit; red +: truth.</figcaption></figure>
+<figure><img class="wide" src="card/img/e_detail.png" alt=""><figcaption>Step e: a 256-px full-res detail. The groove's depth follows the sound (dark: deep). Red: trace; green: true centerline.</figcaption></figure>
+<figure><img class="wide" src="card/img/j_sound.png" alt=""><figcaption>Step j: the sound read from the groove's depth (red) against the truth (green).</figcaption></figure>
 <table>
 <tr><th>Preset (5 seeds)</th><th>Low-res center</th><th>Trace rms</th><th>Wrong groove</th><th>No cut</th><th>Sound readout corr.</th></tr>
-<tr><td>Clean</td><td class="n">0.02&ndash;0.17 px</td><td class="n">0.26&ndash;0.50 px</td><td class="n">0</td><td class="n">0.5%</td><td class="n">0.97&ndash;0.99</td></tr>
-<tr><td>Typical</td><td class="n">0.02&ndash;0.17 px</td><td class="n">0.28&ndash;0.57 px</td><td class="n">0</td><td class="n">0.5%</td><td class="n">0.93&ndash;0.96</td></tr>
-<tr><td>Loud</td><td class="n">0.02&ndash;0.17 px</td><td class="n">0.34&ndash;0.63 px</td><td class="n">0</td><td class="n">7.6%</td><td class="n">0.93&ndash;0.98</td></tr>
-<tr><td>Hard</td><td class="n">0.3&ndash;0.9 px</td><td class="n">1.05&ndash;2.6 px</td><td class="n">0&ndash;1.8%</td><td class="n">4.7%</td><td class="n">0.80&ndash;0.87</td></tr>
+<tr><td>Clean</td><td class="n">0.02&ndash;0.15 px</td><td class="n">0.35&ndash;0.60 px</td><td class="n">0</td><td class="n">0.5%</td><td class="n">0.98&ndash;0.99</td></tr>
+<tr><td>Typical</td><td class="n">0.01&ndash;0.16 px</td><td class="n">0.40&ndash;0.66 px</td><td class="n">0</td><td class="n">0.5%</td><td class="n">0.89&ndash;0.92</td></tr>
+<tr><td>Loud</td><td class="n">0.01&ndash;0.16 px</td><td class="n">0.45&ndash;0.71 px</td><td class="n">0</td><td class="n">7.7%</td><td class="n">0.94&ndash;0.96</td></tr>
+<tr><td>Hard</td><td class="n">0.3&ndash;2.0 px</td><td class="n">1.1&ndash;2.7 px</td><td class="n">0&ndash;1.9%</td><td class="n">4.7%</td><td class="n">0.75&ndash;0.81</td></tr>
 </table>
-<p class="muted">All turns, default settings. Hand marks 10&ndash;32 px off (hard: 20&ndash;68 px).
-Trace rms: distance from each traced point to the nearest true groove
-centerline. Sound: correlation of the read-out depth signal with the true sound
-of the traced groove.</p>
+<p class="muted">Python pipeline, all turns, default settings; from card/results.json. Hand marks 6&ndash;26 px off
+(hard: 13&ndash;53 px). Trace rms: distance from each traced point to the nearest true groove centerline.
+Sound: correlation of the read-out depth signal with the true sound of the traced groove.</p>
 <ul>
-<li>On the idealized card, <b>geometry and tracking are solved</b>: center to
-~0.2 px from a hand mark tens of px off, spacing to ~0.1%, and the trace stays
-within ~0.3&ndash;0.6 px of the groove centerline, through the gaps where the sound
-lifts the stylus out of the card.</li>
-<li><b>The sound comes out of the depth</b> with correlation ~0.95 at the
-measured grain level; doubling the grain (hard) brings it to ~0.85.</li>
+<li>On the idealized card, <b>geometry and tracking are solved</b>: center to ~0.1 px
+from a hand mark tens of px off (or without one), spacing to ~0.1%, and the trace
+stays within ~0.4&ndash;0.7 px of the groove centerline, through the gaps where the
+sound lifts the stylus out of the card.</li>
+<li><b>The sound comes out of the depth</b> with correlation ~0.9 at the measured
+grain level (0.98 without grain); doubling the grain (hard) brings it to ~0.8.</li>
 </ul>
 
 <h3>Next steps</h3>
