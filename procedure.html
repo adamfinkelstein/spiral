@@ -800,7 +800,10 @@ flat, but the center did not improve (20 cards: median 0.175 &rarr; 0.168 px, be
 mean change &minus;0.004 px). The first refit already reads the wave fully
 (the model is nearly linear in the center); what is left of the red curve is
 error the offsets can't reveal, set by the drift from turn to turn. The
-trace and sound don't change either.</p>
+trace and sound don't change either. Instead the report shows step f twice:
+f1 as the pipeline sees it, and f2 relative to the true spiral, where
+yellow is the refit's remaining error (typical card: 0.10 px rms, a small
+one-turn wave and slope) and green is the drift alone (3.4 px rms).</p>
 <figure><img src="card/img/f_explain.png" alt=""><figcaption>How to read step f, a cartoon. Top: a toy card; the strip follows the cyan spiral (center 0.45 S and spacing 4% off), each column is a radial line &plusmn;S about it (grey), and the offset is the distance from the cyan spiral to the nearest groove (magenta dot, outward +). Middle: the offsets along the strip, unrolled: one wave per turn from the center error, a slow rise from the spacing error, and a copy for every turn of the groove, one spacing apart. Bottom: modulo the spacing, as in step f: only the nearest groove, in &minus;S/2&hellip;+S/2, wrapping when the next turn becomes nearer. A, B, C: the same three columns in all three panels.</figcaption></figure>
 
 <h2>P3.5 The trace</h2>

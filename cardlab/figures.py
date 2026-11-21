@@ -302,6 +302,35 @@ def offsets_mod_spacing(run, path, strip, model, every=40):  # strip and model: 
     save(figure, path)
 
 
+def offsets_vs_truth(run, path, every=40):
+    # step f again, relative to the true spiral (red = 0, possible only on a
+    # simulated card): yellow = the refit's remaining error, green = the
+    # groove's drift, white = measured; below, yellow alone at +-1 px
+    strip, spacing, card = run.strip, run.strip.spiral.spacing, run.card
+    ideal = ideal_offset(card, strip)
+    true_offset = card.nearest_groove(*spiral_points(strip.spiral, strip.theta))[0]
+    columns = np.arange(len(strip.theta))
+    smoothed, confidence = offsets_from(strip.demod, spacing, 24 / strip.step)
+    shown = columns[::every]
+    brightness = np.clip(2 * confidence[shown] / confidence[shown].max(), 0.15, 1)
+    figure = new_figure(900, 900)
+    axes = figure.add_axes([0.08, 0.33, 0.9, 0.65])
+    axes.scatter(shown, wrap(smoothed[shown] - ideal[shown], spacing), s=3, c=np.stack([brightness] * 3, axis=1))
+    axes.plot(shown, wrap(true_offset[shown] - ideal[shown], spacing), ".", color=COLORS["true"], ms=1.5)
+    axes.axhline(0, color=COLORS["truth"], lw=1.5)
+    axes.plot(columns[::5], wrap(run.model[::5] - ideal[::5], spacing), ".", color=COLORS["refit"], ms=1)
+    axes.set_ylim(-spacing / 2, spacing / 2)
+    axes.tick_params(labelbottom=False)
+    axes.set_ylabel("offset from the true spiral, px (mod spacing)")
+    zoom = figure.add_axes([0.08, 0.06, 0.9, 0.22], sharex=axes)
+    zoom.axhline(0, color=COLORS["truth"], lw=1.5)
+    zoom.plot(columns[::5], wrap(run.model[::5] - ideal[::5], spacing), "-", color=COLORS["refit"], lw=1.5)
+    zoom.set_ylim(-1, 1)
+    zoom.set_ylabel("refit error, px")
+    zoom.set_xlabel("column (inner turns left)")
+    save(figure, path)
+
+
 def strip_image(run, path, columns=1040):
     strip, spacing = run.strip, run.strip.spiral.spacing
     window = strip_window(run, columns)

@@ -111,6 +111,11 @@ Pages serves them (nothing is built on GitHub).
   (`figures.offsets_explainer`, `f_explain.png`, also in procedure P3.4):
   toy card with the strip's spiral off center, the offsets unrolled, and
   modulo S, with three columns A, B, C followed through all three.
+  Step f is two panes: f1 in the strip's frame (what the refit sees: the
+  low-res center / spacing errors as a one-turn wave and a slope), f2
+  (`figures.offsets_vs_truth`, `f_truth.png`) everything minus the true
+  spiral: yellow = the refit's remaining error (with a ±1 px zoom below),
+  green = the drift; numbers: refit error and drift rms.
 - Sanity check against the JS version: `checks/compare_with_js.sh [preset]
   [seed]` (needs node — on the Mac via nvm in Terminal; ~2 min) dumps the
   Python pipeline's inputs and intermediates and feeds the same inputs to
