@@ -192,10 +192,11 @@ function drawProfile(p) {
   ctx.fillStyle = PURPLE;
   ctx.fillText(spText, right, ty);
   ctx.fillStyle = '#ddd';
-  ctx.fillText('white: mean log |FFT|; red: smoothed, where searched', right, T + 34);
-  if (peak.edge) {
+  ctx.fillText(`white: mean log |FFT|; red: smoothed, where searched; prominence ${peak.prominence.toFixed(2)}`, right, T + 34);
+  if (peak.edge || peak.weak) {
     ctx.fillStyle = '#ffb020';
-    ctx.fillText('⚠ maximum on the edge of the search window: no reliable spacing (the pipeline stops)', right, T + 50);
+    ctx.fillText(peak.edge ? '⚠ maximum on the edge of the search window: no reliable spacing (the pipeline stops)'
+      : `⚠ peak too weak (prominence ${peak.prominence.toFixed(2)} < 0.65): no reliable spacing (the pipeline stops)`, right, T + 50);
   }
 }
 
@@ -377,7 +378,7 @@ function render() {
     const cohOut = document.getElementById('cohOut');
     if (p.cohOn && p.spiral && !p.cohTrue && !isFinite(peak.spacing)) {
       clearCoherence();
-      cohOut.textContent = 'Coherence center: skipped, no reliable spacing (the FFT peak is on the edge of the search window).';
+      cohOut.textContent = `Coherence center: skipped, no reliable spacing (the FFT peak is ${peak.edge ? 'on the edge of the search window' : 'too weak'}).`;
     } else if (p.cohOn && p.spiral) {
       const sp = p.cohTrue ? p.spacing : peak.spacing;
       const r = coherenceCenter(norm, sp, mark); // the masked image and the mark, as in cardlab

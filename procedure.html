@@ -185,14 +185,20 @@ page, a warning, and the coherence center is skipped; on the cards,
 <code>SpacingNotFound</code>, and the report lists the card as failed). Falling back
 to the nominal spacing, as before, is not survivable: across machines it can
 be ~33% off, and the later steps fail beyond ~&plusmn;3&ndash;5% (P3.1).</p>
-<p><b>Not caught:</b> a nominal far too <i>large</i>. On a typical card (true 29
-px) the spacing is found for a nominal 0.6&ndash;1.5 &times; the truth and fails
-cleanly at 0.5 &times;; but at 1.7 &times; and 2 &times; the window misses the real peak
-and its maximum is a low-frequency bump inside it, so a wrong spacing (37,
-61 px) comes out without a failure. That is outside the window's guarantee
-(true spacing &ge; 0.67 &times; nominal), but silent. A check on the peak's
-prominence above the slope line, or on the coherence it gives, could catch
-it; not yet built.</p>
+<p><b>A weak peak fails too.</b> With a nominal far too <i>large</i> (1.7&ndash;2.5 &times;
+the truth) the window misses the real peak, and its maximum is a
+low-frequency bump inside it, not on its edge: before this check a wrong
+spacing (e.g. 37 or 61 px instead of 29) came out silently. So the peak must
+also stand out: its <b>prominence</b>, its height above the trough line at the
+peak, P(&rho;<sub>i</sub>) &minus; line(&rho;<sub>i</sub>), in log magnitude (a log ratio of peak to
+background), must be at least 0.65 (the peak about twice its background).
+Measured (<code>experiments/spacing_prominence.py</code>): correct peaks 0.89&ndash;1.91
+on the 26 cards and 1.08&ndash;4.0 on the page's spirals (noise up to 3, offsets,
+aspect, rings, few turns); wrong ones not already on the edge at most 0.41
+(cards) and 0.17 (spirals); a frame without a groove or spiral 0.04&ndash;0.21. On
+the page the prominence is printed under the plot. It can't catch the
+varying-spacing limit (a real but displaced peak, prominence 1.6&ndash;2.8), and
+real depth maps may give weaker correct peaks than these simulations.</p>
 <p><b>Why the slope.</b> The peak sits on a falling background (from the
 mask's own spectrum, the soft line edges, noise, the weighting and the log),
 which pulls a plain parabola toward smaller radii, i.e. larger spacings:
@@ -745,6 +751,7 @@ outside, so an edge peak now fails the card instead of falling back to it. It ne
 precise: the refit (P3.4) fits the spacing again. The groove has few useful harmonics, and the profile's
 own ripple (from the annulus edges) spoiled the harmonic sum's trough samples
 (it locked &minus;11% off on some cards). If the peak is on the window's edge,
+or if its prominence above the trough line is under 0.65 (Part 1, step 4),
 the card fails with <code>SpacingNotFound</code> (no test card has; the FFT spacing is
 within 0.08% on typical cards, 0.11% on hard ones). Until Nov 2026 the window
 was &plusmn;10%, the smoothing 1 bin, and the nominal was also used when the peak

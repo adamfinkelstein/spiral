@@ -82,6 +82,7 @@ for (let y = 0; y < N; y++) {
   }
 }
 const profile = new Float64Array(NBINS);
+let profileScale = 1; // profile = mean log magnitude / profileScale (its largest value off DC)
 
 // Mean subtraction and Hann window (optional), 2D FFT, log magnitude
 // (fftshifted into mag, DC at (N/2, N/2)) and the radial profile (mean of
@@ -120,6 +121,7 @@ function computeSpectrum(src, removeDC = true, useWindow = true) {
     }
   }
   const scale = max > 0 ? 1 / max : 0;
+  profileScale = max;
   profile.fill(0);
   for (let i = 0; i < N * N; i++) profile[binOf[i]] += mag[i] * scale;
   for (let b = 0; b < NBINS; b++) profile[b] /= binCount[b];
@@ -206,7 +208,7 @@ function fftInput(norm, mask, mark, spacing, ex) { // fills fftIn
 const peakProfile = new Float64Array(NBINS);
 let peak = { rho: NaN, spacing: NaN, lo: NaN, hi: NaN, edge: false };
 
-function profilePeak({ target, window = 0.5, blur = 1.5 }) {
+function profilePeak({ target, window = 0.5, blur = 1.5, minProminence = 0.65 }) {
   const R = Math.ceil(3 * blur);
   for (let i = 0; i < NBINS; i++) {
     if (!(blur > 0)) { peakProfile[i] = profile[i]; continue; }
@@ -231,9 +233,11 @@ function profilePeak({ target, window = 0.5, blur = 1.5 }) {
   // a = (5Σx²y − 10Σy)/70). A plain parabola is pulled toward smaller radii
   // by the falling background.
   let rho = best;
+  const at = r => { const i = Math.floor(r), f = r - i; return peakProfile[i] * (1 - f) + peakProfile[i + 1] * f; };
+  const x1 = 0.5 * best, x2 = Math.min(1.5 * best, NBINS - 2), y1 = at(x1), k = (at(x2) - y1) / (x2 - x1);
+  // prominence: the peak's height above that line, in log magnitude (unscaled, as cardlab)
+  const prominence = (peakProfile[best] - y1 - k * (best - x1)) * profileScale;
   if (!edge) {
-    const at = r => { const i = Math.floor(r), f = r - i; return peakProfile[i] * (1 - f) + peakProfile[i + 1] * f; };
-    const x1 = 0.5 * best, x2 = Math.min(1.5 * best, NBINS - 2), y1 = at(x1), k = (at(x2) - y1) / (x2 - x1);
     let sy = 0, sxy = 0, sx2y = 0;
     for (let x = -2; x <= 2; x++) {
       const y = peakProfile[best + x] - (y1 + k * (best + x - x1));
@@ -242,6 +246,9 @@ function profilePeak({ target, window = 0.5, blur = 1.5 }) {
     const a = (5 * sx2y - 10 * sy) / 70, b = sxy / 10;
     if (a < 0) rho += Math.max(-2, Math.min(2, -b / (2 * a)));
   }
-  peak = { rho, spacing: edge ? NaN : N / rho, measured: N / rho, lo, hi, edge };
+  // no reliable spacing: a maximum on the window's edge, or one standing less
+  // than minProminence above the trough line (as cardlab's min_prominence)
+  const weak = !edge && prominence < minProminence;
+  peak = { rho, spacing: edge || weak ? NaN : N / rho, measured: N / rho, lo, hi, edge, weak, prominence };
   return peak;
 }

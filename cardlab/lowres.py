@@ -11,7 +11,8 @@ LOW_SIZE = 1024
 
 
 class SpacingNotFound(Exception):
-    # the profile's maximum is on the edge of the search window: no clear peak.
+    # no clear peak: the profile's maximum is on the edge of the search window,
+    # or it stands less than min_prominence above the trough line.
     # The card fails here (falling back to the nominal would be up to ~33% off,
     # far outside what the later steps survive: experiments/spacing_budget.py)
     pass
@@ -22,6 +23,7 @@ class LowResSettings:
     turn_weight_power: float = 0.5   # FFT input weighted by r^-power about the mark
     spacing_window: float = 0.5      # search ± this fraction of the expected peak radius (frequency): 0.5-1.5 x size / nominal
     profile_smoothing: float = 1.5   # bins, Gaussian, before the peak search
+    min_prominence: float = 0.65     # log magnitude above the trough line; below it: no reliable spacing
     symmetry_window: float = 0.12    # sigma of the Gaussian window about the map's peak, x the marked outer radius
     symmetry_search: float = 1.5     # the symmetry center lies within this many sigma of the peak
 
@@ -79,17 +81,26 @@ def radial_profile(spectrum, smoothing):
     return gaussian_filter1d(profile, smoothing) if smoothing > 0 else profile
 
 
+def trough_line(profile, index):
+    # the local background under a peak: a line through the profile at the
+    # halfway troughs, 0.5 and 1.5 x the peak's radius
+    x1, x2 = 0.5 * index, 1.5 * index
+    y1, y2 = np.interp([x1, x2], np.arange(len(profile)), profile)
+    return lambda x: y1 + (y2 - y1) / (x2 - x1) * (np.asarray(x) - x1)
+
+
+def peak_prominence(profile, index):
+    # height of the peak above that background, in log magnitude (a log ratio)
+    return float(profile[index] - trough_line(profile, index)(index))
+
+
 def peak_without_slope(profile, index):
-    # sub-bin peak position: subtract the local background, a line through the
-    # profile at the halfway troughs (0.5 and 1.5 x the peak's radius), from the
+    # sub-bin peak position: subtract the local background (trough_line) from the
     # 5 bins around the peak, then the vertex of a least-squares parabola. The
     # peak sits on a falling background, which pulls a plain parabola toward
     # smaller radii (Nov 2026: cards 0.049 -> 0.024 % median spacing error).
-    bins = np.arange(len(profile))
-    x1, x2 = 0.5 * index, 1.5 * index
-    y1, y2 = np.interp([x1, x2], bins, profile)
     offsets = np.arange(-2, 3)
-    values = profile[index - 2 : index + 3] - (y1 + (y2 - y1) / (x2 - x1) * (index + offsets - x1))
+    values = profile[index - 2 : index + 3] - trough_line(profile, index)(index + offsets)
     a, b, _ = np.polyfit(offsets, values, 2)
     vertex = -b / (2 * a) if a < 0 else 0.0
     return index + float(np.clip(vertex, -2, 2))
@@ -111,7 +122,10 @@ def fft_spacing(image, mask, mark, scale, nominal, settings):
     on_edge = best in (low, high)
     peak = best if on_edge else peak_without_slope(profile, best)
     spacing = size / peak
-    ok = not on_edge  # a peak on the window's edge: no reliable spacing
+    # no reliable spacing: a maximum on the window's edge, or a weak one
+    # (correct peaks on cards and drawn spirals: >= 0.89; wrong ones not on the
+    # edge: <= 0.41; experiments/spacing_prominence.py)
+    ok = not on_edge and peak_prominence(profile, best) >= settings.min_prominence
     return spectrum, profile, (low, high), peak, spacing, ok
 
 
@@ -199,7 +213,10 @@ def low_res_stage(full, mark, nominal_spacing, settings=LowResSettings()):
     image = normalize_in_mask(downsample(full), mask)
     spectrum, profile, window, peak, measured, ok = fft_spacing(image, mask, mark, scale, nominal, settings)
     if not ok:
-        raise SpacingNotFound(f"the profile's maximum is on the edge of the search window "
-                              f"({measured * scale:.2f} px, nominal {nominal_spacing:.2f} px)")
+        best = int(round(peak))
+        on_edge = best in window
+        reason = "is on the edge of the search window" if on_edge else \
+            f"is too weak (prominence {peak_prominence(profile, best):.2f} < {settings.min_prominence})"
+        raise SpacingNotFound(f"the profile's maximum {reason} ({measured * scale:.2f} px, nominal {nominal_spacing:.2f} px)")
     spiral, z_map, coherence = find_center(image, mark, scale, measured, settings)
     return LowResResult(scale, image, mask, spectrum, profile, window, peak, measured * scale, z_map, coherence, spiral)

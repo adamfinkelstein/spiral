@@ -149,10 +149,12 @@ Pages serves them (nothing is built on GitHub).
   FFT within 0.1% → 10–40× margin; a fallback to the nominal is not
   survivable, so an edge peak now fails the card (`lowres.SpacingNotFound`;
   build_card.py records {"failed": ...} and the report lists it; the page
-  shows no spacing and skips the coherence center). Not caught: a nominal
-  far too large (typical card: found for 0.6–1.5 × truth, fails at 0.5 ×,
-  but 1.7 × / 2 × give 37 / 61 px silently); a peak-prominence or coherence
-  check could catch it (not built). Idea (full-res refit on
+  shows no spacing and skips the coherence center). Also a weak peak:
+  prominence (height above the trough line, log magnitude) < 0.65
+  (`min_prominence`, `profilePeak({ minProminence })`): correct peaks ≥ 0.89
+  (cards) / 1.08 (spirals), wrong ones not on the edge ≤ 0.41, no groove
+  ≤ 0.21 (experiments/spacing_prominence.py). This catches a nominal far too
+  large (1.7–2.5 ×), which used to give a wrong spacing silently. Idea (full-res refit on
   hold, Adam): a second strip pass only when the refit corrects a lot.
 - Spacing search (Nov 2026, `experiments/spacing_window.py`, results in
   `experiments/spacing_window_results.md`): window ±50% (then of the nominal spacing; now of the expected peak radius, below)
