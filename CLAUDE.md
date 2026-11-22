@@ -95,6 +95,16 @@ Pages serves them (nothing is built on GitHub).
   comments, no docstrings; factor shared code; lean on vetted libraries
   (OpenCV, scipy, scikit-image / scikit-learn, e.g. their RANSAC) and
   vectorized numpy instead of loops.
+- Colors (Adam's: one meaning everywhere in card.html; `figures.COLORS`, the
+  report's span classes and its color key): white input (hand mark,
+  nominal), cyan low-res estimates, yellow refit, orange path (trace) and
+  read-out sound, green true groove and true sound, pale green true geometry
+  (center, spacing, ideal spiral), magenta wrong groove (with "none on this
+  card" when there is none), grey raw measurements (the wedges), violet
+  annotations (detail-spot boxes, cartoon labels, the rectangle's rows and
+  wedge edges). Red is not used; blue was the sector method while it ran
+  beside the strip. Add a new color
+  rather than reuse one with another meaning.
 - Constants (Adam's, for a paper later): prefer round, justifiable values
   over fitted decimals, e.g. a peak at least 2× its background (ln 2), not
   0.65; a window from halfway to zero frequency to halfway to the second
@@ -102,13 +112,37 @@ Pages serves them (nothing is built on GitHub).
   the synthetic experiments, then pick the round value inside it, check it
   still separates the cases, and record both the measured range and the
   reason in the docs.
+- Full-res stage = the unrolled rectangle and its wedges (`wedges.py`,
+  Nov 2026, Adam's idea; replaced the strip, which stays in `strip.py` for
+  the experiments and shared helpers): columns along the low-res spiral at
+  equal arc length (3 px; 1 px gives the same), rows = radial offset; rows
+  ±S/2 cover every pixel once. Never stored: `Unrolled.pull` samples a block
+  when needed. Wedges of 1/40 turn; per column one untapered period of rows
+  × e^{−2πid/S}, summed per wedge. Pass 1: rows about the spiral →
+  `refit_wedges` (the strip's refit on ~1500 wedge offsets, no resampling)
+  → path = model + offsets within ±S/2. Pass 2: rows centered midway between
+  the lands, (groove + mean of the turns either side) / 2 (on the groove
+  itself was worse; with true offsets the rule gives 0.158 vs 0.16 px
+  measured). Path = wedge offsets as phasors |Z|e^{iφ}. 20 cards: path
+  medians 0.15 / 0.16 / 0.81 / 0.08 px (typical / loud / hard / clean) vs
+  the strip's 0.59 / 0.68 / 1.32 / 0.56, sound the same; 0.37 s vs 0.54 s.
+  Why the strip was worse: its ±S cos² window takes in the neighbouring
+  turns, which drift differently, and pulled the path ~10% toward the
+  spiral. card.html shows only the wedges; its section 4 and procedure
+  P3.6b list the alternatives tried with numbers (strip, strip with ±S/2
+  or two-period windows, per-pixel sectors, re-centering on the groove,
+  per-wedge tilt). Experiments: unrolled_wedges.py, strip_window.py,
+  cell_coherence*.py, cell_error_breakdown.py. `Run.strip` is now just the
+  rectangle's columns (a Strip with no demodulation), the frame of
+  `Run.model` / `trace` / `score`.
 - Modules: `params.py` (CardParams dataclass, PRESETS, PARAM_NOTES with
   sources), `geometry.py` (Spiral, Mark, TAU, wrap, smoothstep,
   spiral_points), `model.py` (make_card, Card.groove_height /
   nearest_groove / sound, render → full-res float32 image ~6 s; grain is
   Gaussian-filtered white noise, unlike the JS value noise),
   `lowres.py` (cv2.INTER_AREA downsample, annulus mask, FFT spacing,
-  spiral coherence map by FFT + center of point symmetry), `strip.py` (strip columns by equal
+  spiral coherence map by FFT + center of point symmetry), `wedges.py`
+  (the full-res stage, above), `strip.py` (the former stage: strip columns by equal
   arc length, cv2.remap sampling in blocks < 32767 wide, demodulation,
   refit: grid start + scipy least_squares with soft_l1 on wrapped
   residuals, lock_trace), `readout.py` (sound), `scoring.py` (truth),
@@ -122,14 +156,17 @@ Pages serves them (nothing is built on GitHub).
   clipped by the axes (consecutive columns are neighbours along the
   groove), wrong-groove columns in magenta. Before step f, a cartoon
   (`figures.offsets_explainer`, `f_explain.png`, also in procedure P3.4):
-  toy card with the strip's spiral off center, the offsets unrolled, and
+  toy card with the rectangle's spiral off center, the offsets unrolled, and
   modulo S, with three columns A, B, C followed through all three.
-  Step f is two panes: f1 in the strip's frame (what the refit sees: the
+  Steps f0 (`rectangle_turns`: 4 wedges of 5 consecutive turns, stacked so
+  they tile) and f0b (`wedges_on_card`) show the rectangle. Step f is two
+  panes: f1 pass 1's wedges about the low-res spiral (what the refit sees: the
   low-res center / spacing errors as a one-turn wave and a slope), f2
   (`figures.offsets_vs_truth`, `f_truth.png`) everything minus the true
   spiral: yellow = the refit's remaining error (with a ±1 px zoom below),
   green = the drift; numbers: refit error and drift rms.
-- Sanity check against the JS version: `checks/compare_with_js.sh [preset]
+- Sanity check against the JS version (covers the low-res stage and the
+  former strip, not the wedges): `checks/compare_with_js.sh [preset]
   [seed]` (needs node — on the Mac via nvm in Terminal; ~2 min) dumps the
   Python pipeline's inputs and intermediates and feeds the same inputs to
   each JS function. Results (typical 1–3, loud 1, hard 1, clean 1): FFT

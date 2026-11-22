@@ -7,13 +7,14 @@ from .model import make_card, render
 from .params import PRESETS
 from .readout import ReadoutSettings, read_sound
 from .scoring import center_error, correlation, rms, score_trace, spacing_error, spiral_vs_grooves
-from .strip import StripSettings, build_strip, lock_trace, refit_geometry
+from .strip import Strip
+from .wedges import WedgeSettings, run_wedges
 
 
 @dataclass
 class Settings:
     low: LowResSettings = field(default_factory=LowResSettings)
-    strip: StripSettings = field(default_factory=StripSettings)
+    wedges: WedgeSettings = field(default_factory=WedgeSettings)
     readout: ReadoutSettings = field(default_factory=ReadoutSettings)
 
 
@@ -22,10 +23,12 @@ class Run:
     card: object
     image: np.ndarray
     low: object
-    strip: object
+    wedges: object          # wedges.WedgeRun
+    strip: object           # the rectangle's columns along the low-res spiral (no demodulation): the frame
+                            # of model, trace and score
     refit: object
-    model: np.ndarray
-    trace: np.ndarray
+    model: np.ndarray       # the refitted spiral's offset from the low-res one, per column, px
+    trace: np.ndarray       # the groove's offset from the low-res spiral, per column, px
     sound: np.ndarray
     score: object
 
@@ -34,11 +37,12 @@ def run_pipeline(preset, seed, settings=Settings()):
     card = make_card(PRESETS[preset], seed)
     image = render(card)
     low = low_res_stage(image, card.mark, card.params.spacing, settings.low)
-    strip = build_strip(image, low.spiral, card.mark, settings.strip)
-    refit, model = refit_geometry(strip, settings.strip)
-    trace = lock_trace(strip, model, settings.strip)
-    sound = read_sound(image, strip, trace, settings.readout)
-    return Run(card, image, low, strip, refit, model, trace, sound, score_trace(card, strip, trace))
+    wedges = run_wedges(image, low.spiral, card.mark, settings.wedges)
+    unrolled = wedges.unrolled
+    strip = Strip(low.spiral, unrolled.theta, unrolled.step, None, None, None)
+    sound = read_sound(image, strip, wedges.path, settings.readout)
+    return Run(card, image, low, wedges, strip, wedges.spiral, wedges.model, wedges.path, sound,
+               score_trace(card, strip, wedges.path))
 
 
 def summarize(run):
@@ -56,6 +60,7 @@ def summarize(run):
         "refit_vs_grooves": spiral_vs_grooves(card, score, run.model),
         "coherence": run.low.coherence,
         "columns": len(run.strip.theta),
+        "wedges": len(run.wedges.final.theta),
         "turns": float((run.strip.theta[-1] - run.strip.theta[0]) / (2 * np.pi)),
         "trace_rms": rms(score.distance),
         "off_quarter": float(np.mean(np.abs(score.distance) > card.spacing / 4)),

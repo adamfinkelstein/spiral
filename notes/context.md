@@ -63,13 +63,17 @@ calibrated from those images.
 
 Low res (1024²): mask to the hand-marked annulus → FFT spacing (peak within
 ±10% of nominal) → coherence map → its center of point symmetry (center),
-arg Z there (phase). Full res: unrolled
-strip along that spiral (a column every 3 px of groove, ±1 spacing),
-demodulation per column → geometry refit modulo the spacing (grid start +
-robust least squares) → trace locked to the refitted spiral (σ 48 px along
-the groove) → sound = land minus groove bottom, relative to its slow average.
-Typical cards: center ~0.1 px, trace ~0.5 px, no wrong groove, sound
-correlation ~0.9 (limited by the measured grain level).
+arg Z there (phase). Full res (Nov 2026, Adam's idea; replaced the strip):
+the annulus unrolled into a rectangle along that spiral (a column every 3 px
+of groove, rows ±S/2, sampled only when needed) → wedges of 1/40 turn, one
+period of rows demodulated per column → geometry refit modulo the spacing on
+the wedges (grid start + robust least squares) → pass 2 with each column's
+rows midway between the lands → path locked to the refitted spiral → sound =
+land minus groove bottom, relative to its slow average. Typical cards:
+center ~0.1–0.3 px, path ~0.15 px, no wrong groove, sound correlation ~0.9
+(limited by the readout and the measured grain level, not the path).
+Alternatives tried (strip with ±S or one-period windows, per-pixel sectors,
+re-centering on the groove, per-wedge tilt): procedure.html P3.6b.
 
 ## Adam's preferences
 
@@ -109,9 +113,14 @@ correlation ~0.9 (limited by the measured grain level).
   full-res refit is on hold.
 - Drift: the real card's groove offsets (Tomaz's images 21, 26) are ~3 px
   rms and change almost completely from one turn to the next; the model
-  now matches (3.2 px rms, periods 0.3–1 turn). Wobble was removed. A
-  second strip pass along the refitted spiral flattened step f but didn't
-  improve the center (drift-limited), so it was dropped (Nov 2026).
+  now matches (3.2 px rms, periods 0.3–1 turn), and Adam thinks real drift
+  is slower still. Wobble was removed. A second strip pass along the
+  refitted spiral flattened step f but didn't improve the center
+  (drift-limited), so it was dropped (Nov 2026).
+- Groove identity: every method names a groove's turn by the nearest arm of
+  the geometry model, so a groove drifting more than S/2 from it lands on the
+  wrong turn. Idea: grooves can't cross, so check their order across turns
+  at each angle (easy in the rectangle).
 - Put card imperfections back one at a time (warp, slow height drift, dust,
   damage) once the idealized pipeline is settled.
 - Stretched cards: the low-res center now survives up to 3% stretch, but

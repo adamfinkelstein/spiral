@@ -681,14 +681,25 @@ the image masked to the hand-marked annulus &rarr; spacing = FFT radial-profile
 peak within 0.5&ndash;1.5 &times; the radius expected from the nominal &rarr; center and phase from the spiral
 coherence map (Z at every pixel by one FFT correlation, then the map's
 center of point symmetry near its peak) &rarr; <b>full-res
-stage</b>: unrolled strip along that spiral (a column every 3 px of groove, rows
-&plusmn;S at 1 px) &rarr; per-column demodulation &rarr; robust refit of the geometry,
-modulo S &rarr; trace locked to the refitted spiral &rarr; <b>sound readout</b>: the
-groove's depth along the trace. Scored against the card's truth. The report
+stage</b>: the annulus unrolled into a rectangle along that spiral (a column
+every 3 px of groove, rows &plusmn;S/2 at 1 px, sampled only when needed) &rarr;
+wedges of 1/40 turn, one period of rows demodulated per column &rarr; robust
+refit of the geometry on the wedges, modulo S &rarr; a second pass with each
+column's rows midway between the lands &rarr; the path, locked to the refitted
+spiral &rarr; <b>sound readout</b>: the groove's depth along the path (until Nov
+2026 the full-res stage was a strip with a &plusmn;S window; P3.6b). Scored against the card's truth. The report
 shows each step (a&ndash;j, with a cartoon before f and f in two panes: as the
 pipeline sees it, and relative to the true spiral) large, in one column, with
 notes and numbers beside it. Lengths that should scale with resolution are set in spacings.
 </div>
+
+<p class="muted">Colors in the report and in these figures mean the same thing
+everywhere: white = input (hand mark, nominal spacing), cyan = low-res
+estimates, yellow = the refit, orange = the path (trace) and the read-out sound,
+green = the true groove and true sound, pale green = the true geometry
+(center, spacing, ideal spiral), magenta = wrong groove, grey = raw
+measurements (the wedges), violet = annotations (also the rectangle's rows
+and wedge edges).</p>
 
 <h2>P3.0 The card model (cardlab/model.py)</h2>
 <p>A height map rendered at full resolution (5551&sup2;, ~6 s); the low-res image
@@ -831,31 +842,52 @@ beyond its window failed; Nelder&ndash;Mead on all pixels matches the fit but ta
 3&ndash;6% of the time. The ring pattern carries no extra information; the FFT
 just makes using all the data cheap.</p>
 
-<h2>P3.3 Full-res stage: the unrolled strip</h2>
-<p>Columns along the low-res spiral every 3 px of groove, from 1.5 turns inside
-the marked inner edge to 1.5 turns inside the outer one (~160 000 columns,
-~35 turns, ~2&ndash;3 s). Each column samples the full-res height along the radius
-at d = &minus;S..S (1 px), removes a linear trend, and correlates with
-e<sup>&minus;2&pi;id/S</sup> under a cos&sup2; window of half-width S. A groove at offset o gives a
-component &asymp; &minus;cos(2&pi;(d &minus; o)/S), so o = &minus;S &middot; arg(&minus;Z)/2&pi; (mod S), and |Z| is a
-confidence (low where the sound makes the groove shallow or absent).</p>
+<h2>P3.3 Full-res stage: the unrolled rectangle and its wedges</h2>
+<p>(<code>cardlab/wedges.py</code>; Adam's idea, Nov 2026.) The annulus is unrolled
+along the low-res spiral: columns at equal arc length (every 3 px of groove,
+from 1.5 spacings inside the marked inner edge to 1.5 inside the outer one,
+~175 000 columns, ~38 turns), rows the radial offset d from the spiral (1 px,
+outward +). Rows &minus;S/2..S/2 cover every annulus pixel exactly once, since
+offset +S is the next turn at the same angle. The rectangle is never stored:
+a block of columns and rows is sampled (bilinear, scipy map_coordinates) only
+when it is needed. Wedges are blocks of columns, 40 per turn (9&deg;; ~200 px of
+groove on the inner turns, ~430 px on the outer). Per column</p>
+<p class="eq">z = &sum;<sub>d</sub> w(d) v(d) e<sup>&minus;2&pi;i d/S</sup></p>
+<p>over exactly one period of rows (w = 1, the two end rows the fraction inside
+&plusmn;S/2), and Z = the sum of z over the wedge. A groove at offset o gives a
+component &asymp; &minus;cos(2&pi;(d &minus; o)/S), so o = &minus;S &middot; arg(&minus;Z)/2&pi; (mod S), and |Z|
+is a confidence. One period, untapered, gives the first Fourier component
+exactly; a taper or a wider window lets the neighbouring turns in, and since
+they drift independently of this one they pull the estimate toward the spiral
+(the strip's &plusmn;S cos&sup2; window followed only ~90% of the drift; P3.6b).
+Columns every 1 px give the same results as every 3 px.</p>
+<p><b>Two passes.</b> Pass 1: rows about the spiral &rarr; ~1500 wedge offsets &rarr; the
+geometry refit (P3.4), on the wedges alone, no resampling. Pass 2: each column's
+period of rows centered <b>midway between the lands</b> either side of the
+groove, at (o<sub>n</sub> + &frac12;(o<sub>n&minus;1</sub> + o<sub>n+1</sub>)) / 2, where o<sub>n&plusmn;1</sub> are pass 1's
+offsets of the turns either side (the same column one turn, 2&pi;, away in the
+rectangle). Then the window's ends fall in the land, as far from groove n as
+from its neighbours. Centered on the groove itself was worse (typical card 1:
+0.37 px vs. 0.21 for pass 1 alone and 0.16 midway; with the true offsets the
+midway rule gives 0.158 px, so it is near its limit).</p>
+<figure><img src="card/img/f_rectangle.png" alt=""><figcaption>Step f0: the same 4 wedges (36&deg;) of 5 consecutive turns, stacked outward up; each turn's band is exactly &plusmn;S/2 about its arm, so they tile the card. Turns are numbered from the spiral's center (r = turn &times; S). Violet dotted: pass 1's rows; violet solid: pass 2's rows, midway between the lands; violet vertical: wedge edges; green: the true groove; orange: the path.</figcaption></figure>
 
 <h2>P3.4 Refit of the geometry</h2>
-<p>About the strip's spiral, a center error (e<sub>x</sub>, e<sub>y</sub>), a spacing error &beta; and
-a phase error appear as</p>
+<p>About the low-res spiral, a center error (e<sub>x</sub>, e<sub>y</sub>), a spacing error &beta; and
+a phase error appear in pass 1's wedge offsets as</p>
 <p class="eq">o(&theta;) &asymp; a + &beta;(&theta; &minus; &theta;<sub>0</sub>) + e<sub>x</sub> cos &alpha; + e<sub>y</sub> sin &alpha; &nbsp; (mod S)</p>
 <p>Start: a grid over &beta; (&plusmn;2.5%, steps that move the outermost turn by S/4)
-and (e<sub>x</sub>, e<sub>y</sub>) (&plusmn;1.5 S, steps of S/4) on every 20th column, scoring
+and (e<sub>x</sub>, e<sub>y</sub>) (&plusmn;1.5 S, steps of S/4) on every wedge, scoring
 |&sum; |Z| e<sup>2&pi;i(o &minus; model)/S</sup>| (the constant a comes out as its arg). Then a
 robust least-squares fit on wrapped residuals (scipy least_squares, soft-L1
 loss, weights |Z|). Comparing
 modulo S makes slips to a neighboring turn cost nothing; fitting unwrapped
 offsets instead failed on hard cards, where weak stretches made the unwrapping
-slip. Step f1 shows it: relative to the strip's spiral, the refitted model
+slip. Step f1 shows it: relative to the low-res spiral, the refitted model
 (yellow) has a one-turn wave whose amplitude is the center correction, next to
-the same curve for the true center, spacing and phase (red). Over only a few
+the same curve for the true center, spacing and phase (pale green). Over only a few
 turns, spacing and drift can't be told apart (3 turns: &minus;3% spacing).</p>
-<p><b>Tried and not kept: a second pass</b> (Nov 2026): sample the strip again
+<p><b>Tried and not kept (with the strip): a second pass</b> (Nov 2026): sample the strip again
 along the refitted spiral and refit, reading off any one-turn wave and slope
 still left. The fitted wave dropped from ~0.14 to ~0.01 px and yellow lay
 flat, but the center did not improve (20 cards: median 0.175 &rarr; 0.168 px, better on 9 of 20,
@@ -866,21 +898,25 @@ trace and sound don't change either. Instead the report shows step f twice:
 f1 as the pipeline sees it, and f2 relative to the true spiral, where
 yellow is the refit's remaining error (typical card: 0.10 px rms, a small
 one-turn wave and slope) and green is the drift alone (3.4 px rms).</p>
-<figure><img src="card/img/f_explain.png" alt=""><figcaption>How to read step f, a cartoon. Top: a toy card; the strip follows the cyan spiral (center 0.45 S and spacing 4% off), each column is a radial line &plusmn;S about it (grey), and the offset is the distance from the cyan spiral to the nearest groove (magenta dot, outward +). Middle: the offsets along the strip, unrolled: one wave per turn from the center error, a slow rise from the spacing error, and a copy for every turn of the groove, one spacing apart. Bottom: modulo the spacing, as in step f: only the nearest groove, in &minus;S/2&hellip;+S/2, wrapping when the next turn becomes nearer. A, B, C: the same three columns in all three panels.</figcaption></figure>
+<figure><img src="card/img/f_explain.png" alt=""><figcaption>How to read step f, a cartoon. Top: a toy card; the rectangle follows the cyan spiral (center 0.45 S and spacing 4% off), each column is a radial line &plusmn;S/2 about it (grey), and the offset is the distance from the cyan spiral to the nearest groove (violet dot, outward +). Middle: the offsets along the rectangle, unrolled: one wave per turn from the center error, a slow rise from the spacing error, and every turn of the groove, one spacing apart. Bottom: modulo the spacing, as in step f: only the nearest groove, in &minus;S/2&hellip;+S/2, wrapping when the next turn becomes nearer. A, B, C: the same three columns in all three panels.</figcaption></figure>
 
-<h2>P3.5 The trace</h2>
-<p>Local offsets: Z smoothed along the strip (Gaussian, default &sigma; 48 px: the
-groove's sideways path is smooth, so heavy smoothing only removes noise).
-Reference: the refitted spiral plus the slowly varying residual (circular mean
-of |Z|e<sup>2&pi;i(o &minus; model)/S</sup> over &sigma; 300 px, kept within &plusmn;S/2 of the spiral). Each
-column's trace is the groove nearest the reference. Groove identity comes from
-the fitted spiral, so noise and gaps can't cause lasting slips; the price is that
-grooves must stay within S/2 of one spiral. (Unwrapping the slow residual can
-follow larger drift, but in weak stretches it slipped turns and never came
-back.)</p>
+<h2>P3.5 The path</h2>
+<p>Between wedge centers the offsets are interpolated as phasors |Z|e<sup>2&pi;io/S</sup>
+(so a weak wedge counts little), at every column. Pass 1's path is the
+refitted model (P3.4, unwrapped) plus the interpolated offset's difference
+from it, wrapped to &plusmn;S/2: each column takes the groove nearest the refitted
+spiral. Pass 2's path is pass 1's plus the new offsets' difference from it,
+again within &plusmn;S/2. Groove identity therefore comes from the fitted spiral,
+so noise and gaps can't cause lasting slips; the price is that a groove must
+stay within S/2 of the spiral, as with the strip (its reference was also kept
+within &plusmn;S/2 of the model). On the measured real card the drift stays within
+~8 px of a fitted spiral, well inside S/2 = 14.5 px. A possible later check:
+a lathe can't cross a groove it has cut, so at any angle the grooves keep
+their order; in the rectangle a turn's neighbours are one column-turn away,
+so a misnamed groove would show as two turns claiming one groove.</p>
 
 <h2>P3.6 Sound readout</h2>
-<p>Per column, the land on both sides (mean over &plusmn;3 px at &plusmn;S/2) minus the traced
+<p>Per column, the land on both sides (mean over &plusmn;3 px at &plusmn;S/2) minus the path's
 bottom (mean over &plusmn;3 px): the cut depth, &ge; 0. Relative to its own average over
 300 px of groove (the nominal depth fades at the ends of the recording):
 sound = depth/average &minus; 1, which can't go below &minus;1 (no cut); 0 where the
@@ -892,29 +928,68 @@ Window width (typical cards, median correlation over 5 seeds, Nov 2026):
 &plusmn;3 px. (The JS version had measured 0.935 / 0.948 / 0.956 for &plusmn;1&ndash;3,
 before the grain and drift changes.)</p>
 
-<h2>P3.7 How well it works</h2>
-<figure><img class="wide" src="card/img/d_coherence.png" alt=""><figcaption>Step d: |Z| around the answer (typical card, seed 1). White +: hand mark; cyan ring: the symmetry center; red +: truth.</figcaption></figure>
-<figure><img class="wide" src="card/img/e_detail_08.png" alt=""><figcaption>Step e: a 256-px full-res detail (one of 16 spots; click a box in step a of the report to switch). The groove&rsquo;s depth follows the sound (dark: deep). Red: trace (magenta: wrong groove); green: true centerline.</figcaption></figure>
-<figure><img class="wide" src="card/img/j_sound.png" alt=""><figcaption>Step j: the sound read from the groove's depth (red) against the truth (green).</figcaption></figure>
+<h2>P3.6b Alternatives tried for the full-res stage (Nov 2026)</h2>
+<p>On the 20 cards (5 seeds per preset), median path rms typical / loud / hard /
+clean, and the hard cards' wrong-groove share. Sound correlation was the same
+for all of them, within ~0.005: the readout and the grain limit it, not the
+path.</p>
 <table>
-<tr><th>Preset (5 seeds)</th><th>Low-res center</th><th>Refit center</th><th>Trace rms</th><th>Wrong groove</th><th>No cut</th><th>Sound readout corr.</th></tr>
-<tr><td>Clean</td><td class="n">0.14&ndash;0.33 px</td><td class="n">0.09&ndash;0.33 px</td><td class="n">0.51&ndash;0.83 px</td><td class="n">0</td><td class="n">0.5&ndash;0.6%</td><td class="n">0.960&ndash;0.976</td></tr>
-<tr><td>Typical</td><td class="n">0.14&ndash;0.35 px</td><td class="n">0.09&ndash;0.33 px</td><td class="n">0.54&ndash;0.84 px</td><td class="n">0</td><td class="n">0.5&ndash;0.6%</td><td class="n">0.891&ndash;0.910</td></tr>
-<tr><td>Loud</td><td class="n">0.14&ndash;0.36 px</td><td class="n">0.09&ndash;0.34 px</td><td class="n">0.61&ndash;0.91 px</td><td class="n">0</td><td class="n">7.6&ndash;7.7%</td><td class="n">0.930&ndash;0.945</td></tr>
-<tr><td>Hard</td><td class="n">0.17&ndash;0.39 px</td><td class="n">0.16&ndash;0.43 px</td><td class="n">0.99&ndash;1.70 px</td><td class="n">0.03&ndash;0.41%</td><td class="n">4.7&ndash;4.8%</td><td class="n">0.800&ndash;0.829</td></tr>
+<tr><th>Method</th><th>Path rms, px</th><th>Hard: wrong groove</th><th>Time</th></tr>
+<tr><td>Strip (the pipeline until Nov 2026, <code>cardlab/strip.py</code>): columns every 3 px, rows &plusmn;S, linear trend removed, cos&sup2; window; refit on the columns; trace = groove nearest a reference (refitted spiral + residual smoothed over 300 px), Z smoothed over 48 px</td><td class="n">0.59 / 0.68 / 1.32 / 0.56</td><td class="n">0.25%</td><td class="n">0.54 s</td></tr>
+<tr><td>Strip, cos&sup2; &plusmn;S, mean or nothing removed</td><td class="n">0.50 / 0.57 / 1.28 / 0.45</td><td class="n">0.19%</td><td class="n"></td></tr>
+<tr><td>Strip, one period untapered (rows &plusmn;S/2)</td><td class="n">0.27 / 0.32 / 1.21 / 0.16</td><td class="n">0.15%</td><td class="n">0.52 s</td></tr>
+<tr><td>Strip, two periods untapered (rows &plusmn;S)</td><td class="n">1.62 / 1.65 / 2.97 / 1.61</td><td class="n">0.36%</td><td class="n"></td></tr>
+<tr><td>Pixel sectors: each annulus pixel to its nearest arm and one of 40 sectors per turn (cells), three passes over the full frame (refit, drift, bands re-centered on the groove)</td><td class="n">0.22 / 0.28 / 1.07 / 0.18</td><td class="n">0.01%</td><td class="n">3.3 s</td></tr>
+<tr><td>Unrolled rectangle, pass 1 only</td><td class="n">0.21 / 0.26 / 1.06 / 0.16</td><td class="n">0.06%</td><td class="n">0.20 s</td></tr>
+<tr><td>Unrolled rectangle, pass 2 rows centered on the groove</td><td class="n">0.23 / 0.29 / 1.13 / 0.19</td><td class="n">0.53%</td><td class="n">0.37 s</td></tr>
+<tr><td><b>Unrolled rectangle, pass 2 rows midway between the lands (now)</b></td><td class="n">0.15 / 0.16 / 0.81 / 0.08</td><td class="n">0.07%</td><td class="n">0.37 s</td></tr>
 </table>
-<p class="muted">Python pipeline, all turns, default settings, drift 3.2 px (hard 5 px); from card/results.json (Nov 2026). Hand marks 6&ndash;26 px off
-(hard: 13&ndash;53 px). Trace rms: distance from each traced point to the nearest true groove centerline.
-Sound: correlation of the read-out depth signal with the true sound of the traced groove.</p>
+<p><b>Why the strip was worse.</b> Its path followed only ~90% of the groove's
+drift (path error vs. true drift: slope &minus;0.10, correlation &minus;0.57 on typical
+cards). Its &plusmn;S window takes in the neighbouring turns, which drift
+independently, and they pull the estimate toward the spiral: the more of them
+in the window, the stronger the pull (rect &plusmn;S slope &minus;0.39, cos&sup2; &plusmn;S &minus;0.10,
+one period &minus;0.02). Removing the linear trend cost a little more
+(<code>experiments/strip_window.py</code>).</p>
+<p><b>Also tried and not kept.</b> Pixel sectors: a cos&sup2; taper across the band
+(biases the offset toward the window's center), removing each cell's mean,
+20 or 80 sectors per turn, smoothing along the groove, low resolution, and
+dropping weak cells (the |Z| weighting already discounts them); an error
+breakdown showed the cell size wasn't the limit (an ideal path from 40 cells
+per turn: 0.05 px). Unrolled rectangle: a tilt per wedge (slope along the
+groove from the phase step between columns; 1.9 / 4.9 px on two cards, too
+noisy); a path without the geometry model (within &plusmn;S/2 of the low-res
+spiral: the same on typical cards). Results: <code>experiments/cell_coherence_results.md</code>,
+<code>cell_error_breakdown_results.md</code>, <code>strip_window_results.md</code>,
+<code>unrolled_wedges_results.md</code>.</p>
+<p>The JS check (<code>checks/compare_with_js.sh</code>) compares the strip with the
+frozen card_js.html, so it no longer covers the pipeline's full-res stage.</p>
+
+<h2>P3.7 How well it works</h2>
+<figure><img class="wide" src="card/img/d_coherence.png" alt=""><figcaption>Step d: |Z| around the answer (typical card, seed 1). White +: hand mark; cyan ring: the symmetry center; pale green +: the true center.</figcaption></figure>
+<figure><img class="wide" src="card/img/e_detail_08.png" alt=""><figcaption>Step e: a 256-px full-res detail (one of 16 spots; click a box in step a of the report to switch). The groove&rsquo;s depth follows the sound (dark: deep). Orange: path (magenta: wrong groove, none on this card); green: true centerline.</figcaption></figure>
+<figure><img class="wide" src="card/img/j_sound.png" alt=""><figcaption>Step j: the sound read from the groove's depth (orange) against the truth (green).</figcaption></figure>
+<table>
+<tr><th>Preset (5 seeds)</th><th>Low-res center</th><th>Refit center</th><th>Path rms</th><th>Wrong groove</th><th>No cut</th><th>Sound readout corr.</th></tr>
+<tr><td>Clean</td><td class="n">0.14&ndash;0.33 px</td><td class="n">0.09&ndash;0.35 px</td><td class="n">0.06&ndash;0.11 px</td><td class="n">0</td><td class="n">0.5&ndash;0.6%</td><td class="n">0.953&ndash;0.972</td></tr>
+<tr><td>Typical</td><td class="n">0.14&ndash;0.35 px</td><td class="n">0.10&ndash;0.35 px</td><td class="n">0.14&ndash;0.22 px</td><td class="n">0</td><td class="n">0.5&ndash;0.6%</td><td class="n">0.886&ndash;0.906</td></tr>
+<tr><td>Loud</td><td class="n">0.14&ndash;0.36 px</td><td class="n">0.10&ndash;0.35 px</td><td class="n">0.15&ndash;0.25 px</td><td class="n">0</td><td class="n">7.6&ndash;7.7%</td><td class="n">0.924&ndash;0.941</td></tr>
+<tr><td>Hard</td><td class="n">0.17&ndash;0.39 px</td><td class="n">0.16&ndash;0.52 px</td><td class="n">0.44&ndash;1.29 px</td><td class="n">0&ndash;0.2%</td><td class="n">4.7&ndash;4.8%</td><td class="n">0.796&ndash;0.825</td></tr>
+</table>
+<p class="muted">Python pipeline (unrolled rectangle and wedges), all turns, default settings, drift 3.2 px (hard 5 px); from card/results.json (Nov 2026). Hand marks 6&ndash;26 px off
+(hard: 13&ndash;53 px). Path rms: distance from each point of the path to the nearest true groove centerline.
+Sound: correlation of the read-out depth signal with the true sound of the traced groove. With the strip
+(until Nov 2026) the trace was 0.51&ndash;0.83 / 0.54&ndash;0.84 / 0.61&ndash;0.91 / 0.99&ndash;1.70 px and the sound the same within ~0.005.</p>
 <ul>
 <li>On the idealized card, <b>geometry and tracking are solved</b>: center to
 ~0.1&ndash;0.3 px after the refit, from a hand mark tens of px off (the low-res
-center doesn't use the mark), spacing to 0.01&ndash;0.05%, and the trace stays within
-~0.5&ndash;0.9 px of the groove centerline (1&ndash;1.7 px on hard cards), through
+center doesn't use the mark), spacing to 0.01&ndash;0.05%, and the path stays within
+~0.1&ndash;0.25 px of the groove centerline (0.4&ndash;1.3 px on hard cards), through
 the gaps where the sound lifts the stylus out of the card. The groove's own
 drift, ~3 px from turn to turn, is what limits the refitted center.</li>
 <li><b>The sound comes out of the depth</b> with correlation ~0.9 at the measured
-grain level (0.96&ndash;0.98 without grain); doubling the grain (hard) brings it to ~0.8.</li>
+grain level (0.95&ndash;0.97 without grain); doubling the grain (hard) brings it to ~0.8.
+A better path didn't change it: the readout and the grain limit it.</li>
 </ul>
 
 <h3>Next steps</h3>
@@ -927,8 +1002,8 @@ spectrum.</li>
 <li>Put the card's imperfections back one at a time (warp, slow height drift,
 dust, damage) once the idealized pipeline is settled.</li>
 <li>A stretch term in the refit (r&middot;cos 2&alpha;, r&middot;sin 2&alpha;): the low-res
-center survives a 3% stretch (P3.2), but the refit and the strip would not
-cope with more than ~0.3%.</li>
+center survives a 3% stretch (P3.2), but the refit and the path would not
+cope with more than ~0.3% (the rows must stay within reach of the groove).</li>
 </ul>
 
 <p><a href="explain.html">Explain controls</a> &middot; <a href="spacing.html">Spacing page</a> &middot; <a href="center.html">Center page</a> &middot; <a href="card.html">Card page</a></p>

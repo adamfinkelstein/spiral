@@ -71,7 +71,8 @@ The card is flat with paper grain (level measured on the sonorine scans),
 ~40 turns at 29 px groove spacing, and the sound cut into the groove's depth
 (hill-and-dale); where the stylus rises above the card the groove disappears.
 From a hand-marked center: spacing (FFT) and center/spacing/phase (spiral
-coherence) at low resolution, then an unrolled strip at full resolution, a
-robust geometry refit, the groove trace and the sound read from the depth,
+coherence) at low resolution, then the annulus unrolled into a rectangle
+along that spiral and cut into wedges (1/40 turn) at full resolution, a robust
+geometry refit on the wedges, the groove's path and the sound read from the depth,
 all scored against the truth over many seeds. The earlier in-browser version
 is `card_js.html`.
