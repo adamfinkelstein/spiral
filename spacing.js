@@ -196,7 +196,7 @@ function drawProfile(p) {
   if (peak.edge || peak.weak) {
     ctx.fillStyle = '#ffb020';
     ctx.fillText(peak.edge ? '⚠ maximum on the edge of the search window: no reliable spacing (the pipeline stops)'
-      : `⚠ peak too weak (prominence ${peak.prominence.toFixed(2)} < 0.65): no reliable spacing (the pipeline stops)`, right, T + 50);
+      : `⚠ peak less than 2× its background (prominence ${peak.prominence.toFixed(2)} < ln 2): no reliable spacing`, right, T + 50);
   }
 }
 

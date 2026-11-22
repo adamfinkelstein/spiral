@@ -23,7 +23,7 @@ class LowResSettings:
     turn_weight_power: float = 0.5   # FFT input weighted by r^-power about the mark
     spacing_window: float = 0.5      # search ± this fraction of the expected peak radius (frequency): 0.5-1.5 x size / nominal
     profile_smoothing: float = 1.5   # bins, Gaussian, before the peak search
-    min_prominence: float = 0.65     # log magnitude above the trough line; below it: no reliable spacing
+    min_prominence: float = float(np.log(2))  # peak at least 2x its background (log magnitude above the trough line)
     symmetry_window: float = 0.12    # sigma of the Gaussian window about the map's peak, x the marked outer radius
     symmetry_search: float = 1.5     # the symmetry center lies within this many sigma of the peak
 
@@ -216,7 +216,7 @@ def low_res_stage(full, mark, nominal_spacing, settings=LowResSettings()):
         best = int(round(peak))
         on_edge = best in window
         reason = "is on the edge of the search window" if on_edge else \
-            f"is too weak (prominence {peak_prominence(profile, best):.2f} < {settings.min_prominence})"
+            f"is too weak (prominence {peak_prominence(profile, best):.2f} < ln 2: less than 2x its background)"
         raise SpacingNotFound(f"the profile's maximum {reason} ({measured * scale:.2f} px, nominal {nominal_spacing:.2f} px)")
     spiral, z_map, coherence = find_center(image, mark, scale, measured, settings)
     return LowResResult(scale, image, mask, spectrum, profile, window, peak, measured * scale, z_map, coherence, spiral)

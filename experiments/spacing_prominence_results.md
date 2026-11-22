@@ -20,9 +20,11 @@ large ≤ 0.17; nominal 1.7 × on the window's edge (already caught); no spiral
 peaks (1.6–2.8): a real peak, at the varying-spacing limit, which a
 prominence test can't and shouldn't reject.
 
-Threshold: `min_prominence = 0.65` (cardlab `LowResSettings`, fftspacing.js
-`profilePeak`): every correct peak ≥ 0.89, every wrong one not already on the
-window's edge ≤ 0.41 (≤ 0.49 including edge ones); the peak must be about
-twice its background (e^0.65 ≈ 1.9). Below it, the spacing counts as not
+Threshold: `min_prominence = ln 2 ≈ 0.69` (cardlab `LowResSettings`,
+fftspacing.js `profilePeak`; first 0.65, rounded to a factor of 2 for a
+justifiable constant): the peak must be at least twice its background
+(geometric-mean magnitude over the ring, since the profile averages
+log(1 + |F|)). Every correct peak ≥ 0.89 (2.4×), every wrong one not already
+on the window's edge ≤ 0.41 (1.5×; ≤ 0.49 including edge ones). Below it, the spacing counts as not
 found (`SpacingNotFound`; the page skips the coherence center). To check on
 real depth maps: their correct peaks may be weaker.

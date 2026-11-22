@@ -150,7 +150,8 @@ Pages serves them (nothing is built on GitHub).
   survivable, so an edge peak now fails the card (`lowres.SpacingNotFound`;
   build_card.py records {"failed": ...} and the report lists it; the page
   shows no spacing and skips the coherence center). Also a weak peak:
-  prominence (height above the trough line, log magnitude) < 0.65
+  prominence (height above the trough line, log magnitude) < ln 2, i.e. the
+  peak less than twice its background (first 0.65; rounded for the paper)
   (`min_prominence`, `profilePeak({ minProminence })`): correct peaks ≥ 0.89
   (cards) / 1.08 (spirals), wrong ones not on the edge ≤ 0.41, no groove
   ≤ 0.21 (experiments/spacing_prominence.py). This catches a nominal far too

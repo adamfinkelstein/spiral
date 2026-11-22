@@ -208,7 +208,7 @@ function fftInput(norm, mask, mark, spacing, ex) { // fills fftIn
 const peakProfile = new Float64Array(NBINS);
 let peak = { rho: NaN, spacing: NaN, lo: NaN, hi: NaN, edge: false };
 
-function profilePeak({ target, window = 0.5, blur = 1.5, minProminence = 0.65 }) {
+function profilePeak({ target, window = 0.5, blur = 1.5, minProminence = Math.LN2 }) {
   const R = Math.ceil(3 * blur);
   for (let i = 0; i < NBINS; i++) {
     if (!(blur > 0)) { peakProfile[i] = profile[i]; continue; }
@@ -247,7 +247,8 @@ function profilePeak({ target, window = 0.5, blur = 1.5, minProminence = 0.65 })
     if (a < 0) rho += Math.max(-2, Math.min(2, -b / (2 * a)));
   }
   // no reliable spacing: a maximum on the window's edge, or one standing less
-  // than minProminence above the trough line (as cardlab's min_prominence)
+  // than minProminence = ln 2 above the trough line, i.e. less than twice its
+  // background (as cardlab's min_prominence)
   const weak = !edge && prominence < minProminence;
   peak = { rho, spacing: edge || weak ? NaN : N / rho, measured: N / rho, lo, hi, edge, weak, prominence };
   return peak;

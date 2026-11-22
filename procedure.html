@@ -191,7 +191,10 @@ low-frequency bump inside it, not on its edge: before this check a wrong
 spacing (e.g. 37 or 61 px instead of 29) came out silently. So the peak must
 also stand out: its <b>prominence</b>, its height above the trough line at the
 peak, P(&rho;<sub>i</sub>) &minus; line(&rho;<sub>i</sub>), in log magnitude (a log ratio of peak to
-background), must be at least 0.65 (the peak about twice its background).
+background), must be at least ln 2 &asymp; 0.69: the peak must be at least
+<b>twice its local background</b> (strictly, twice in geometric-mean magnitude
+over the ring, since the profile averages log(1&nbsp;+&nbsp;|F|)). The factor was
+chosen empirically, in the gap between correct and wrong peaks below.
 Measured (<code>experiments/spacing_prominence.py</code>): correct peaks 0.89&ndash;1.91
 on the 26 cards and 1.08&ndash;4.0 on the page's spirals (noise up to 3, offsets,
 aspect, rings, few turns); wrong ones not already on the edge at most 0.41
@@ -751,7 +754,7 @@ outside, so an edge peak now fails the card instead of falling back to it. It ne
 precise: the refit (P3.4) fits the spacing again. The groove has few useful harmonics, and the profile's
 own ripple (from the annulus edges) spoiled the harmonic sum's trough samples
 (it locked &minus;11% off on some cards). If the peak is on the window's edge,
-or if its prominence above the trough line is under 0.65 (Part 1, step 4),
+or if it is less than twice its background (prominence under ln 2; Part 1, step 4),
 the card fails with <code>SpacingNotFound</code> (no test card has; the FFT spacing is
 within 0.08% on typical cards, 0.11% on hard ones). Until Nov 2026 the window
 was &plusmn;10%, the smoothing 1 bin, and the nominal was also used when the peak
