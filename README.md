@@ -16,7 +16,7 @@ Estimate the ring spacing from the 2D Fourier transform.
   nudge, double-click to recenter).
 - Right: log |FFT| of that image, zero frequency at the center.
 - Below: radial profile of the FFT; the spacing is its peak after smoothing
-  (1.5 bins), searched within ±50% of the radius where the target spacing
+  (1 bin), searched within ±50% of the radius where the target spacing
   would put it (drawn in red),
   the same rule as the card pipeline.
 - Controls for ring spacing, start/end radius, phase, aspect, radius offsets

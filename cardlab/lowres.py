@@ -22,9 +22,9 @@ class SpacingNotFound(Exception):
 class LowResSettings:
     turn_weight_power: float = 0.5   # FFT input weighted by r^-power about the mark
     spacing_window: float = 0.5      # search ± this fraction of the expected peak radius (frequency): 0.5-1.5 x size / nominal
-    profile_smoothing: float = 1.5   # bins, Gaussian, before the peak search
+    profile_smoothing: float = 1.0   # bins, Gaussian, before the peak search
     min_prominence: float = float(np.log(2))  # peak at least 2x its background (log magnitude above the trough line)
-    symmetry_window: float = 0.12    # sigma of the Gaussian window about the map's peak, x the marked outer radius
+    symmetry_window: float = 1 / 8   # sigma of the Gaussian window about the map's peak, x the marked outer radius
     symmetry_search: float = 1.5     # the symmetry center lies within this many sigma of the peak
 
 

@@ -154,9 +154,15 @@ worse everywhere (table in step 7). Then the 512&times;512 FFT.</li>
 frequency) and average:
 <div class="eq">P(r) = (1/n<sub>r</sub>) &sum; L(u,v) &nbsp; over round(&radic;(u&sup2;+v&sup2;)) = r</div>
 Only radii up to 256 are used (beyond, the bins cover only the corners).</li>
-<li>Smooth P with a Gaussian of 1.5 bins (removes speckle and the fringes from
-the spiral's start and end radii; 3 bins merged the peaks of large spacings;
-none: better at spacing 10, worse at 20, and worst on the cards).</li>
+<li>Smooth P with a Gaussian of 1 bin (removes speckle and the fringes from
+the spiral's start and end radii). Tested 0, 1, 1.5, 2 and 3 bins: none was
+worst on the cards; 3 merged the peaks of large spacings; on the page's
+spirals 1 bin was best or tied (spacing 40 with noise 1.5: 0.36% vs. 0.49 /
+0.79% for 1.5 / 2 bins), on the cards 2 bins a little better (median 0.020
+vs. 0.023 / 0.024% for 1.5 / 1), all far inside the error budget. 1 bin was
+chosen as the round value (Nov 2026; it was 1.5). A scale-free alternative
+would be a third of the peak's natural width, FFT size / annulus width
+(&asymp; 1.1 bins here, 1.6 on the cards).</li>
 </ol>
 <h3>Where the peaks are</h3>
 <p>A point at radius &rho; in the transform is a pattern repeating &rho; times
@@ -242,7 +248,7 @@ up to &plusmn;3%; at &plusmn;5&ndash;10% it fails. The FFT is 10&ndash;40&times;
 budget. So a method that never lands on the wrong peak matters more than the
 last tenth of a percent, and failing on spirals with only 2&ndash;3 turns is
 acceptable.</p>
-<figure><img class="wide" src="procedure/09_profile_peak.png" alt=""><figcaption>The default spiral. White: the radial profile; red: smoothed by 1.5 bins, drawn only inside the search window, 0.5&ndash;1.5 &times; the expected radius (dashed); its highest point (dot) gives the spacing (10.00 px). Purple bar: the estimate on a 0&ndash;64 px scale.</figcaption></figure>
+<figure><img class="wide" src="procedure/09_profile_peak.png" alt=""><figcaption>The default spiral. White: the radial profile; red: smoothed by 1 bin, drawn only inside the search window, 0.5&ndash;1.5 &times; the expected radius (dashed); its highest point (dot) gives the spacing (10.00 px). Purple bar: the estimate on a 0&ndash;64 px scale.</figcaption></figure>
 
 <h2>5. Earlier: the harmonic-sum score (until Nov 2026)</h2>
 <p>The page used to score each candidate first-peak radius &rho; by how far
@@ -279,7 +285,7 @@ variation locked onto one region's spacing.</p>
 <tr><td>0</td><td>Hand-mark error</td><td>&sigma; 4 px per axis; radii &plusmn;1%</td><td>a slider, 0&ndash;20 px</td></tr>
 <tr><td>2</td><td>Turn weighting</td><td>1/&radic;r about the mark, capped at 2<i>s</i><sub>0</sub></td><td>none, 1/&radic;r, 1/r</td></tr>
 <tr><td>3</td><td>Mask (from the hand mark), mean removed inside it</td><td>ramp 1 spacing; no Hann window</td><td>Hann on top of the mask: worse; no mask + Hann: worse</td></tr>
-<tr><td>3</td><td>Profile smoothing</td><td>1.5 bins</td><td>0, 1, 1.5, 3 (also on the cards)</td></tr>
+<tr><td>3</td><td>Profile smoothing</td><td>1 bin</td><td>0, 1, 1.5, 2, 3 (also on the cards); was 1.5</td></tr>
 <tr><td>4</td><td>Sub-bin refinement</td><td>5-bin least-squares parabola after removing the trough line</td><td>3-bin parabola (2&times; worse on cards); re-searching the whole window after the subtraction (not kept: could move the peak); a line through the valley bottoms instead of the halfway troughs: the deepest point in 0.5&ndash;1 / 1&ndash;1.5 &times; the peak radius about the same, the first dip walking downhill fragile (stops on ripple: 3.5 vs 1.0% at spacing 40 with noise)</td></tr>
 <tr><td>4</td><td>Search window</td><td>0.5&ndash;1.5 &times; the expected radius 512&nbsp;/&nbsp;<i>s</i><sub>0</sub></td><td>&plusmn;10/20/50% identical on cards and spirals; &times;0.5&ndash;2 before</td></tr>
 </table>
@@ -356,7 +362,7 @@ splits into lobes, and the fit locks onto the brightest lobe, 5 px off at
 aspect 0.98 and 20 px at 1.05. The map stays symmetric under a 180&deg; turn
 about the true center, though (Adam's observation), and the self-convolution
 finds that symmetry: for g = (|Z| &minus; its window mean) &times; a Gaussian window
-(&sigma; = 0.12 &times; the marked outer radius: 24 px on the default spiral) about the
+(&sigma; = 1/8 of the marked outer radius: 25 px on the default spiral) about the
 peak, C(s) = &sum;<sub>p</sub> g(p)&middot;g(s &minus; p) is largest at s = 2c<sub>0</sub>, where every
 term is g(p)&sup2;. It runs on a crop about the peak, M&times;M with M the power of two
 &ge; 6&sigma; (the crop is circular here, as is the map); the center is searched
@@ -739,7 +745,7 @@ the idealized card has no slow height drift, dust or scratches.</p>
 soft annulus mask as the only window (a Hann window on top starved the outer
 turns: over 40 cards, spacing rms error 0.071 &rarr; 0.046% and the peak 11 &rarr; 8
 bins wide without it); the mean is subtracted inside the mask only. The
-spacing is the peak of the radial profile (smoothed by 1.5 bins) within
+spacing is the peak of the radial profile (smoothed by 1 bin) within
 0.5&ndash;1.5 &times; the radius expected from the nominal (the device spec; why:
 Part 1, step 4), refined below a bin by a parabola through the 5 bins
 around it after subtracting the local slope (a line through the halfway
@@ -756,7 +762,7 @@ own ripple (from the annulus edges) spoiled the harmonic sum's trough samples
 (it locked &minus;11% off on some cards). If the peak is on the window's edge,
 or if it is less than twice its background (prominence under ln 2; Part 1, step 4),
 the card fails with <code>SpacingNotFound</code> (no test card has; the FFT spacing is
-within 0.08% on typical cards, 0.11% on hard ones). Until Nov 2026 the window
+within 0.09% on typical cards, 0.12% on hard ones). Until Nov 2026 the window
 was &plusmn;10%, the smoothing 1 bin, and the nominal was also used when the peak
 was more than 3% from it; that rule turned cards cut at 25.9 or 32.2 px (the
 range over Tomaz's five cards, searched with the 29-px nominal) into 9.5&ndash;12.9%
@@ -785,7 +791,7 @@ is the FFT's (the full-res refit tunes it). The hand mark only places the
 mask: the map covers the frame, so there is no search window.</p>
 <p><b>The center is the map's center of point symmetry</b> near its brightest
 pixel (<code>lowres.symmetry_center</code>): g = (|Z| &minus; its window mean) &times; a
-Gaussian window (&sigma; = 0.12 &times; the marked outer radius, ~61 low-res px or 11
+Gaussian window (&sigma; = 1/8 of the marked outer radius, ~64 low-res px or 12
 spacings) about the peak, on a crop of &plusmn;3&sigma;, convolved with itself (scipy
 fftconvolve, ~8 ms); the maximum, searched within 1.5&sigma; of the peak, is at
 twice the center (half-pixel steps, then a parabola). The kernel reaches the
@@ -892,10 +898,10 @@ before the grain and drift changes.)</p>
 <figure><img class="wide" src="card/img/j_sound.png" alt=""><figcaption>Step j: the sound read from the groove's depth (red) against the truth (green).</figcaption></figure>
 <table>
 <tr><th>Preset (5 seeds)</th><th>Low-res center</th><th>Refit center</th><th>Trace rms</th><th>Wrong groove</th><th>No cut</th><th>Sound readout corr.</th></tr>
-<tr><td>Clean</td><td class="n">0.14&ndash;0.33 px</td><td class="n">0.09&ndash;0.32 px</td><td class="n">0.51&ndash;0.82 px</td><td class="n">0</td><td class="n">0.5&ndash;0.6%</td><td class="n">0.960&ndash;0.976</td></tr>
-<tr><td>Typical</td><td class="n">0.14&ndash;0.36 px</td><td class="n">0.09&ndash;0.33 px</td><td class="n">0.54&ndash;0.83 px</td><td class="n">0</td><td class="n">0.5&ndash;0.6%</td><td class="n">0.891&ndash;0.910</td></tr>
-<tr><td>Loud</td><td class="n">0.14&ndash;0.36 px</td><td class="n">0.09&ndash;0.33 px</td><td class="n">0.61&ndash;0.90 px</td><td class="n">0</td><td class="n">7.6&ndash;7.7%</td><td class="n">0.930&ndash;0.945</td></tr>
-<tr><td>Hard</td><td class="n">0.17&ndash;0.42 px</td><td class="n">0.15&ndash;0.43 px</td><td class="n">0.99&ndash;1.69 px</td><td class="n">0.03&ndash;0.41%</td><td class="n">4.7&ndash;4.8%</td><td class="n">0.800&ndash;0.829</td></tr>
+<tr><td>Clean</td><td class="n">0.14&ndash;0.33 px</td><td class="n">0.09&ndash;0.33 px</td><td class="n">0.51&ndash;0.83 px</td><td class="n">0</td><td class="n">0.5&ndash;0.6%</td><td class="n">0.960&ndash;0.976</td></tr>
+<tr><td>Typical</td><td class="n">0.14&ndash;0.35 px</td><td class="n">0.09&ndash;0.33 px</td><td class="n">0.54&ndash;0.84 px</td><td class="n">0</td><td class="n">0.5&ndash;0.6%</td><td class="n">0.891&ndash;0.910</td></tr>
+<tr><td>Loud</td><td class="n">0.14&ndash;0.36 px</td><td class="n">0.09&ndash;0.34 px</td><td class="n">0.61&ndash;0.91 px</td><td class="n">0</td><td class="n">7.6&ndash;7.7%</td><td class="n">0.930&ndash;0.945</td></tr>
+<tr><td>Hard</td><td class="n">0.17&ndash;0.39 px</td><td class="n">0.16&ndash;0.43 px</td><td class="n">0.99&ndash;1.70 px</td><td class="n">0.03&ndash;0.41%</td><td class="n">4.7&ndash;4.8%</td><td class="n">0.800&ndash;0.829</td></tr>
 </table>
 <p class="muted">Python pipeline, all turns, default settings, drift 3.2 px (hard 5 px); from card/results.json (Nov 2026). Hand marks 6&ndash;26 px off
 (hard: 13&ndash;53 px). Trace rms: distance from each traced point to the nearest true groove centerline.

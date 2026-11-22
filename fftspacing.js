@@ -208,7 +208,7 @@ function fftInput(norm, mask, mark, spacing, ex) { // fills fftIn
 const peakProfile = new Float64Array(NBINS);
 let peak = { rho: NaN, spacing: NaN, lo: NaN, hi: NaN, edge: false };
 
-function profilePeak({ target, window = 0.5, blur = 1.5, minProminence = Math.LN2 }) {
+function profilePeak({ target, window = 0.5, blur = 1, minProminence = Math.LN2 }) {
   const R = Math.ceil(3 * blur);
   for (let i = 0; i < NBINS; i++) {
     if (!(blur > 0)) { peakProfile[i] = profile[i]; continue; }

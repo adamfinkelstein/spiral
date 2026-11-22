@@ -33,8 +33,8 @@ Adam's preferences and open questions.
   `mapPeak`, `mapAt` (bilinear Z), `symmetryCenter` (point symmetry of the
   map near its peak: self-convolution of the windowed zero-mean |Z| on an
   M×M crop, M = power of two ≥ 6σ, at most N; max at twice the center),
-  `coherenceCenter(src, spacing, mark, windowFraction = 0.12, search = 1.5)`
-  (σ = 0.12 × mark.rOuter, center within 1.5σ of the peak; phase = arg Z at
+  `coherenceCenter(src, spacing, mark, windowFraction = 1 / 8, search = 1.5)`
+  (σ = mark.rOuter / 8, center within 1.5σ of the peak; phase = arg Z at
   the center). No DOM. Bright arms, so Z has no minus sign (Python's
   grooves do). Same rules as cardlab's find_center.
 - `explain.html` — help page for `spacing.html` controls ("Explain"
@@ -166,8 +166,9 @@ Pages serves them (nothing is built on GitHub).
   hold, Adam): a second strip pass only when the refit corrects a lot.
 - Spacing search (Nov 2026, `experiments/spacing_window.py`, results in
   `experiments/spacing_window_results.md`): window ±50% (then of the nominal spacing; now of the expected peak radius, below)
-  (`spacing_window`; ±10/20/50% identical), profile smoothing 1.5 bins
-  (`profile_smoothing`; 1.5 a little better than 1, 0 worst), and no
+  (`spacing_window`; ±10/20/50% identical), profile smoothing 1.5 bins, now
+  1 bin (`profile_smoothing`; cards: 2 ≥ 1.5 ≥ 1 by 0.004% median, spirals:
+  1 best or tied, 2 worst under noise; 0 worst on cards), and no
   fallback to the nominal (now not even for an edge peak, which fails): the old
   rule (nominal if > 3% off) turned cards cut at 25.9 / 32.2 px searched
   with the 29-px nominal into 9.5–12.9% errors (peak itself right to 0.08%).
@@ -203,7 +204,7 @@ Pages serves them (nothing is built on GitHub).
   clean: 0.16–0.30 px median at any stretch ≤ 3% (none > 1 px); unstretched
   0.28 vs J0's 0.04 px, fine since the refit searches ±1.5 spacings and
   fits the center (Adam: no need for sub-pixel here). σ 3 handles only 1%.
-  Now σ = 0.12 × the marked outer radius (≈ 11 spacings), search ±1.5σ.
+  Now σ = r_outer / 8 (≈ 12 spacings; was 0.12 × r_outer), search ±1.5σ.
   Hard cards: ~0.8 px unstretched, 1 of 5 fails at 2%. The full-res refit
   has no stretch term yet (a 1% stretch moves outer turns ±28 px).
 - Gradient-based centers dropped (Adam's decision, Nov 2026): the spiral
@@ -240,7 +241,7 @@ Pages serves them (nothing is built on GitHub).
   still takes the strip and model to show.
 - Results (Python, 5 seeds, symmetry center; J0 fit before it gave
   0.01–0.16 px and the same trace and sound): typical — low-res center
-  0.14–0.36 px, refit 0.09–0.33 px, trace 0.54–0.84 px, no wrong groove,
+  0.14–0.35 px, refit 0.09–0.33 px, trace 0.54–0.84 px, no wrong groove,
   sound corr 0.89–0.91 (drift 3.2 px from Nov 2026; before: trace
   0.39–0.63, sound 0.89–0.92);
   (results before the drift change:) clean 0.98–0.99; loud 0.94–0.96; hard center 0.3–2.0 px, trace
@@ -341,7 +342,7 @@ Robustness (8 random offset sets, uniform in ±amp at each knot):
   `noiseField[2..3]`), the soft annulus mask (`annulusMask`, ramp 1
   spacing), `normalizeInMask`, 1/√r about the mark with the mask as the only
   window (`fftInput`; no Hann), and the spacing as the peak of the profile
-  smoothed by 1.5 bins within 0.5–1.5 × the expected peak radius N /
+  smoothed by 1 bin within 0.5–1.5 × the expected peak radius N /
   target, i.e. ±50% in frequency (`profilePeak({ target,
   window, blur })` → `peak` = { rho, spacing, measured, lo, hi, edge }; sub-bin
   position: the trough line (profile at 0.5 and 1.5 × the peak bin)
@@ -377,8 +378,8 @@ Robustness (8 random offset sets, uniform in ±amp at each knot):
   (Adam): the coherence center tolerates ~5% spacing error and the refit
   re-fits the spacing (±2.5%), so a method that never lands on the wrong
   peak matters more than precision; failing with 2–3 turns is acceptable.
-- Coherence aligned with cardlab (Nov 2026): σ = 0.12 × the marked outer
-  radius (was 3 spacings here, 10 on cards), center within 1.5σ of the
+- Coherence aligned with cardlab (Nov 2026): σ = r_outer / 8 (first 0.12 ×
+  r_outer; was 3 spacings here, 10 on cards), center within 1.5σ of the
   peak, kernel reach = outer radius + 2 spacings. Page: same centers (aspect
   1.05 0.12 vs 0.10 px). Cards (experiments/symmetry_center.py, re-run with
   the current drift, 360 runs per rule): medians a little better, failures

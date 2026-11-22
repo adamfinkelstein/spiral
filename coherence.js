@@ -167,9 +167,9 @@ function symmetryCenter(peak, sigma, search = 1.5) {
 // center, phase (radians, same convention as renderSpiral's p.phase), the map
 // peak, a relative coherence score, the crop size and timings in ms.
 // As cardlab/lowres.py find_center: kernel reach = marked outer radius + 2
-// spacings (here at most N/2 − 1), symmetry window σ = 0.12 × the marked outer
+// spacings (here at most N/2 − 1), symmetry window σ = 1/8 of the marked outer
 // radius, the center within 1.5σ of the map's peak.
-function coherenceCenter(src, spacing, mark, windowFraction = 0.12, search = 1.5) {
+function coherenceCenter(src, spacing, mark, windowFraction = 1 / 8, search = 1.5) {
   const t0 = performance.now();
   const sumAbs = coherenceMap(src, spacing, Math.min(N / 2 - 1, Math.ceil(mark.rOuter + 2 * spacing)));
   const t1 = performance.now();

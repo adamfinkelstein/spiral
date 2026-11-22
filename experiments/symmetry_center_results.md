@@ -96,3 +96,13 @@ outer radius (≈ 11 spacings), center within 1.5σ of the peak, reach r_outer +
 
 Failures over 20 px: σ 10 S 7 of 360 (hard cards at 2–3%), σ 0.12 r 1 of 360
 (a loud card at 3%, 221 px). Adopted: σ 0.12 r, in cardlab and on the page.
+
+## σ = r_outer / 8 (Nov 2026)
+
+Rounded from 0.12 × r_outer, re-run on the same cards: identical within
+noise (all 360 runs: median 0.266 vs 0.265 px, 5.8 vs 5.6% over 1 px; the
+same 3 cases over 20 px, all hard seed 1 at 3% stretch, where the FFT peak
+is now too weak for the prominence check, so this experiment fell back to
+the nominal spacing; the pipeline itself stops there with SpacingNotFound).
+Adopted r_outer / 8. On the spacing page's spirals also identical (aspect
+1.05: 0.118 vs 0.120 px).

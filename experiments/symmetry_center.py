@@ -71,7 +71,8 @@ def j0_center(z_map, spacing):
 METHODS = {  # name: function of (z_map with the old reach, z_map with the current reach, spacing, outer radius), low-res px
     "fft+J0": lambda z_old, z_new, spacing, r_outer: j0_center(z_old, spacing),
     "sym σ 10 S (before)": lambda z_old, z_new, spacing, r_outer: symmetry_center(z_old, 10 * spacing, search=3),
-    "sym σ 0.12 r_outer (now)": lambda z_old, z_new, spacing, r_outer: symmetry_center(z_new, 0.12 * r_outer, search=1.5),
+    "sym σ 0.12 r_outer": lambda z_old, z_new, spacing, r_outer: symmetry_center(z_new, 0.12 * r_outer, search=1.5),
+    "sym σ r_outer/8 (now)": lambda z_old, z_new, spacing, r_outer: symmetry_center(z_new, r_outer / 8, search=1.5),
 }
 
 

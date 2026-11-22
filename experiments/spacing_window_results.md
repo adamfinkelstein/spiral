@@ -62,3 +62,11 @@ cards 0.016 %, off-nominal 0.037 % (about the same); first dip walking
 downhill from the peak: 0.012 % / 0.041 %, but it stops on the profile's
 ripple after 9–10 bins (troughs are ~95 bins away), and on drawn spirals it
 failed worse (spacing 40, noise 1.5: 3.5 vs 1.0 %). Kept the halfway troughs.
+
+## Profile smoothing 1 / 1.5 / 2 bins (Nov 2026)
+
+Same 26 cards (median / max): 1 bin 0.024 / 0.118%, 1.5 bins 0.023 /
+0.108%, 2 bins 0.020 / 0.093%; hard cards 0.049 / 0.025 / 0.012%. On the
+spacing page's drawn spirals 1 bin was best or tied and 2 bins worst under
+noise (spacing 40, noise 1.5: 0.36 / 0.49 / 0.79%). Chose 1 bin, the round
+value, all far inside the error budget (~±1% for full quality).
