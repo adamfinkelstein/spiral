@@ -13,8 +13,8 @@ LOW_SIZE = 1024
 @dataclass
 class LowResSettings:
     turn_weight_power: float = 0.5   # FFT input weighted by r^-power about the mark
-    spacing_window: float = 0.1      # search ± this fraction of the nominal spacing
-    spacing_tolerance: float = 0.03  # farther than this from nominal: use nominal
+    spacing_window: float = 0.5      # search ± this fraction of the expected peak radius (frequency): 0.5-1.5 x size / nominal
+    profile_smoothing: float = 1.5   # bins, Gaussian, before the peak search
     symmetry_window: float = 10      # spacings, Gaussian window (sigma) about the map's peak, for the symmetry center
 
 
@@ -63,12 +63,13 @@ def log_spectrum(image, mask):
     return np.log1p(np.abs(np.fft.fftshift(np.fft.fft2(centered))))
 
 
-def radial_profile(spectrum):
+def radial_profile(spectrum, smoothing):
     size = spectrum.shape[0]
     radius = np.rint(pixel_radius(size, size / 2 + 0.5, size / 2 + 0.5)).astype(int).ravel()
     sums = np.bincount(radius, spectrum.ravel())
     counts = np.bincount(radius)
-    return gaussian_filter1d(sums / np.maximum(counts, 1), 1)
+    profile = sums / np.maximum(counts, 1)
+    return gaussian_filter1d(profile, smoothing) if smoothing > 0 else profile
 
 
 def parabolic_peak(values, index):
@@ -82,14 +83,18 @@ def fft_spacing(image, mask, mark, scale, nominal, settings):
     radius = pixel_radius(size, mark.x / scale, mark.y / scale)
     weight = np.maximum(radius, 2 * nominal) ** -settings.turn_weight_power
     spectrum = log_spectrum(image * weight / weight.mean(), mask)
-    profile = radial_profile(spectrum)
-    low = int(np.floor(size / ((1 + settings.spacing_window) * nominal)))
-    high = int(np.ceil(size / ((1 - settings.spacing_window) * nominal)))
+    profile = radial_profile(spectrum, settings.profile_smoothing)
+    # window in frequency, about the expected peak radius size / nominal: from
+    # halfway to zero frequency to halfway to the second harmonic (window 0.5),
+    # so for a true spacing within ~0.67-1.33 x nominal only the fundamental fits
+    expected = size / nominal
+    low = int(np.floor((1 - settings.spacing_window) * expected))
+    high = int(np.ceil((1 + settings.spacing_window) * expected))
     best = low + int(np.argmax(profile[low : high + 1]))
     on_edge = best in (low, high)
     peak = best if on_edge else parabolic_peak(profile, best)
     spacing = size / peak
-    ok = not on_edge and abs(spacing / nominal - 1) < settings.spacing_tolerance
+    ok = not on_edge  # a peak on the window's edge: use the nominal
     return spectrum, profile, (low, high), peak, spacing, ok
 
 

@@ -1,7 +1,9 @@
-// Ring-spacing estimate from the 2D FFT (shared by spacing.html and card.html):
-// FFT, radial profile, harmonic-sum score with the coarse-to-fine advanced
-// search, and turn weighting. No DOM; uses N from render.js (the image size,
-// a power of two). Load after render.js.
+// Ring-spacing estimate from the 2D FFT (shared by spacing.html and the frozen
+// card_js.html): FFT, radial profile, the hand mark's annulus mask and turn
+// weighting, and the spacing as the peak of the smoothed profile (all as
+// cardlab/lowres.py). No DOM; uses N from render.js (the image size, a power
+// of two). Load after render.js. (The harmonic-sum score with its
+// coarse-to-fine search, used until Nov 2026, is described in procedure.html.)
 
 // ---------- FFT ----------
 
@@ -124,139 +126,6 @@ function computeSpectrum(src, removeDC = true, useWindow = true) {
   return max;
 }
 
-// ---------- Harmonic sum ----------
-
-// Rings with spacing s put peaks in the profile at k * rho1, rho1 = N / s.
-// For each candidate fundamental rho1, add up over harmonics k = 1..K of
-//   profile(k rho1) - (profile((k - 1/2) rho1) + profile((k + 1/2) rho1)) / 2,
-// i.e. peak height above the troughs halfway to its neighbours. Subtracting
-// the troughs removes the slowly varying background and keeps rho1 / 2 and
-// 2 rho1 from scoring as high as the true rho1. The sum is divided by
-// sqrt(K): a plain average lets a multiple of rho1 that hits one or two strong
-// harmonics win, while a plain sum lets tiny rho1 win by piling up many small
-// ripples (tested over spirals/rings, widths 2-8, spacings 3-60). The profile
-// is first smoothed with a Gaussian of H_BLUR bins, which removes fringe
-// ripple and speckle (mostly hurting the trough samples) and cut the rms error
-// for rings about 3x; much wider (3 bins) merges the peaks of large spacings.
-// Only radii up to N/2 are
-// used (beyond that the bins only cover the FFT's corners).
-const H_RMAX = N / 2;
-const H_MIN = N / 64, H_MAX = H_RMAX / 1.5, H_STEP = 0.05; // spacing 64 .. ~3 px
-const H_COUNT = Math.floor((H_MAX - H_MIN) / H_STEP) + 1;
-const hScore = new Float64Array(H_COUNT);
-const hRho = i => H_MIN + i * H_STEP;
-let hBest = { rho: NaN, spacing: NaN };
-const H_BLUR = 1.5;
-const smoothProfile = new Float64Array(NBINS);
-
-function profileAt(r) { // linear interpolation between bins of the smoothed profile
-  const i = Math.floor(r), f = r - i;
-  return smoothProfile[i] * (1 - f) + smoothProfile[i + 1] * f;
-}
-
-// Coarse to fine, for spirals whose local spacing varies (radius offsets):
-// a spread of spacings within ±v turns each harmonic k into a band of
-// relative width ±v around k·rho1, so higher harmonics blur more and their
-// troughs vanish once k·v approaches 1/4. A stage with v > 0 smooths the
-// profile with a Gaussian of σ = v/2 in log radius (the same relative width
-// for every harmonic), uses only harmonics k <= 1/(4v), and finds the best
-// rho1; the next stage halves v and searches only within ±v (of the previous
-// stage) around that answer. vMin is the expected spacing variation (device
-// tolerance): stages run from max(0.3, 3·vMin) down to vMin, and the answer
-// is the vMin stage's. Refining further locks onto one region's spacing
-// instead of the average when the spacing really varies (tested). vMin = 0:
-// stages down to ~0.02, then the plain sharp score above (full precision for
-// a perfect spiral). hScore (plotted) is always the final stage's score.
-const LOG_DU = 0.004; // log-radius grid step
-const LOG_M = Math.ceil(Math.log(NBINS - 2) / LOG_DU) + 1;
-const logRaw = new Float64Array(LOG_M), logSm = new Float64Array(LOG_M);
-const stageScore = new Float64Array(H_COUNT);
-let hStages = [];
-let hWin = null; // advanced mode: { lo, hi } rho range searched, and whether the answer hit its edge
-
-function smoothedLog(v) { // returns ρ → profile smoothed by σ = v/2 in log ρ
-  for (let j = 0; j < LOG_M; j++) logRaw[j] = profileAt(Math.min(NBINS - 2, Math.exp(j * LOG_DU)));
-  const sg = v / 2 / LOG_DU, R = Math.ceil(3 * sg);
-  for (let j = 0; j < LOG_M; j++) {
-    let acc = 0, w = 0;
-    for (let d = -R; d <= R; d++) {
-      const g = Math.exp(-(d * d) / (2 * sg * sg));
-      acc += g * logRaw[Math.min(LOG_M - 1, Math.max(0, j + d))];
-      w += g;
-    }
-    logSm[j] = acc / w;
-  }
-  return r => {
-    const x = Math.log(Math.max(1, r)) / LOG_DU, i = Math.min(LOG_M - 2, Math.floor(x)), f = x - i;
-    return logSm[i] * (1 - f) + logSm[i + 1] * f;
-  };
-}
-
-// Harmonic score at sample i with profile function P, using at most kMax harmonics.
-function scoreAt(i, P, kMax) {
-  const rho = hRho(i);
-  let sum = 0, K = 0;
-  for (let k = 1; k <= kMax && (k + 0.5) * rho <= H_RMAX; k++, K++) {
-    sum += P(k * rho) - 0.5 * (P((k - 0.5) * rho) + P((k + 0.5) * rho));
-  }
-  return K ? sum / Math.sqrt(K) : -Infinity;
-}
-
-// Best sample of `sc` within [lo, hi], refined parabolically; returns rho.
-function bestRho(sc, lo, hi) {
-  let bi = lo;
-  for (let i = lo; i <= hi; i++) if (sc[i] > sc[bi]) bi = i;
-  let rho = hRho(bi);
-  if (bi > lo && bi < hi) {
-    const a = sc[bi - 1], b = sc[bi], c = sc[bi + 1], den = a - 2 * b + c;
-    if (den < 0) rho += (0.5 * (a - c) / den) * H_STEP;
-  }
-  return rho;
-}
-const rhoIndex = rho => Math.max(0, Math.min(H_COUNT - 1, Math.round((rho - H_MIN) / H_STEP)));
-
-// opts: { advanced, vMin, target }. Advanced (default on the page): search
-// only spacings within ×0.5–2 of the target spacing (the device's nominal
-// spacing; here the true one), coarse to fine down to vMin, and flag an
-// answer on the edge of that range as unreliable. Otherwise: the original
-// single sharp stage over the whole range.
-function computeHarmonicScore(opts = {}) {
-  const advanced = !!opts.advanced, vMin = advanced ? opts.vMin || 0 : 0;
-  const R = Math.ceil(3 * H_BLUR);
-  for (let i = 0; i < NBINS; i++) { // Gaussian blur, clamped at the ends
-    let v = 0, w = 0;
-    for (let j = -R; j <= R; j++) {
-      const g = Math.exp(-(j * j) / (2 * H_BLUR * H_BLUR));
-      v += g * profile[Math.min(NBINS - 1, Math.max(0, i + j))];
-      w += g;
-    }
-    smoothProfile[i] = v / w;
-  }
-
-  hStages = [];
-  let lo = 0, hi = H_COUNT - 1;
-  hWin = null;
-  if (advanced) {
-    lo = rhoIndex(N / (2 * opts.target)); hi = rhoIndex(N / (0.5 * opts.target));
-    hWin = { lo: hRho(lo), hi: hRho(hi), edge: false };
-  }
-  const vs = [];
-  if (advanced) for (let v = Math.max(0.3, 3 * vMin); v > Math.max(vMin, 0.02) * 1.0001; v /= 2) vs.push(v);
-  vs.push(vMin); // final stage (0 = sharp)
-  for (const v of vs) {
-    const P = v > 0 ? smoothedLog(v) : profileAt, kMax = v > 0 ? Math.max(1, Math.floor(1 / (4 * v))) : Infinity;
-    const sc = v === vMin ? hScore : stageScore;
-    if (v === vMin) for (let i = 0; i < H_COUNT; i++) hScore[i] = scoreAt(i, P, kMax); // full curve, for the plot
-    else for (let i = lo; i <= hi; i++) stageScore[i] = scoreAt(i, P, kMax);
-    const rho = bestRho(sc, lo, hi);
-    hStages.push({ v, spacing: N / rho });
-    hBest = { rho, spacing: N / rho };
-    lo = Math.max(lo, rhoIndex(rho / (1 + v))); hi = Math.min(hi, rhoIndex(rho * (1 + v)));
-  }
-  if (hWin) hWin.edge = hBest.rho <= hWin.lo + 2 * H_STEP || hBest.rho >= hWin.hi - 2 * H_STEP;
-  if (!advanced) hStages = [];
-}
-
 // ---------- Even weight per turn ----------
 
 // The FFT weights each turn by its length (∝ r), so outer turns dominate the
@@ -277,3 +146,88 @@ function evenWeight(src, c, spacing, ex = 1) { // weight 1/r^ex (ex 1: equal tur
   return imgW;
 }
 
+
+// ---------- Hand mark and annulus mask (as cardlab/lowres.py) ----------
+
+// A hand mark: center and inner / outer radius of the groove's annulus. The
+// mask is a soft annulus inside the marked circles (smoothstep over `ramp` px,
+// one nominal spacing). fftInput: the image normalized inside the mask (mean
+// removed, times the mask, unit rms), times the turn weight
+// max(r, 2·spacing)^-ex about the mark (mean 1), minus its mean inside the
+// mask, so the frame outside stays 0. The mask is the FFT's only window.
+const maskArr = new Float32Array(N * N), normArr = new Float32Array(N * N), fftIn = new Float32Array(N * N);
+const smoothstep = t => { t = Math.min(1, Math.max(0, t)); return t * t * (3 - 2 * t); };
+
+function annulusMask(mark, ramp) {
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const r = Math.hypot(x + 0.5 - mark.x, y + 0.5 - mark.y);
+    maskArr[y * N + x] = smoothstep((r - mark.rInner) / ramp) * smoothstep((mark.rOuter - r) / ramp);
+  }
+  return maskArr;
+}
+
+function normalizeInMask(src, mask) { // fills normArr
+  let sm = 0, smv = 0;
+  for (let i = 0; i < N * N; i++) { sm += mask[i]; smv += mask[i] * src[i]; }
+  const mean = smv / sm;
+  let ss = 0;
+  for (let i = 0; i < N * N; i++) { normArr[i] = (src[i] - mean) * mask[i]; ss += normArr[i] * normArr[i]; }
+  const k = ss > 0 ? 1 / Math.sqrt(ss / sm) : 0;
+  for (let i = 0; i < N * N; i++) normArr[i] *= k;
+  return normArr;
+}
+
+function fftInput(norm, mask, mark, spacing, ex) { // fills fftIn
+  const r0 = 2 * spacing;
+  let sw = 0;
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const w = ex > 0 ? Math.max(Math.hypot(x + 0.5 - mark.x, y + 0.5 - mark.y), r0) ** -ex : 1;
+    fftIn[y * N + x] = w; sw += w;
+  }
+  const k = (N * N) / sw;
+  let sm = 0, smv = 0;
+  for (let i = 0; i < N * N; i++) { fftIn[i] *= norm[i] * k; sm += mask[i]; smv += mask[i] * fftIn[i]; }
+  const mean = smv / sm;
+  for (let i = 0; i < N * N; i++) fftIn[i] -= mean * mask[i];
+  return fftIn;
+}
+
+// ---------- Spacing: peak of the smoothed profile (as cardlab/lowres.py) ----------
+
+// The radial profile smoothed by a Gaussian of `blur` bins; its largest value
+// within ±window of the expected peak radius rho0 = N / target (target: the
+// device's nominal spacing), refined by a parabola through it and its
+// neighbours; spacing = N / radius. The window is set in frequency: with 0.5 it
+// runs from halfway to zero frequency (0.5 rho0) to halfway to the second
+// harmonic (1.5 rho0), so for any true spacing within ~0.67–1.33 × the target
+// the fundamental is inside and its second harmonic outside. A peak on the
+// window's edge is unreliable: the target is used instead.
+const peakProfile = new Float64Array(NBINS);
+let peak = { rho: NaN, spacing: NaN, lo: NaN, hi: NaN, edge: false };
+
+function profilePeak({ target, window = 0.5, blur = 1.5 }) {
+  const R = Math.ceil(3 * blur);
+  for (let i = 0; i < NBINS; i++) {
+    if (!(blur > 0)) { peakProfile[i] = profile[i]; continue; }
+    let v = 0, w = 0;
+    for (let j = -R; j <= R; j++) {
+      const g = Math.exp(-(j * j) / (2 * blur * blur));
+      v += g * profile[Math.min(NBINS - 1, Math.max(0, i + j))];
+      w += g;
+    }
+    peakProfile[i] = v / w;
+  }
+  const rho0 = N / target;
+  const lo = Math.max(1, Math.floor((1 - window) * rho0));
+  const hi = Math.min(NBINS - 2, Math.ceil((1 + window) * rho0));
+  let best = lo;
+  for (let i = lo; i <= hi; i++) if (peakProfile[i] > peakProfile[best]) best = i;
+  const edge = best === lo || best === hi;
+  let rho = best;
+  if (!edge) {
+    const a = peakProfile[best - 1], b = peakProfile[best], c = peakProfile[best + 1], den = a - 2 * b + c;
+    if (den < 0) rho += (0.5 * (a - c)) / den;
+  }
+  peak = { rho, spacing: edge ? target : N / rho, measured: N / rho, lo, hi, edge };
+  return peak;
+}

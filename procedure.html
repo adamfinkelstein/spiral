@@ -47,31 +47,33 @@ Source: <a href="https://github.com/adamfinkelstein/spiral">github.com/adamfinke
 <h1 class="part" id="part1">Part 1 &mdash; Ring spacing (<a href="spacing.html">spacing.html</a>)</h1>
 
 <div class="box">
-<b>In one paragraph.</b> Find a rough center from image gradients (RANSAC
-over pairs of gradient lines, corrected for the spiral's sideways offset,
-with the image blurred along the rings to resist noise). Weight the image by
-1/&radic;r about that center so outer turns don't dominate. Take the 2D
-Fourier transform and its radial profile. Score each candidate spacing by how
-well its harmonics stand above the troughs between them, searching only
-&times;0.5&ndash;2 of the nominal spacing and refining coarse to fine, from
-broad bands down to the expected spacing variation. Precision: about
-0.3&ndash;0.7% when the spiral is perfect, even with heavy noise; about
-0.5&ndash;2.5% when the local spacing varies by up to &plusmn;15&ndash;30%.
-Then, as in the card pipeline, the spiral coherence map gives the center to
-a few hundredths of a pixel and the phase (step 8).
+<b>In one paragraph.</b> As on the cards (Part 3), a hand mark (simulated
+here: the true center and radii plus small errors) gives the annulus that
+holds the spiral. Normalize the image inside that soft annulus mask, weight
+it by 1/&radic;r about the marked center so outer turns don't dominate, and
+take the 2D Fourier transform (the mask is its only window) and its radial
+profile. The spacing is the highest point of the profile, smoothed by 1.5
+bins, within 0.5&ndash;1.5 &times; the radius where the nominal spacing would put it
+(step 4). Precision: about
+0.05&ndash;0.5% when the spiral is perfect (spacing 5&ndash;20), even with noise;
+about 1&ndash;2% when the local spacing varies by up to &plusmn;15&ndash;30%. Then the
+spiral coherence map gives the center to a few hundredths of a pixel and the
+phase (step 8). Every step is the card pipeline's low-res stage (Part 3,
+P3.1&ndash;P3.2). Until Nov 2026 the page had no mark: it found a rough center
+from gradient lines (step 1, dropped), used the whole image with a Hann
+window, and scored spacings by a harmonic sum (step 5, replaced).
 </div>
 
 <h2>0. Inputs and assumptions</h2>
 <table>
 <tr><th>Input</th><th>Meaning</th></tr>
-<tr><td>Image</td><td>512&times;512 grey image, bright spiral on dark. The center can be anywhere (sub-pixel) and is <i>not</i> given.</td></tr>
-<tr><td>Nominal spacing <i>s</i><sub>0</sub></td><td>The device's target ring spacing. The true spacing is assumed to be within &times;0.5&ndash;2 of it. (In the app the true spacing stands in for it.)</td></tr>
-<tr><td>Expected variation <i>v</i></td><td>How much the local spacing may vary along the spiral (device tolerance), default &plusmn;10%.</td></tr>
-<tr><td>Spiral sense</td><td>Which way the spiral winds, needed for the sideways-offset correction in step 1.</td></tr>
+<tr><td>Image</td><td>512&times;512 grey image, bright spiral on dark, anywhere in the frame (sub-pixel center).</td></tr>
+<tr><td>Hand mark</td><td>Center and inner / outer radius, as annotated on a card. Simulated: the true values plus an error (Hand-mark error, default &sigma; 4 px per axis; radii &plusmn;1%).</td></tr>
+<tr><td>Nominal spacing <i>s</i><sub>0</sub></td><td>The device's target ring spacing. The true spacing is assumed to be within about 0.67&ndash;1.33 &times; of it (the search window, step 4). (In the app the true spacing stands in for it.)</td></tr>
+<tr><td>Spiral sense</td><td>Which way the spiral winds (for the coherence map of step 8).</td></tr>
 </table>
 <p>The model is an Archimedean spiral r = b&theta; with b = spacing&nbsp;/&nbsp;2&pi;
-(the radius grows by one spacing per turn). b appears throughout: it is also the
-sideways offset that makes a spiral differ from circles (step 1).</p>
+(the radius grows by one spacing per turn).</p>
 
 <h3>Test images</h3>
 <p>The app renders the spiral per pixel (not with canvas strokes), from the
@@ -97,71 +99,27 @@ the same offsets distort a spiral with fewer turns more.</li>
 <figure><img src="procedure/03_noisy.png" alt=""><figcaption>…plus noise &sigma; 0.6. This is the running example below.</figcaption></figure>
 </div>
 
-<h2>1. Rough center from gradient lines</h2>
-<p>The spacing itself doesn't need the center (the Fourier magnitude ignores
-where the spiral is), but step 2 weights turns by their radius, so it needs the
-center to within a pixel or so. A centroid of bright pixels would be biased
-whenever some angles are brighter or missing. Instead, every pixel on a ring's
-edge has a gradient pointing across the ring, so the line through it along the
-gradient passes (nearly) through the center; the center is where most lines
-meet.</p>
-<ol>
-<li><b>Blur and gradients.</b> Gaussian blur &sigma; 1 px, then Sobel gradients everywhere.</li>
-<li><b>Choose lines.</b> Lines are undirected, so each falls in one of 64
-orientation bins over 180&deg;. Keep in each bin the 150 strongest pixels above a
-global floor (the 70th percentile of gradient magnitude). Every orientation
-gets an equal say, while orientations with no real edges stay nearly empty
-instead of filling with noise. Weight = magnitude &minus; floor. (Keeping a
-fixed top percentage instead was tried first; it ties the count to image size
-and lets noise fill it.)</li>
-<li><b>Spiral correction.</b> On a spiral, the normal at a point at angle
-&alpha; misses the center by b sideways: it passes through
-center + b&middot;(&minus;sin&nbsp;&alpha;,&nbsp;cos&nbsp;&alpha;) (exactly
-b(r&sup2;+b&sup2;)/(r&sup2;+2b&sup2;); radially only &asymp;&nbsp;b&sup2;/r). For a candidate
-center, each line is shifted back by that amount (no trigonometry needed: the
-direction comes from the pixel's offset from the candidate). Rings need no
-correction.</li>
-<li><b>RANSAC over pairs of lines.</b> Draw a line with probability &prop; its
-weight, and a partner from an orientation bin chosen with probability &prop;
-(lines in the bin)&nbsp;&middot;&nbsp;sin&sup2;(angle between the bins): an
-intersection's error grows like 1/sin of the angle, so near-perpendicular
-pairs are favoured. Their (corrected) intersection is a candidate center,
-scored by &Sigma;&nbsp;w&middot;min(d&sup2;,&nbsp;&epsilon;&sup2;) over a fixed random subset of
-lines (d = corrected distance, &epsilon; = 2 px). 600 candidates scored
-against 1500 lines.</li>
-<li><b>Refine.</b> Weighted least-squares intersection of the inlier lines
-(d&nbsp;&lt;&nbsp;&epsilon;), recomputing inliers and corrections three times.</li>
-<li><b>Tangential blur rounds.</b> Blur the image along circles about the
-current center (Gaussian &sigma; 3 px along the local tangent, bilinear samples;
-shorter near the center), recompute lines and center (150 candidates, 1000
-scoring lines, since it starts close), and repeat until the center moves less
-than 1 px, at most 3 rounds. Blurring <i>along</i> the rings averages noise
-away without smearing across them; ~1 px accuracy is plenty for step 2.</li>
-</ol>
-<div class="figs">
-<figure><img src="procedure/03_noisy.png" alt=""><figcaption>Input (noise 0.6).</figcaption></figure>
-<figure><img src="procedure/04_tangential.png" alt=""><figcaption>After the last tangential blur. Green pixels: inlier lines; green +: estimate; red circle: true center (3.2 px apart here, after 3 rounds).</figcaption></figure>
-</div>
-<table>
-<tr><th>Case (off-center spirals)</th><th>No tangential blur</th><th>Tangential blur 3 px</th></tr>
-<tr><td>No noise (spacing 10 / 20)</td><td class="n">0.03&ndash;0.08 px</td><td class="n">0.04&ndash;0.06 px</td></tr>
-<tr><td>Noise 0.3</td><td class="n">3&ndash;8 px</td><td class="n">0.5&ndash;0.8 px</td></tr>
-<tr><td>Noise 0.6</td><td class="n">6&ndash;8 px</td><td class="n">~2.2 px</td></tr>
-<tr><td>Noise 1.0</td><td class="n">18&ndash;36 px</td><td class="n">2.3&ndash;3.8 px</td></tr>
-</table>
-<p class="muted">Medians over 3 positions. The sideways correction matters most with few
-turns: at spacing 20 it took the clean error from 0.27 to 0.03 px. A
-non-circular drawing (aspect 1.02) is the hardest case (~2 px), since its
-lines no longer meet at one point. RANSAC alone was about as accurate as the
-Hough-style vote it replaced; the tangential blur did most of the work under
-noise. Cost: ~60 ms blur + ~40 ms lines + ~12 ms RANSAC per later round.</p>
+<h2>1. Rough center: tried and dropped</h2>
+<p>Until Nov 2026 the page had no hand mark and found a rough center from the
+image alone, for the turn weighting: lines along the image gradients (each
+passes nearly through the center, after a sideways correction of b for the
+spiral), intersected by RANSAC over pairs of lines, with the image blurred
+along circles about the current estimate to resist noise (a few rounds). On
+these drawn spirals it reached 0.03&ndash;0.08 px without noise and 2&ndash;4 px at
+noise 0.6&ndash;1.0, and ~2 px at aspect 1.02. It was dropped because it was too
+unstable on realistic card data (Part 3, simulated cards): there it missed
+by 20&ndash;200 px, since the sound cut into the groove's depth gives the
+gradients a large component along the groove, so only 2&ndash;4% of lines agree
+on any point. The page now uses the hand mark, as the card pipeline does, and
+finds the precise center from the spiral coherence map (step 8). The center
+page (Part 2) still uses this center for its tangential blur.</p>
 
 <h2>2. Weight the turns</h2>
 <p>In the Fourier transform each turn contributes in proportion to its length,
 which grows with r, so outer turns dominate. The magnitude spectrum can't tell
 inner from outer turns (that information is in the phase), so the weighting
-has to happen in the image, before the transform, about the center from step
-1. Multiply each pixel by</p>
+has to happen in the image, before the transform, about the marked center
+(formerly the gradient-line center, step 1). Multiply each pixel by</p>
 <p class="eq">w(r) = max(r, 2<i>s</i><sub>0</sub>)<sup>&minus;&frac12;</sup>,
 &nbsp; normalized to mean 1</p>
 <p>The cap near the center avoids amplifying noise where there are no rings.</p>
@@ -169,7 +127,7 @@ has to happen in the image, before the transform, about the center from step
 <figure><img src="procedure/05_weighted.png" alt=""><figcaption>The noisy example weighted by 1/&radic;r (displayed darker).</figcaption></figure>
 </div>
 <table>
-<tr><th>Spacing, offsets (advanced search, 10%)</th><th>by length (none)</th><th>1/&radic;r</th><th>1/r (equal turns)</th></tr>
+<tr><th>Spacing, offsets (harmonic sum, before the mask)</th><th>by length (none)</th><th>1/&radic;r</th><th>1/r (equal turns)</th></tr>
 <tr><td>10, &plusmn;0.1</td><td class="n">0.37 / 0.9</td><td class="n">0.75 / 1.3</td><td class="n">0.87 / 1.8</td></tr>
 <tr><td>10, &plusmn;0.25</td><td class="n">0.80 / 1.4</td><td class="n">0.48 / 1.8</td><td class="n">1.20 / 2.4</td></tr>
 <tr><td>10, &plusmn;0.5</td><td class="n">2.5 / 14.6</td><td class="n">2.4 / 8.2</td><td class="n">3.5 / 9.6</td></tr>
@@ -184,17 +142,21 @@ with the estimated center were identical to those with the true center.</p>
 
 <h2>3. Fourier transform and radial profile</h2>
 <ol>
-<li>Subtract the image mean (removes the bright zero-frequency spot), apply a
-Hann window (fades to black at the borders; removes cross-shaped streaks from
-the transform treating the image as periodic), take the 512&times;512 FFT.</li>
+<li><b>Mask</b>: a soft annulus from the hand mark (smoothstep over one
+nominal spacing inside the marked circles). The image is normalized inside
+it (mean removed, times the mask, unit rms), weighted (step 2), and its mean
+inside the mask is removed again, so the frame outside stays exactly 0. The
+mask is the only window: a Hann window on top made the estimate worse (below
+and on the cards), and the old whole-image pipeline with a Hann window was
+worse everywhere (table in step 7). Then the 512&times;512 FFT.</li>
 <li>L(u,v) = log(1&nbsp;+&nbsp;|F|), divided by its largest value away from zero frequency.</li>
 <li><b>Radial profile</b>: assign each FFT pixel to the bin round(distance from zero
 frequency) and average:
 <div class="eq">P(r) = (1/n<sub>r</sub>) &sum; L(u,v) &nbsp; over round(&radic;(u&sup2;+v&sup2;)) = r</div>
 Only radii up to 256 are used (beyond, the bins cover only the corners).</li>
 <li>Smooth P with a Gaussian of 1.5 bins (removes speckle and the fringes from
-the spiral's start and end radii; cut rms error for rings about 3&times;;
-3 bins merged the peaks of large spacings).</li>
+the spiral's start and end radii; 3 bins merged the peaks of large spacings;
+none: better at spacing 10, worse at 20, and worst on the cards).</li>
 </ol>
 <h3>Where the peaks are</h3>
 <p>A point at radius &rho; in the transform is a pattern repeating &rho; times
@@ -206,121 +168,131 @@ narrow band rather than a smooth wave, fainter harmonics at
 <figure><img src="procedure/08_fft_clean.png" alt=""><figcaption>log |FFT| of the clean spiral, with red circles at the expected harmonics.</figcaption></figure>
 <figure><img src="procedure/06_fft.png" alt=""><figcaption>log |FFT| of the weighted noisy example: noise adds a flat floor, the rings still stand out near the center.</figcaption></figure>
 </div>
-<figure><img class="wide" src="procedure/09_profile_clean.png" alt=""><figcaption>Clean spiral. White: radial profile P; peaks at the harmonics (red dashed; the outer dashed pair also marks the search range ×0.5–2). Red: the final-stage score S(&rho;). Purple bar: the estimate on a 0–64 px scale.</figcaption></figure>
 
-<h2>4. Harmonic-sum score</h2>
-<p>For each candidate first-peak radius &rho;, measure how far the profile at
-each multiple stands above the points halfway to its neighbours:</p>
-<p class="eq">S(&rho;) = (1/&radic;K) &sum;<sub>k=1..K</sub> [ P&#771;(k&rho;) &minus; &frac12;P&#771;((k&minus;&frac12;)&rho;) &minus; &frac12;P&#771;((k+&frac12;)&rho;) ]</p>
-<ul>
-<li><b>Only the true &rho;<sub>1</sub> scores high.</b> There every term is a
-peak minus two troughs. At &rho;<sub>1</sub>/2 every other term samples a trough;
-at 2&rho;<sub>1</sub> the halfway points land on peaks.</li>
-<li><b>Subtracting the halfway points</b> removes the slowly falling
-background.</li>
-<li><b>Dividing by &radic;K</b> (K = number of multiples used): an average let a
-multiple of &rho;<sub>1</sub> hitting one or two strong harmonics win; a plain sum
-let tiny &rho; win by piling up ripples.</li>
-<li>Candidates in steps of 0.05; the best sample is refined by a parabola
-through it and its neighbours, &rho;* = &rho;<sub>i</sub> + 0.05&middot;&frac12;(S<sub>i&minus;1</sub>&minus;S<sub>i+1</sub>)/(S<sub>i&minus;1</sub>&minus;2S<sub>i</sub>+S<sub>i+1</sub>),
-and the spacing is <i>s</i>* = 512&nbsp;/&nbsp;&rho;*.</li>
-</ul>
-<p>This single sharp stage (the app with "Advanced peak search" off) gets a
-perfect spiral within ~0.06% (0.2&ndash;0.5% over many shapes), but fails badly
-once the local spacing varies: rings at several spacings smear each harmonic
-into a band, and the score jumps to a wrong peak (errors ~70%).</p>
+<h2>4. Spacing: the peak of the smoothed profile</h2>
+<p>The same rule as on the cards (<code>profilePeak</code> in fftspacing.js,
+<code>fft_spacing</code> in cardlab): the largest value of the smoothed profile
+within 0.5&ndash;1.5 &times; the expected peak radius &rho;<sub>0</sub> = 512&nbsp;/&nbsp;<i>s</i><sub>0</sub>,
+refined by a parabola through it and its two neighbours:
+&rho;* = &rho;<sub>i</sub> + &frac12;(P<sub>i&minus;1</sub> &minus; P<sub>i+1</sub>)/(P<sub>i&minus;1</sub> &minus; 2P<sub>i</sub> + P<sub>i+1</sub>),
+spacing = 512&nbsp;/&nbsp;&rho;*. A peak on the window's edge is unreliable, and
+the nominal is used instead (with a warning).</p>
+<p><b>Why that window.</b> The profile has peaks at &rho;<sub>1</sub>, 2&rho;<sub>1</sub>,
+3&rho;<sub>1</sub>, &hellip; and natural troughs halfway between neighbours; below the
+fundamental there is no harmonic, only zero frequency. So the window runs from
+halfway to zero frequency (0.5&nbsp;&rho;<sub>0</sub>) to halfway to the second harmonic
+(1.5&nbsp;&rho;<sub>0</sub>): set in frequency, &plusmn;50% of &rho;<sub>0</sub> (25&ndash;77 at
+spacing 10). If the true peak is at f&middot;&rho;<sub>0</sub>, the fundamental is inside
+for 0.5 &lt; f &lt; 1.5 and the second harmonic outside for f &gt; 0.75, so for any
+true spacing within ~0.67&ndash;1.33 &times; the nominal only the fundamental fits:
+three times the &plusmn;11% spread across Tomaz's cards. A narrower window only
+tightens that guarantee; a wider one admits the second harmonic on the right
+or the rise toward zero frequency on the left (annulus edges, and on real
+cards slow height drift). Until Nov 2026 the window was &plusmn;50% of the
+<i>spacing</i> (radii 0.67&ndash;2 &rho;<sub>0</sub>), whose right edge sat on the second
+harmonic at the nominal spacing. On the test spirals and cards both gave the
+same answers, even with the nominal 30&ndash;40% off (the fundamental always
+dominated); the new window is chosen for its guarantee.</p>
+<p><b>Robust before accurate.</b> The estimate doesn't need to be very
+precise, only reliable, because the later steps tolerate a few percent of
+spacing error by design: the coherence center (step 8) moved by only 0.14 px
+with the spacing 5% off, and on the cards the full-res refit fits the spacing
+itself (searching &plusmn;2.5%). So a method that never lands on the wrong peak
+matters more than the last tenth of a percent, and failing on spirals with
+only 2&ndash;3 turns is acceptable.</p>
+<figure><img class="wide" src="procedure/09_profile_peak.png" alt=""><figcaption>The default spiral. White: the radial profile; red: smoothed by 1.5 bins, drawn only inside the search window, 0.5&ndash;1.5 &times; the expected radius (dashed); its highest point (dot) gives the spacing (10.00 px). Purple bar: the estimate on a 0&ndash;64 px scale.</figcaption></figure>
 
-<h2>5. Advanced peak search</h2>
-<ol>
-<li><b>Restricted range.</b> Search only &rho; for spacings within
-&times;0.5&ndash;2 of <i>s</i><sub>0</sub>. This alone removes the catastrophic
-wrong-peak failures. (Narrower windows, &times;0.8&ndash;1.25 or
-&times;0.9&ndash;1.1, only cap the error by construction: the answer then sits
-on the window's edge and reflects the assumption more than the data.)</li>
-<li><b>Broadened bands on a log scale.</b> If the spacing varies within
-&plusmn;v, harmonic k becomes a band of relative width &plusmn;v around k&rho;<sub>1</sub>,
-so higher harmonics blur more. On a log-radius axis every band has the same
-width, so one Gaussian smoothing (&sigma; = v/2 in log &rho;) broadens all harmonics
-consistently: the score compares bands instead of points.</li>
-<li><b>Only well-separated harmonics.</b> Use harmonics k &le; 1/(4v); beyond that
-the bands of neighbouring harmonics overlap and the troughs vanish.</li>
-<li><b>Coarse to fine.</b> Start at v = max(0.3, 3&middot;v<sub>expected</sub>), find the
-best &rho;, then halve v and search only within &plusmn;v of the previous answer.</li>
-<li><b>Stop at the expected variation</b> (default 10%) instead of refining to
-sharp peaks: when the spacing really varies there is no single sharp peak, and
-each sharper stage locks onto one region's spacing instead of the average.
-(Example, spacing 20 with offsets &plusmn;0.25: 0.9% error at v = 0.3, 9.9% at v = 0.)
-At v<sub>expected</sub> = 0 it refines all the way, for a perfect spiral.</li>
-<li><b>Edge warning</b> if the answer lies on the edge of the &times;0.5&ndash;2 range.
-It rarely fires: failures usually land on a strong local peak inside the range.</li>
-</ol>
-<figure><img class="wide" src="procedure/07_profile.png" alt=""><figcaption>Running example (offsets, noise 0.6, 1/&radic;r): coarse to fine 10.12 → 9.92 → 9.87 px (stages v = 0.3, 0.15, 0.1); the true average spacing is 10. Dashed lines: the search range.</figcaption></figure>
+<h2>5. Earlier: the harmonic-sum score (until Nov 2026)</h2>
+<p>The page used to score each candidate first-peak radius &rho; by how far
+the profile at its multiples stands above the points halfway between them,
+S(&rho;) = (1/&radic;K) &sum;<sub>k</sub> [P(k&rho;) &minus; &frac12;P((k&minus;&frac12;)&rho;) &minus; &frac12;P((k+&frac12;)&rho;)],
+searched coarse to fine (the profile smoothed in log radius by &sigma; = v/2,
+harmonics k &le; 1/(4v), v halved each stage from 0.3 down to the expected
+spacing variation, 10%), within &times;0.5&ndash;2 of the nominal. It was replaced by
+the plain peak to match the card pipeline, where the harmonic sum failed: the
+groove has few useful harmonics, and the ripple from the annulus edges
+spoiled its trough samples (&minus;11% on some cards). On the page's drawn
+spirals the harmonic sum was more accurate where the local spacing varies
+(below); that is the cost of using one method for both.</p>
 <table>
-<tr><th>Spiral, offsets (local variation)</th><th>Single sharp stage</th><th>Advanced, 10%</th></tr>
-<tr><td>Spacing 10, none</td><td class="n">0.06 / 0.1</td><td class="n">0.45 / 0.5</td></tr>
-<tr><td>Spacing 10, &plusmn;0.25 (&asymp;&plusmn;17%)</td><td class="n">1.5 / 5.2</td><td class="n">0.75 / 1.6</td></tr>
-<tr><td>Spacing 10, &plusmn;0.5 (&asymp;&plusmn;33%)</td><td class="n">13 / 43</td><td class="n">2.0 / 14</td></tr>
-<tr><td>Spacing 20, &plusmn;0.1 (&asymp;&plusmn;13%)</td><td class="n">2.1 / 70</td><td class="n">0.55 / 1.1</td></tr>
-<tr><td>Spacing 20, &plusmn;0.25 (&asymp;&plusmn;33%)</td><td class="n">70 / 71</td><td class="n">2.5 / 12</td></tr>
-<tr><td>Spacing 20, &plusmn;0.5 (&asymp;&plusmn;67%)</td><td class="n">70 / 70</td><td class="n">16 / 50</td></tr>
+<tr><th>Spiral (mask, 1/&radic;r, 8 offset sets, node)</th><th>Harmonic sum</th><th>Profile peak (now)</th></tr>
+<tr><td>Spacing 10, perfect: noise 0 / 0.6 / 1.5</td><td class="n">0.39, 0.06, 0.37</td><td class="n">0.08, 0.15, 0.22</td></tr>
+<tr><td>Spacing 10, offsets &plusmn;0.1 / &plusmn;0.25 / &plusmn;0.5</td><td class="n">0.31, 0.83, 0.88 (max 6.6)</td><td class="n">0.93, 1.62, 1.97 (max 10.2)</td></tr>
+<tr><td>Spacing 20, perfect: noise 0 / 0.6 / 1.5</td><td class="n">0.06, 0.10, 0.46</td><td class="n">0.23, 0.44, 0.48</td></tr>
+<tr><td>Spacing 20, offsets &plusmn;0.1 / &plusmn;0.25 / &plusmn;0.5</td><td class="n">0.38, 2.6, 9.2 (max 41)</td><td class="n">0.89, 2.0, 22.5 (max 34)</td></tr>
+<tr><td>Spacing 5, noise 0.6 / spacing 40</td><td class="n">0.07, 0.22</td><td class="n">0.05, 1.99</td></tr>
+<tr><td>Spacing 40, radius 30&ndash;100 (under 2 turns)</td><td class="n">20 (fails)</td><td class="n">23 (fails)</td></tr>
 </table>
-<p class="muted">Median / max % error over 10 random offset sets, without turn weighting.</p>
+<p class="muted">Median spacing error, %, radius 50&ndash;200 unless noted, hand
+mark &sigma; 4 px; profile peak in the window of the time, &plusmn;50% of the spacing (harmonic sum: &times;0.5&ndash;2). Earlier
+findings for the harmonic sum (procedure history): an average over harmonics
+let a multiple of &rho;<sub>1</sub> win, a plain sum let tiny &rho; win (hence
+1/&radic;K); without the window or the coarse-to-fine stages it locked onto
+wrong peaks (~70% errors) once the spacing varied; refining past the real
+variation locked onto one region's spacing.</p>
 
 <h2>6. Parameters</h2>
 <table>
 <tr><th>Step</th><th>Parameter</th><th>Default</th><th>Explored / notes</th></tr>
-<tr><td>1</td><td>Pre-blur</td><td>&sigma; 1 px</td><td>&sigma; &asymp; 2 helped under noise before the tangential blur existed</td></tr>
-<tr><td>1</td><td>Orientation bins</td><td>64 over 180&deg;</td><td></td></tr>
-<tr><td>1</td><td>Lines per orientation</td><td>150</td><td>fixed top 5&ndash;50% of all pixels tried first</td></tr>
-<tr><td>1</td><td>Strength floor</td><td>70th percentile</td><td></td></tr>
-<tr><td>1</td><td>RANSAC</td><td>600 &times; 1500, then 150 &times; 1000; &epsilon; = 2 px; partner &prop; sin&sup2;</td><td>uniform pairs with a 30&deg; cutoff tried first; 600 &times; 3000 in every round made RANSAC 18&times; slower</td></tr>
-<tr><td>1</td><td>Tangential blur</td><td>&sigma; 3 px</td><td>0 (off), 2, 3, 5</td></tr>
-<tr><td>1</td><td>Rounds / stop</td><td>&le; 3, &lt; 1 px</td><td>5 rounds and 0.05 px: no better under noise, the estimate jitters ~1 px</td></tr>
-<tr><td>2</td><td>Turn weighting</td><td>1/&radic;r, capped at 2<i>s</i><sub>0</sub></td><td>none, 1/&radic;r, 1/r</td></tr>
-<tr><td>3</td><td>Mean subtraction, Hann window</td><td>on</td><td></td></tr>
-<tr><td>3</td><td>Profile smoothing</td><td>1.5 bins</td><td>0, 1.5, 3</td></tr>
-<tr><td>4</td><td>Candidate step</td><td>0.05 bins</td><td>+ parabolic refinement</td></tr>
-<tr><td>5</td><td>Search range</td><td>&times;0.5&ndash;2 of <i>s</i><sub>0</sub></td><td>none, &times;0.8&ndash;1.25, &times;0.9&ndash;1.1</td></tr>
-<tr><td>5</td><td>Expected variation</td><td>10%</td><td>0, 5, 10, 15%; starting v 0.1&ndash;0.4</td></tr>
+<tr><td>0</td><td>Hand-mark error</td><td>&sigma; 4 px per axis; radii &plusmn;1%</td><td>a slider, 0&ndash;20 px</td></tr>
+<tr><td>2</td><td>Turn weighting</td><td>1/&radic;r about the mark, capped at 2<i>s</i><sub>0</sub></td><td>none, 1/&radic;r, 1/r</td></tr>
+<tr><td>3</td><td>Mask (from the hand mark), mean removed inside it</td><td>ramp 1 spacing; no Hann window</td><td>Hann on top of the mask: worse; no mask + Hann: worse</td></tr>
+<tr><td>3</td><td>Profile smoothing</td><td>1.5 bins</td><td>0, 1, 1.5, 3 (also on the cards)</td></tr>
+<tr><td>4</td><td>Search window</td><td>0.5&ndash;1.5 &times; the expected radius 512&nbsp;/&nbsp;<i>s</i><sub>0</sub></td><td>&plusmn;10/20/50% identical on cards and spirals; &times;0.5&ndash;2 before</td></tr>
 </table>
 
 <h2>7. How well it works, and limits</h2>
 <table>
-<tr><th>Condition (full pipeline)</th><th>Spacing error, median / max</th></tr>
-<tr><td>Perfect spiral, any noise up to 1.5 (radius 50&ndash;200 or 30&ndash;100, spacing 10 or 20)</td><td class="n">0.1&ndash;0.7% / &le; 2%</td></tr>
-<tr><td>Local spacing varying up to &asymp;&plusmn;15%</td><td class="n">0.5&ndash;0.8% / &le; 1.8%</td></tr>
-<tr><td>Local spacing varying &asymp;&plusmn;30%</td><td class="n">2.2&ndash;2.4% / 3.7&ndash;8%</td></tr>
-<tr><td>Local spacing varying &asymp;&plusmn;67%</td><td class="n">~16% / 35% (unreliable)</td></tr>
+<tr><th>Spiral (profile peak, 8 offset sets)</th><th>Spacing error, median / max</th></tr>
+<tr><td>Perfect, spacing 5&ndash;20, noise up to 1.5</td><td class="n">0.05&ndash;0.48% / &le; 0.8%</td></tr>
+<tr><td>Perfect, spacing 40 (~4 turns)</td><td class="n">2.0% / 2.6%</td></tr>
+<tr><td>Local spacing varying, offsets &plusmn;0.1 (&asymp;&plusmn;13%)</td><td class="n">0.9% / &le; 2.4%</td></tr>
+<tr><td>Offsets &plusmn;0.25 (&asymp;&plusmn;17&ndash;33%)</td><td class="n">1.6&ndash;2.0% / &le; 3.6%</td></tr>
+<tr><td>Offsets &plusmn;0.5, spacing 10 / 20</td><td class="n">2.0% / 10%; 23% / 34% (fails)</td></tr>
+<tr><td>Under 2 turns (spacing 40, radius 30&ndash;100)</td><td class="n">23% (fails)</td></tr>
+</table>
+<p><b>The mask vs. the old whole-image pipeline</b> (with the harmonic sum;
+spacing error %, median / max over 8 offset sets): the mask helped everywhere,
+a Hann window on top of it hurt, as on the cards.</p>
+<table>
+<tr><th>Spiral</th><th>Old: no mask, Hann, &times;0.5&ndash;2</th><th>Mask, no Hann</th><th>Mask + Hann</th></tr>
+<tr><td>Spacing 10, perfect</td><td class="n">0.50 / 0.5</td><td class="n">0.26 / 0.4</td><td class="n">0.30 / 0.5</td></tr>
+<tr><td>Spacing 10, offsets &plusmn;0.1</td><td class="n">0.79 / 1.6</td><td class="n">0.14 / 0.9</td><td class="n">0.47 / 1.4</td></tr>
+<tr><td>Spacing 20, perfect</td><td class="n">0.83 / 1.0</td><td class="n">0.08 / 0.2</td><td class="n">0.52 / 1.3</td></tr>
+<tr><td>Spacing 20, &plusmn;0.25, noise 0.6</td><td class="n">3.2 / 8.3</td><td class="n">2.9 / 5.9</td><td class="n">5.8 / 15</td></tr>
 </table>
 <ul>
 <li><b>Noise is not the limit.</b> White noise spreads evenly over all frequencies
 and the radial profile averages thousands of FFT pixels per radius, so the
-spacing estimate stays within ~1&ndash;2% even at noise 1.5. Noise mainly
-affects the center (step 1), which only needs ~1 px.</li>
+spacing estimate stays within ~0.5% even at noise 1.5.</li>
 <li><b>Varying spacing is the limit.</b> The transform sees a mixture of local
 spacings; beyond about &plusmn;30% there is no single peak, and even the target
 (the average spacing) is ill defined: the Fourier transform's own
 pixel-weighted mean spacing then differs from the &theta;-average.</li>
-<li><b>Non-circular drawings</b> (aspect) make the rings elliptical, smearing the
-peaks and confusing the center.</li>
+<li><b>Few turns</b> (large spacing, small radius): the peak sits at a small
+radius, few bins wide, where the annulus edges add their own ripple.</li>
+<li><b>Non-circular drawings</b> (aspect) make the rings elliptical and smear
+the peaks; the center of step 8 still handles them (0.1 px at aspect 1.05).</li>
 </ul>
 
 <h3>Tried and not kept</h3>
 <ul>
-<li>Refining to sharp peaks (v&nbsp;=&nbsp;0) when the spacing varies (locks onto one region).</li>
-<li>Narrow search windows (answer sits on the edge).</li>
+<li>The harmonic-sum score with a coarse-to-fine search (step 5): more
+accurate on these spirals when the spacing varies, but it failed on the
+cards; replaced by the profile peak so both pipelines use one method.</li>
+<li>The rough center from gradient lines and RANSAC (step 1): too unstable on
+realistic (simulated) card data; replaced by the hand mark.</li>
+<li>A Hann window (worse than the mask alone); the whole image without a mask.</li>
 <li>1/r turn weighting (over-weights short inner turns).</li>
 <li>Tangential blur on the Fourier input: differences within &plusmn;0.2 percentage
 points either way; the transform is already noise-tolerant.</li>
 <li>Center from the centroid of bright pixels (biased by uneven brightness over angles).</li>
-<li>Keeping a fixed top percentage of gradient pixels (count tied to image size; noise fills it).</li>
-<li>Hough voting on a grid (replaced by RANSAC: grid-free and sub-pixel, similar accuracy).</li>
 </ul>
 <h3>Not yet tried</h3>
 <ul>
 <li>Estimating the spacing separately in radius bands or wedges and combining
-them robustly; this would also measure how much the spacing varies, which
-could set the expected variation automatically.</li>
+them robustly; this would also measure how much the spacing varies.</li>
+<li>Windows wider than &plusmn;50% of the expected radius (they would admit the second harmonic).</li>
 <li>Correcting for a non-circular drawing (fitting an ellipse to the rings).</li>
 </ul>
 
@@ -609,6 +581,10 @@ bounded by ~&frac12; spacing to avoid slipping a turn).</li>
 </ul>
 
 <h2>P2.9 Next: toward real cards</h2>
+<p class="muted">The plan written at this point, kept for the record. It became
+Part 3, in a simpler form: an idealized card (flat, grain only: no warp, dust,
+scratches, banding or damage yet), the sound cut into the depth rather than
+sideways, and a global pipeline as sketched below, without the patches.</p>
 <p>Real cards (e.g. the sonorine scans) differ from these chunks: the whole
 annulus is present (~40 turns, inner radius ~0.58 of the outer, outer
 &theta; &asymp; 600 rad), grooves are depressions in a noisy depth map, paper texture
@@ -638,22 +614,24 @@ turn.</li>
 <p class="src">Built in Python (<code>cardlab/</code>, <code>build_card.py</code>): <a href="card.html">card.html</a>
 is the generated report, with results over many seeds. The method was first developed in the browser
 (<a href="card_js.html">card_js.html</a>, frozen); the Python version differs in the center search (P3.2), the FFT
-window (P3.1) and the grain texture. A stage-by-stage check against the JS (<code>checks/compare_with_js.sh</code>)
+window (P3.1), the grain texture and the groove's drift (P3.0; the JS card still
+has the earlier slow drift and a small wobble). A stage-by-stage check against the JS (<code>checks/compare_with_js.sh</code>)
 found the shared stages agree to rounding.</p>
 
 <div class="box">
 <b>Current procedure.</b> Idealized card (flat, grain only) with the sound cut
 into the groove's depth &rarr; <b>low-res stage</b> (1024&sup2;, ~5.4 px spacing):
 the image masked to the hand-marked annulus &rarr; spacing = FFT radial-profile
-peak within &plusmn;10% of the nominal &rarr; center and phase from the spiral
+peak within 0.5&ndash;1.5 &times; the radius expected from the nominal &rarr; center and phase from the spiral
 coherence map (Z at every pixel by one FFT correlation, then the map's
 center of point symmetry near its peak) &rarr; <b>full-res
 stage</b>: unrolled strip along that spiral (a column every 3 px of groove, rows
 &plusmn;S at 1 px) &rarr; per-column demodulation &rarr; robust refit of the geometry,
 modulo S &rarr; trace locked to the refitted spiral &rarr; <b>sound readout</b>: the
 groove's depth along the trace. Scored against the card's truth. The report
-shows each step (a&ndash;j) large, in one column, with notes and numbers beside
-it. Lengths that should scale with resolution are set in spacings.
+shows each step (a&ndash;j, with a cartoon before f and f in two panes: as the
+pipeline sees it, and relative to the true spiral) large, in one column, with
+notes and numbers beside it. Lengths that should scale with resolution are set in spacings.
 </div>
 
 <h2>P3.0 The card model (cardlab/model.py)</h2>
@@ -695,11 +673,11 @@ over the nearest arms: where the sound lifts the stylus above the card
 groove at 0.4 rms; 7.6% at 0.7). The hand marks (center, inner and outer
 radius) are the truth plus noise.</p>
 <p>Measured on sonorine_001 (images 21&ndash;22 of the notes): spacing 29.0 px;
-grain rms 0.52 &times; the groove's rms (2.6 vs. 5.0), cells ~3 px; turns wander
-&plusmn;2 px between neighbours; annulus r &asymp; 1600&ndash;2770 px (~40 turns). Assumed: the
+grain rms 0.52 &times; the groove's rms (2.6 vs. 5.0), cells ~3 px; groove offsets
+2.9&ndash;3.5 px rms per turn, independent from turn to turn (images 21, 26, above); annulus r &asymp; 1600&ndash;2770 px (~40 turns). Assumed: the
 groove's width and shape, the sound's level and spectrum, the hand-mark error.
 Presets: <b>typical</b>, <b>loud</b> (sound 0.7 rms), <b>hard</b> (grain doubled, drift
-6 px, sound 0.6, worse hand mark), <b>clean</b> (no grain). The page lists every
+5 px, sound 0.6, worse hand mark), <b>clean</b> (no grain). The page lists every
 value with its source.</p>
 
 <h2>P3.1 Low-res stage: input and spacing</h2>
@@ -711,12 +689,21 @@ the idealized card has no slow height drift, dust or scratches.</p>
 soft annulus mask as the only window (a Hann window on top starved the outer
 turns: over 40 cards, spacing rms error 0.071 &rarr; 0.046% and the peak 11 &rarr; 8
 bins wide without it); the mean is subtracted inside the mask only. The
-spacing is the peak of the radial profile within &plusmn;10% of the nominal,
-refined parabolically. The groove has few useful harmonics, and the profile's
+spacing is the peak of the radial profile (smoothed by 1.5 bins) within
+0.5&ndash;1.5 &times; the radius expected from the nominal (the device spec; why:
+Part 1, step 4), refined parabolically. It needs to be reliable more than
+precise: the refit (P3.4) fits the spacing again. The groove has few useful harmonics, and the profile's
 own ripple (from the annulus edges) spoiled the harmonic sum's trough samples
-(it locked &minus;11% off on some cards). If the peak is on the window's edge or
-&gt; 3% from the nominal, the nominal is used instead (no test card has needed
-it; the FFT spacing is within 0.1% on typical cards, 0.5% on hard ones).</p>
+(it locked &minus;11% off on some cards). If the peak is on the window's edge,
+the nominal is used instead (no test card has needed it; the FFT spacing is
+within 0.11% on typical cards, 0.14% on hard ones). Until Nov 2026 the window
+was &plusmn;10%, the smoothing 1 bin, and the nominal was also used when the peak
+was more than 3% from it; that rule turned cards cut at 25.9 or 32.2 px (the
+range over Tomaz's five cards, searched with the 29-px nominal) into 9.5&ndash;12.9%
+errors, where the peak itself was right to 0.08%
+(<code>experiments/spacing_window.py</code>, results in
+<code>experiments/spacing_window_results.md</code>: window width made no
+difference; smoothing 1.5 a little better than 1, none the worst).</p>
 
 <h2>P3.2 Low-res stage: center and phase (the spiral coherence map)</h2>
 <p>With b = S/2&pi;, the spiral is r = b(&alpha; &minus; &phi; + 2&pi;n), so u = r/b &minus; &alpha; is
@@ -757,7 +744,9 @@ typical, loud and clean cards 0.16&ndash;0.30 px median, none over 1 px, at any
 stretch up to 3%; unstretched 0.28 px vs. the J<sub>0</sub> fit's 0.04 px, which the
 full-res refit doesn't need (it searches &plusmn;1.5 spacings for the center and
 fits it). Hard cards (drift 6 px): ~0.8 px unstretched, fine at 1%, 1 of 5
-fails at 2%, nearly all at 3%. The full-res refit has no stretch term
+fails at 2%, nearly all at 3%. (Measured with the earlier drift model, 2 px
+slow drift on typical cards and 6 px on hard ones; not yet repeated with the
+current one.) The full-res refit has no stretch term
 yet, so a stretched card would still fail there.</p>
 <p>Earlier test (<code>experiments/center_search.py</code>, results in
 <code>experiments/center_search_results.md</code>), before the symmetry center: 32
@@ -789,7 +778,7 @@ robust least-squares fit on wrapped residuals (scipy least_squares, soft-L1
 loss, weights |Z|). Comparing
 modulo S makes slips to a neighboring turn cost nothing; fitting unwrapped
 offsets instead failed on hard cards, where weak stretches made the unwrapping
-slip. Step f shows it: relative to the strip's spiral, the refitted model
+slip. Step f1 shows it: relative to the strip's spiral, the refitted model
 (yellow) has a one-turn wave whose amplitude is the center correction, next to
 the same curve for the true center, spacing and phase (red). Over only a few
 turns, spacing and drift can't be told apart (3 turns: &minus;3% spacing).</p>
@@ -825,29 +814,34 @@ sound = depth/average &minus; 1, which can't go below &minus;1 (no cut); 0 where
 average is under &frac14; of its median (the faded ends), clipped to &minus;1..3, then
 smoothed by &sigma; 3 px. It is scored against the true sound of the traced groove,
 floored at &minus;1 (where nothing was cut, the depth carries no information).
-&plusmn;3 px was best of &plusmn;1&ndash;3 (typical: correlation 0.935 / 0.948 / 0.956).</p>
+Window width (typical cards, median correlation over 5 seeds, Nov 2026):
+&plusmn;1 / 2 / 3 / 4 px give 0.875 / 0.886 / 0.896 / 0.902; the default is still
+&plusmn;3 px. (The JS version had measured 0.935 / 0.948 / 0.956 for &plusmn;1&ndash;3,
+before the grain and drift changes.)</p>
 
 <h2>P3.7 How well it works</h2>
 <figure><img class="wide" src="card/img/d_coherence.png" alt=""><figcaption>Step d: |Z| around the answer (typical card, seed 1). White +: hand mark; cyan ring: the symmetry center; red +: truth.</figcaption></figure>
 <figure><img class="wide" src="card/img/e_detail_08.png" alt=""><figcaption>Step e: a 256-px full-res detail (one of 16 spots; click a box in step a of the report to switch). The groove&rsquo;s depth follows the sound (dark: deep). Red: trace (magenta: wrong groove); green: true centerline.</figcaption></figure>
 <figure><img class="wide" src="card/img/j_sound.png" alt=""><figcaption>Step j: the sound read from the groove's depth (red) against the truth (green).</figcaption></figure>
 <table>
-<tr><th>Preset (5 seeds)</th><th>Low-res center</th><th>Trace rms</th><th>Wrong groove</th><th>No cut</th><th>Sound readout corr.</th></tr>
-<tr><td>Clean</td><td class="n">0.02&ndash;0.15 px</td><td class="n">0.35&ndash;0.60 px</td><td class="n">0</td><td class="n">0.5%</td><td class="n">0.98&ndash;0.99</td></tr>
-<tr><td>Typical</td><td class="n">0.01&ndash;0.16 px</td><td class="n">0.40&ndash;0.66 px</td><td class="n">0</td><td class="n">0.5%</td><td class="n">0.89&ndash;0.92</td></tr>
-<tr><td>Loud</td><td class="n">0.01&ndash;0.16 px</td><td class="n">0.45&ndash;0.71 px</td><td class="n">0</td><td class="n">7.7%</td><td class="n">0.94&ndash;0.96</td></tr>
-<tr><td>Hard</td><td class="n">0.3&ndash;2.0 px</td><td class="n">1.1&ndash;2.7 px</td><td class="n">0&ndash;1.9%</td><td class="n">4.7%</td><td class="n">0.75&ndash;0.81</td></tr>
+<tr><th>Preset (5 seeds)</th><th>Low-res center</th><th>Refit center</th><th>Trace rms</th><th>Wrong groove</th><th>No cut</th><th>Sound readout corr.</th></tr>
+<tr><td>Clean</td><td class="n">0.12&ndash;0.49 px</td><td class="n">0.09&ndash;0.32 px</td><td class="n">0.51&ndash;0.82 px</td><td class="n">0</td><td class="n">0.5&ndash;0.6%</td><td class="n">0.960&ndash;0.976</td></tr>
+<tr><td>Typical</td><td class="n">0.12&ndash;0.50 px</td><td class="n">0.09&ndash;0.33 px</td><td class="n">0.54&ndash;0.83 px</td><td class="n">0</td><td class="n">0.5&ndash;0.6%</td><td class="n">0.891&ndash;0.910</td></tr>
+<tr><td>Loud</td><td class="n">0.11&ndash;0.50 px</td><td class="n">0.09&ndash;0.33 px</td><td class="n">0.61&ndash;0.90 px</td><td class="n">0</td><td class="n">7.6&ndash;7.7%</td><td class="n">0.930&ndash;0.945</td></tr>
+<tr><td>Hard</td><td class="n">0.22&ndash;0.48 px</td><td class="n">0.16&ndash;0.42 px</td><td class="n">0.99&ndash;1.69 px</td><td class="n">0.03&ndash;0.41%</td><td class="n">4.7&ndash;4.8%</td><td class="n">0.800&ndash;0.829</td></tr>
 </table>
-<p class="muted">Python pipeline, all turns, default settings; from card/results.json. Hand marks 6&ndash;26 px off
+<p class="muted">Python pipeline, all turns, default settings, drift 3.2 px (hard 5 px); from card/results.json (Nov 2026). Hand marks 6&ndash;26 px off
 (hard: 13&ndash;53 px). Trace rms: distance from each traced point to the nearest true groove centerline.
 Sound: correlation of the read-out depth signal with the true sound of the traced groove.</p>
 <ul>
-<li>On the idealized card, <b>geometry and tracking are solved</b>: center to ~0.1 px
-from a hand mark tens of px off (or without one), spacing to ~0.1%, and the trace
-stays within ~0.4&ndash;0.7 px of the groove centerline, through the gaps where the
-sound lifts the stylus out of the card.</li>
+<li>On the idealized card, <b>geometry and tracking are solved</b>: center to
+~0.1&ndash;0.3 px after the refit, from a hand mark tens of px off (the low-res
+center doesn't use the mark), spacing to 0.01&ndash;0.05%, and the trace stays within
+~0.5&ndash;0.9 px of the groove centerline (1&ndash;1.7 px on hard cards), through
+the gaps where the sound lifts the stylus out of the card. The groove's own
+drift, ~3 px from turn to turn, is what limits the refitted center.</li>
 <li><b>The sound comes out of the depth</b> with correlation ~0.9 at the measured
-grain level (0.98 without grain); doubling the grain (hard) brings it to ~0.8.</li>
+grain level (0.96&ndash;0.98 without grain); doubling the grain (hard) brings it to ~0.8.</li>
 </ul>
 
 <h3>Next steps</h3>
@@ -859,6 +853,9 @@ filter, using the stylus shape) and filter along the groove with the grain's
 spectrum.</li>
 <li>Put the card's imperfections back one at a time (warp, slow height drift,
 dust, damage) once the idealized pipeline is settled.</li>
+<li>A stretch term in the refit (r&middot;cos 2&alpha;, r&middot;sin 2&alpha;): the low-res
+center survives a 3% stretch (P3.2), but the refit and the strip would not
+cope with more than ~0.3%.</li>
 </ul>
 
 <p><a href="explain.html">Explain controls</a> &middot; <a href="spacing.html">Spacing page</a> &middot; <a href="center.html">Center page</a> &middot; <a href="card.html">Card page</a></p>

@@ -15,19 +15,22 @@ Estimate the ring spacing from the 2D Fourier transform.
   grid. Drag to move its center (Shift for finer control, arrow keys to
   nudge, double-click to recenter).
 - Right: log |FFT| of that image, zero frequency at the center.
-- Below: radial profile of the FFT and a harmonic-sum estimate of the ring
-  spacing.
+- Below: radial profile of the FFT; the spacing is its peak after smoothing
+  (1.5 bins), searched within ±50% of the radius where the target spacing
+  would put it (drawn in red),
+  the same rule as the card pipeline.
 - Controls for ring spacing, start/end radius, phase, aspect, radius offsets
   (an imperfect spiral whose local spacing varies), line width (up to the
   spacing), edge softness (Gaussian-blurred edges, which suppress aliasing in
-  the FFT), blur and noise, plus rings/spiral, smooth edges, mean
-  subtraction, Hann window and an overlay of the expected 1/spacing rings.
-- Advanced peak search (default): searches only ×0.5–2 of the target
-  spacing, coarse to fine down to an expected spacing variation.
-- Gradient-line center: estimates the spiral's center from image gradients
-  (RANSAC over pairs of lines, with blur along the rings to resist noise),
-  used to weight turns (default 1/√r) before the FFT so outer turns don't
-  dominate.
+  the FFT), blur and noise, plus rings/spiral, smooth edges and an overlay
+  of the expected 1/spacing rings.
+- A simulated hand mark (center and radii plus a small error), as on the
+  cards: its soft annulus masks the image, which is weighted 1/√r about the
+  marked center (so outer turns don't dominate) and transformed with the
+  mask as its only window.
+- Earlier versions scored spacings by a harmonic sum and found a rough
+  center from gradient lines (RANSAC); both were dropped in Nov 2026 to
+  match the card pipeline (see the procedure, Part 1).
 - Coherence center (default on, spiral only): the card pipeline's center
   search ported to JS (`coherence.js`): the spiral coherence map |Z| by one
   FFT correlation; the center is the map's center of point symmetry near its

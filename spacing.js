@@ -12,7 +12,7 @@ const octx = off.getContext('2d', { willReadFrequently: true });
 const center = { x: N / 2, y: N / 2 };
 const HANDLE_R = 7;
 
-const ids = ['spacing', 'rStart', 'rEnd', 'phase', 'aspect', 'off20', 'off40', 'off60', 'off80', 'lineWidth', 'softness', 'blur', 'noise', 'gain', 'advanced', 'hVar', 'gradVote', 'gvPerBin', 'gvFloor', 'gvTang', 'gvShow', 'cohOn', 'cohSp', 'evenW', 'isSpiral', 'smooth', 'removeDC', 'window', 'showRing'];
+const ids = ['spacing', 'rStart', 'rEnd', 'phase', 'aspect', 'off20', 'off40', 'off60', 'off80', 'lineWidth', 'softness', 'blur', 'noise', 'gain', 'cohOn', 'cohSp', 'evenW', 'isSpiral', 'smooth', 'markErr', 'sWin', 'showRing'];
 const el = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
 
 function params() {
@@ -30,18 +30,11 @@ function params() {
     smooth: el.smooth.checked,
     spiral: el.isSpiral.checked,
     gain: +el.gain.value,
-    advanced: el.advanced.checked,
-    hVar: +el.hVar.value / 100,
-    gradVote: el.gradVote.checked,
-    gvPerBin: +el.gvPerBin.value,
-    gvFloor: +el.gvFloor.value / 100,
-    gvShow: el.gvShow.checked,
     cohOn: el.cohOn.checked,
     cohTrue: el.cohSp.value === 'true',
     evenW: +el.evenW.value, // weight exponent: 0 none, 0.5 1/√r, 1 1/r
-    gvTang: +el.gvTang.value,
-    removeDC: el.removeDC.checked,
-    window: el.window.checked,
+    markErr: +el.markErr.value,
+    sWin: +el.sWin.value / 100,
     showRing: el.showRing.checked,
   };
 }
@@ -58,7 +51,7 @@ const fftImage = fctx.createImageData(N, N);
 
 
 function computeFFT(p, src = img) {
-  const max = computeSpectrum(src, p.removeDC, p.window); // fftspacing.js: fills mag and profile
+  const max = computeSpectrum(src, false, false); // fftspacing.js: fills mag and profile (src already masked, mean removed)
   const d = fftImage.data;
   const scale = max > 0 ? 1 / max : 0;
   const h = N / 2;
@@ -146,7 +139,7 @@ function drawProfile(p) {
   const SP_MAX = 64;
   const SX = sp => L + (sp / SP_MAX) * pw;
   ctx.fillStyle = 'rgba(160,90,255,0.55)';
-  if (isFinite(hBest.spacing)) ctx.fillRect(L, T + 2, SX(Math.min(SP_MAX, hBest.spacing)) - L, 12);
+  if (isFinite(peak.spacing)) ctx.fillRect(L, T + 2, SX(Math.min(SP_MAX, peak.spacing)) - L, 12);
   ctx.fillStyle = PURPLE;
   ctx.strokeStyle = PURPLE;
   ctx.lineWidth = 1;
@@ -167,49 +160,42 @@ function drawProfile(p) {
   }
   ctx.stroke();
 
-  // Harmonic score vs. fundamental radius, scaled to fill the plot height.
-  let lo = Infinity, hi = -Infinity;
-  for (const v of hScore) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
-  const sy = v => Y(hi > lo ? (v - lo) / (hi - lo) : 0);
+  // The smoothed profile (red), only where it is searched: within ±window of
+  // the target spacing (dashed); its largest value (dot) gives the spacing.
+  ctx.save();
+  ctx.setLineDash([4, 4]);
+  ctx.strokeStyle = 'rgba(255,64,64,0.5)';
+  ctx.lineWidth = 1;
+  for (const r of [peak.lo, peak.hi]) { ctx.beginPath(); ctx.moveTo(X(r), T); ctx.lineTo(X(r), T + ph); ctx.stroke(); }
+  ctx.restore();
   ctx.strokeStyle = '#ff4040';
-  ctx.lineWidth = 1.5;
+  ctx.lineWidth = 2;
   ctx.beginPath();
-  for (let i = 0; i < H_COUNT; i++) {
-    const x = X(hRho(i)), y = sy(hScore[i]);
-    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  for (let r = peak.lo; r <= peak.hi; r++) {
+    const x = X(r), y = Y(Math.min(1, peakProfile[r]));
+    if (r === peak.lo) ctx.moveTo(x, y); else ctx.lineTo(x, y);
   }
   ctx.stroke();
-
-  if (hWin) { // advanced search range (×0.5–2 of the target spacing)
-    ctx.save();
-    ctx.setLineDash([4, 4]);
-    ctx.strokeStyle = 'rgba(255,64,64,0.5)';
-    ctx.lineWidth = 1;
-    for (const r of [hWin.lo, hWin.hi]) { ctx.beginPath(); ctx.moveTo(X(r), T); ctx.lineTo(X(r), T + ph); ctx.stroke(); }
-    ctx.restore();
-  }
+  const b0 = Math.floor(peak.rho), f = peak.rho - b0;
+  const top = peakProfile[b0] * (1 - f) + peakProfile[Math.min(NBINS - 1, b0 + 1)] * f;
   ctx.fillStyle = '#ff4040';
   ctx.beginPath();
-  ctx.arc(X(hBest.rho), sy(hi), 3, 0, 2 * Math.PI);
+  ctx.arc(X(peak.rho), Y(Math.min(1, top)), 3.5, 0, 2 * Math.PI);
   ctx.fill();
   ctx.font = '12px system-ui, sans-serif';
   ctx.textAlign = 'right';
   ctx.textBaseline = 'top';
   // red "radius → " followed by the purple spacing, right-aligned together
-  const spText = `spacing ${hBest.spacing.toFixed(2)} px`;
+  const spText = `spacing ${peak.measured.toFixed(2)} px`;
   const right = L + pw - 6, ty = T + 18;
-  ctx.fillText(`harmonic sum peak: radius ${hBest.rho.toFixed(2)} → `, right - ctx.measureText(spText).width, ty);
+  ctx.fillText(`peak of the smoothed profile: radius ${peak.rho.toFixed(2)} → `, right - ctx.measureText(spText).width, ty);
   ctx.fillStyle = PURPLE;
   ctx.fillText(spText, right, ty);
   ctx.fillStyle = '#ddd';
-  ctx.fillText('mean log |FFT|', L + pw - 6, T + 34);
-  if (hStages.length) { // coarse-to-fine path
-    ctx.fillStyle = '#999';
-    ctx.fillText('coarse to fine: ' + hStages.map(s => s.spacing.toFixed(2)).join(' → ') + ' px', L + pw - 6, T + 50);
-  }
-  if (hWin && hWin.edge) {
+  ctx.fillText('white: mean log |FFT|; red: smoothed, where searched', right, T + 34);
+  if (peak.edge) {
     ctx.fillStyle = '#ffb020';
-    ctx.fillText('⚠ at the edge of the ×0.5–2 search range: unreliable', L + pw - 6, T + 66);
+    ctx.fillText(`⚠ on the edge of the search window (±${Math.round(p.sWin * 100)}% of the expected radius): the nominal spacing is used`, right, T + 50);
   }
 }
 
@@ -235,37 +221,6 @@ const noiseField = new Float32Array(N * N);
     noiseField[i] = r * Math.cos(2 * Math.PI * v);
     noiseField[i + 1] = r * Math.sin(2 * Math.PI * v);
   }
-}
-
-// ---------- Turn weighting (evenWeight): see fftspacing.js ----------
-
-// ---------- Gradient-line center: see gradcenter.js (shared with center.html) ----------
-
-const glCanvas = document.createElement('canvas');
-glCanvas.width = glCanvas.height = N;
-const glCtx = glCanvas.getContext('2d');
-const glImage = glCtx.createImageData(N, N);
-let gvResult = null;
-
-function drawGradientVotes(ctx, r) { // inlier pixels in green
-  const d = glImage.data;
-  d.fill(0);
-  for (let k = 0; k < r.L.n; k++) {
-    if (!r.inl[k]) continue;
-    const i = Math.floor(r.L.Y[k]) * N + Math.floor(r.L.X[k]);
-    d[i * 4] = 40; d[i * 4 + 1] = 255; d[i * 4 + 2] = 120; d[i * 4 + 3] = 170;
-  }
-  glCtx.putImageData(glImage, 0, 0);
-  ctx.drawImage(glCanvas, 0, 0);
-}
-
-function drawGradientMarkers(ctx, r) { // path of the tangential-blur rounds, final center (+)
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = 'rgba(80,255,140,0.6)';
-  for (const q of r.path.slice(0, -1)) { ctx.beginPath(); ctx.arc(q.x, q.y, 4, 0, 2 * Math.PI); ctx.stroke(); }
-  const a = 9, c = r.c;
-  ctx.strokeStyle = '#7fff9f';
-  ctx.beginPath(); ctx.moveTo(c.x - a, c.y); ctx.lineTo(c.x + a, c.y); ctx.moveTo(c.x, c.y - a); ctx.lineTo(c.x, c.y + a); ctx.stroke();
 }
 
 // ---------- Coherence center: see coherence.js ----------
@@ -334,6 +289,30 @@ function coherenceText(p, r, spacing) {
     `Map ${r.msMap.toFixed(0)} ms, center and phase ${r.msCenter.toFixed(0)} ms.`;
 }
 
+// ---------- Simulated hand mark ----------
+
+// Fixed random errors (from the noise field, so they stay put while sliders
+// move): center off by Hand-mark error × a standard normal per axis, radii
+// off by 1% × a standard normal (as on the cards).
+const shown = new Float32Array(N * N);
+function handMark(p) {
+  return {
+    x: center.x + p.markErr * noiseField[0], y: center.y + p.markErr * noiseField[1],
+    rInner: Math.min(p.rStart, p.rEnd) * (1 + 0.01 * noiseField[2]),
+    rOuter: Math.max(p.rStart, p.rEnd) * (1 + 0.01 * noiseField[3]),
+  };
+}
+
+function drawMark(ctx, mark) { // dashed marked circles, white + at the marked center
+  ctx.save();
+  ctx.setLineDash([5, 4]);
+  ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+  ctx.lineWidth = 1.2;
+  for (const r of [mark.rInner, mark.rOuter]) { ctx.beginPath(); ctx.arc(mark.x, mark.y, r, 0, 2 * Math.PI); ctx.stroke(); }
+  ctx.restore();
+  drawPlus(ctx, mark, 8, '#fff', 2);
+}
+
 // Blue plus through the canvas center (overlay only; not part of FFT input).
 function drawCrosshair(ctx) {
   ctx.strokeStyle = 'rgb(60,130,255)';
@@ -354,7 +333,7 @@ function render() {
     // 0 to the current spacing (the browser clamps the value if needed).
     el.lineWidth.max = el.spacing.value;
     const p = params();
-    for (const id of ['spacing', 'rStart', 'rEnd', 'phase', 'aspect', 'off20', 'off40', 'off60', 'off80', 'lineWidth', 'softness', 'blur', 'noise', 'gain', 'hVar', 'gvPerBin', 'gvFloor', 'gvTang']) {
+    for (const id of ['spacing', 'rStart', 'rEnd', 'phase', 'aspect', 'off20', 'off40', 'off60', 'off80', 'lineWidth', 'softness', 'blur', 'noise', 'gain', 'markErr', 'sWin']) {
       el[id].nextElementSibling.textContent = el[id].value;
     }
     document.getElementById('centerOut').textContent =
@@ -362,27 +341,21 @@ function render() {
 
     el.softness.disabled = !p.smooth;
     el.phase.disabled = !p.spiral;
-    el.hVar.disabled = !p.advanced;
-    el.gvPerBin.disabled = !p.gradVote && !p.evenW;
-    el.gvFloor.disabled = !p.gradVote && !p.evenW;
-    el.gvShow.disabled = !p.gradVote;
-    el.gvTang.disabled = !p.gradVote && !p.evenW;
     renderSpiral(p, center, img);
     if (p.noise > 0) for (let i = 0; i < N * N; i++) img[i] += p.noise * noiseField[i];
-    // (even weighting needs the center too, even when it isn't shown)
-    const gvRun = p.gradVote || p.evenW ? gradientCenter(img, p.spacing, p.gvPerBin, p.gvFloor, p.spiral, p.gvTang) : null;
-    gvResult = p.gradVote ? gvRun : null;
-    // Left pane: the image (FFT input), or with "Show blurred image" the
-    // blurred image the gradient lines were computed from.
-    toImageData(gvResult && p.gvShow ? gvResult.img : img, spiralImage); // (ImageData clamps to 0..255)
+    // Simulated hand annotation (as on the cards): the true center and radii
+    // plus fixed random errors; its annulus is the mask (fftspacing.js).
+    const mark = handMark(p);
+    const mask = annulusMask(mark, p.spacing);
+    const norm = normalizeInMask(img, mask);
+    // Left pane: the image, dimmed outside the mask.
+    for (let i = 0; i < N * N; i++) shown[i] = img[i] * (0.3 + 0.7 * mask[i]);
+    toImageData(shown, spiralImage); // (ImageData clamps to 0..255)
     octx.putImageData(spiralImage, 0, 0);
     sctx.drawImage(off, 0, 0);
-    if (gvResult) drawGradientVotes(sctx, gvResult);
-    document.getElementById('gvOut').textContent = !p.gradVote ? '' : !gvResult ? 'Gradient-vote center: no gradients.'
-      : `Gradient-line center (green +): (${gvResult.c.x.toFixed(2)}, ${gvResult.c.y.toFixed(2)}), ` +
-        `${Math.hypot(gvResult.c.x - center.x, gvResult.c.y - center.y).toFixed(2)} px from the true center; ` +
-        `${gvResult.nIn} of ${gvResult.L.n} lines are inliers (green pixels); ${gvResult.rounds} tangential-blur round${gvResult.rounds === 1 ? '' : 's'} ` +
-        `(earlier estimates: green circles).`;
+    drawMark(sctx, mark);
+    document.getElementById('centerOut').textContent = `(${center.x.toFixed(1)}, ${center.y.toFixed(1)}); hand mark (white +, dashed circles) ` +
+      `${Math.hypot(mark.x - center.x, mark.y - center.y).toFixed(1)} px off`;
     drawCrosshair(sctx);
     sctx.beginPath();
     sctx.arc(center.x, center.y, HANDLE_R, 0, 2 * Math.PI);
@@ -391,11 +364,10 @@ function render() {
     sctx.strokeStyle = '#f33';
     sctx.lineWidth = 1.5;
     sctx.stroke();
-    if (gvResult) drawGradientMarkers(sctx, gvResult);
 
-    computeFFT(p, p.evenW && gvRun ? evenWeight(img, gvRun.c, p.spacing, p.evenW) : img);
+    computeFFT(p, fftInput(norm, mask, mark, p.spacing, p.evenW)); // weighted about the mark, mask as the window
     drawCrosshair(fctx);
-    computeHarmonicScore({ advanced: p.advanced, vMin: p.hVar, target: p.spacing });
+    profilePeak({ target: p.spacing, window: p.sWin }); // fftspacing.js, as cardlab
     drawProfile(p);
 
     // Coherence center, with the FFT's spacing estimate (spiral only)
@@ -404,8 +376,8 @@ function render() {
     document.getElementById('cohRow').style.display = p.cohOn && p.spiral ? '' : 'none';
     const cohOut = document.getElementById('cohOut');
     if (p.cohOn && p.spiral) {
-      const sp = p.cohTrue || !isFinite(hBest.spacing) ? p.spacing : hBest.spacing;
-      const r = coherenceCenter(img, sp);
+      const sp = p.cohTrue || !isFinite(peak.spacing) ? p.spacing : peak.spacing;
+      const r = coherenceCenter(norm, sp); // the masked image, as in cardlab
       drawCoherence(r, sp);
       drawPlus(sctx, r.c, 9, CYAN);
       cohOut.textContent = coherenceText(p, r, sp);

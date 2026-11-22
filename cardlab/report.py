@@ -181,9 +181,9 @@ Showcase: preset <b>{escape(card.params.label)}</b>, seed {card.seed}. <a href="
       "<span class='w'>White +</span> hand mark, <span class='c'>cyan</span> low-res fit, <span class='y'>yellow</span> refit, <span class='r'>red +</span> truth. Red boxes: the {len(spots)} detail spots of step e (spread evenly along the groove{', some where the trace is on the wrong groove' if wrong_spots else ''}); <b>click one</b> to show it in step e.",
       f"<span class='num'>Hand mark {s['mark_error']:.1f} px from the true center.</span>")}
 {step(img("b_fft"), "b. FFT of a × 1/√r about the mark (central half of log |FFT|)",
-      "Weighting by 1/√r keeps the outer turns from dominating. The rings sit at radius N/spacing. Dashed: the search window (±10% of nominal); <span class='c'>cyan</span>: the peak.")}
+      "Weighting by 1/√r keeps the outer turns from dominating. The rings sit at radius N/spacing. Dashed: the search window, 0.5–1.5 × the radius expected from the nominal spacing (the device spec): from halfway to zero frequency to halfway to the second harmonic; <span class='c'>cyan</span>: the peak.")}
 {step(img("c_profile"), "c. Radial profile → spacing",
-      "Mean log |FFT| per radius; the spacing is the peak inside the window (grey), refined parabolically; more than 3% from the nominal → nominal used.",
+      "Mean log |FFT| per radius; the spacing is the peak inside the window (grey: 0.5–1.5 × the expected radius, so only the fundamental fits for any spacing within ~0.67–1.33 × the nominal), refined parabolically; a peak on the window's edge → the nominal is used. Profile smoothed by 1.5 bins.",
       "White dashed: nominal; <span class='r'>red</span>: true; <span class='c'>cyan</span>: measured.",
       f"<span class='num'>Measured {low.fft_spacing:.3f} px ({pct(s['fft_spacing_error'])} vs. true {card.spacing:.3f}).</span>")}
 {step(img("d_coherence"), "d. Center, spacing and phase: the spiral coherence map",

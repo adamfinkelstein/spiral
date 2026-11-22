@@ -83,36 +83,30 @@ a fraction of a pixel, and the spiral is drawn exactly there.</p>
   <dt>Line width (px)</dt>
   <dd>Width of the line, measured where it is at half brightness. The slider runs from 0 to the current ring spacing (wider lines would
   merge into a solid disc); lowering the spacing shrinks the width if needed.</dd>
-  <dt>Advanced peak search</dt>
-  <dd>On (default): the spacing estimate searches only between half and twice
-  the target spacing (here the true spacing, standing in for a device's
-  nominal spacing; dashed red lines on the plot), works coarse to fine down to
-  the expected variation below, and warns when its answer lands on the edge
-  of that range. Off: the original single search for sharp peaks over all
-  spacings. Details: <a href="procedure.html">Procedure</a>, step 5.</dd>
-  <dt>Expected spacing variation (&plusmn;%)</dt>
-  <dd>How much the ring spacing may vary along the spiral (e.g. the device's
-  tolerance; default 10%). The search starts broad and stops refining at this
-  variation: refining further makes the estimate lock onto one region's
-  spacing instead of the average. At 0 it refines all the way (best for a
-  perfect spiral). Only used with Advanced peak search; the steps are listed
-  under the plot.</dd>
   <dt>Noise sigma</dt>
   <dd>Adds Gaussian noise (standard deviation in units of full white; a fixed
-  random pattern) to the image after it is drawn and blurred, so both the
-  Fourier transform and the gradient-vote center see a noisy image.</dd>
-  <dt>Gradient-line center</dt>
-  <dd>Shows the spiral's center as estimated from the image alone (used by
-  Turn weighting): lines along the image gradients, intersected by RANSAC and
-  corrected for the spiral, with the image blurred along the rings to resist
-  noise (<a href="procedure.html">Procedure</a>, step 1). Green pixels: the
-  lines that agree; green +: the estimate; green circles: earlier rounds. The
-  error against the true center is shown under the controls.
-  <b>Lines per orientation</b> and <b>Strength floor</b> choose which
-  gradient pixels become lines; <b>Tangential blur</b> sets the blur along the
-  rings (0 = none). <b>Show blurred image</b> replaces the left image with the
-  blurred image the final lines came from; the Fourier transform still uses
-  the unblurred image.</dd>
+  random pattern) to the image after it is drawn and blurred, so the Fourier
+  transform and the coherence center see a noisy image.</dd>
+  <dt>Hand-mark error (px)</dt>
+  <dd>A simulated hand annotation, as on the cards: the true center plus this
+  error (a fixed random direction and size, standard normal per axis &times;
+  the slider), and the start and end radii off by about 1%. White +: the marked
+  center; dashed circles: the marked radii. The soft annulus between them is the
+  <b>mask</b>: only the spiral's pixels count, the frame outside is 0, and the
+  mask is the Fourier transform's only window (no Hann window: on top of the
+  mask it made the estimate worse, here and on the cards). The image is
+  normalized inside the mask, weighted about the marked center (Turn
+  weighting), and transformed; the left panel dims what is outside the mask.</dd>
+  <dt>Search window (&plusmn; % of peak radius)</dt>
+  <dd>Where in the profile the spacing is searched: around the radius where
+  the target spacing (here the true spacing, standing in for a device's
+  nominal spacing) would put the peak, &rho;<sub>0</sub> = 512 / target. The default
+  &plusmn;50% (as in the card pipeline) runs from halfway to zero frequency to
+  halfway to the second harmonic, so for any true spacing within about
+  0.67&ndash;1.33 &times; the target only the fundamental peak fits. The spacing
+  is the highest point of the smoothed radial profile inside this window (red
+  in the plot); a peak on its edge is unreliable, and the target is used
+  instead (warning in the plot).</dd>
   <dt>Coherence center</dt>
   <dd>The center and phase from the spiral coherence map, the method of the
   card pipeline (<a href="procedure.html#p1coh">Procedure</a>, step 8; spiral
@@ -132,7 +126,7 @@ a fraction of a pixel, and the spiral is drawn exactly there.</p>
   <dt>Turn weighting</dt>
   <dd>In the Fourier transform every turn counts in proportion to its length,
   so outer turns dominate ("by length"). "1/r" multiplies the image by 1/r
-  around the gradient-line center before the transform, so every turn counts
+  around the marked center before the transform, so every turn counts
   equally; "1/&radic;r" (the default) is halfway between, and was the best
   compromise in tests (<a href="procedure.html">Procedure</a>, step 2).</dd>
   <dt>Rings/spiral</dt>
@@ -169,14 +163,6 @@ curved arcs coming in from the edges and corners of the right panel
   <dd>Brightness curve for the right panel. Values above 1 brighten faint
   detail; values below 1 emphasize only the strongest parts. The display is
   scaled to the brightest value other than the zero-frequency point.</dd>
-  <dt>Subtract mean</dt>
-  <dd>Subtracts the image's average brightness before transforming, which
-  removes the very bright spot at the center of the spectrum.</dd>
-  <dt>Hann window</dt>
-  <dd>Fades the image smoothly to black toward its borders before
-  transforming. This suppresses the cross-shaped streaks that appear when the
-  image has content near its edges, because the transform treats the image as
-  repeating.</dd>
   <dt>Show 1/spacing</dt>
   <dd>Draws red circles on the spectrum at radius 512 / spacing and its
   multiples. These are where the energy from evenly spaced rings should land,
@@ -187,7 +173,7 @@ curved arcs coming in from the edges and corners of the right panel
 <p>The plot below the two panels is drawn against radius &rho; in the
 Fourier transform (FFT bins): rings spaced <i>s</i> px apart put peaks at
 &rho; = 512&nbsp;/&nbsp;<i>s</i> and its multiples. See
-<a href="procedure.html">Procedure</a> (steps 3&ndash;5) for how the estimate
+<a href="procedure.html">Procedure</a> (steps 3&ndash;4) for how the estimate
 is computed.</p>
 <dl>
 <dt>White curve</dt>
@@ -196,18 +182,19 @@ contrast 1) at each distance from its center. Beyond radius 256 (shaded) the
 circles only pass through the transform's corners. The contrast slider does
 not affect it.</dd>
 <dt><span style="color:#ff4040">Red curve</span></dt>
-<dd>The harmonic-sum score for each candidate first-peak radius, from the
-final stage of the search; its highest point (red dot) gives the estimate.</dd>
+<dd>The same profile smoothed by a Gaussian of 1.5 bins, drawn only inside
+the search window, which is all that is searched. Its highest point (red
+dot), refined by a parabola through it and its neighbours, gives the
+estimate: spacing = 512 / radius.</dd>
 <dt>Text</dt>
-<dd>The peak radius and the estimated spacing; with Advanced peak search,
-the estimate after each coarse-to-fine stage, and a warning if it lands on
-the edge of the search range.</dd>
+<dd>The peak radius and the estimated spacing, and a warning if the peak is
+on the edge of the search window.</dd>
 <dt><span style="color:#b78cff">Purple bar</span></dt>
 <dd>The estimated spacing on its own 0&ndash;64 px scale, labelled in purple
 across the top.</dd>
 <dt>Dashed red lines</dt>
-<dd>The edges of the search range (&times;0.5&ndash;2 of the target spacing)
-with Advanced peak search, and the expected harmonics with Show 1/spacing.</dd>
+<dd>The edges of the search window (&plusmn;Search window around the target
+spacing), and the expected harmonics with Show 1/spacing.</dd>
 </dl>
 <p><a href="procedure.html">Procedure</a> &middot; <a href="spacing.html">Back to the app</a></p>
 

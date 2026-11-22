@@ -98,26 +98,11 @@
   <label for="gain">FFT contrast</label>
   <input id="gain" type="range" min="0.2" max="4" step="0.05" value="1"><output for="gain"></output>
 
-  <label for="advanced">Advanced peak search</label>
-  <input id="advanced" type="checkbox" checked><span></span>
+  <label for="markErr">Hand-mark error (px)</label>
+  <input id="markErr" type="range" min="0" max="20" step="0.5" value="4"><output for="markErr"></output>
 
-  <label for="hVar">Expected spacing variation (±%)</label>
-  <input id="hVar" type="range" min="0" max="30" step="1" value="10"><output for="hVar"></output>
-
-  <label for="gradVote">Gradient-line center</label>
-  <input id="gradVote" type="checkbox"><span></span>
-
-  <label for="gvPerBin">Lines per orientation</label>
-  <input id="gvPerBin" type="range" min="10" max="1000" step="10" value="150"><output for="gvPerBin"></output>
-
-  <label for="gvFloor">Strength floor (percentile)</label>
-  <input id="gvFloor" type="range" min="0" max="99" step="1" value="70"><output for="gvFloor"></output>
-
-  <label for="gvTang">Tangential blur σ (px)</label>
-  <input id="gvTang" type="range" min="0" max="8" step="0.5" value="3"><output for="gvTang"></output>
-
-  <label for="gvShow">Show blurred image</label>
-  <input id="gvShow" type="checkbox" checked><span></span>
+  <label for="sWin">Search window (± % of peak radius)</label>
+  <input id="sWin" type="range" min="10" max="80" step="5" value="50"><output for="sWin"></output>
 
   <label for="cohOn">Coherence center</label>
   <input id="cohOn" type="checkbox" checked><span></span>
@@ -134,24 +119,17 @@
   <label for="smooth">Smooth line edges</label>
   <input id="smooth" type="checkbox" checked><span></span>
 
-  <label for="removeDC">Subtract mean</label>
-  <input id="removeDC" type="checkbox" checked><span></span>
-
-  <label for="window">Hann window</label>
-  <input id="window" type="checkbox" checked><span></span>
 
   <label for="showRing">Show 1/spacing</label>
   <input id="showRing" type="checkbox"><span></span>
 </div>
 <p class="hint" id="cohOut"></p>
-<p class="hint" id="gvOut"></p>
 <p class="hint">Center: <span id="centerOut"></span> — drag anywhere in the image to move it (hold Shift for 10× finer). Arrow keys nudge 1 px (Shift: 0.1 px). Double-click to recenter.</p>
 </div>
 </div>
 
 <script src="render.js"></script>
 <script src="fftspacing.js"></script>
-<script src="gradcenter.js"></script>
 <script src="coherence.js"></script>
 <script src="spacing.js"></script>
 </body>

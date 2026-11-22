@@ -16,12 +16,15 @@ Adam's preferences and open questions.
   `gaussianBlur`, `toImageData`. Defines globals, so page scripts must not
   redeclare them (e.g. no `const N` in a page script).
 - `spacing.html` / `spacing.js` — ring-spacing experiment: spiral (or rings)
-  on the left, log-magnitude 2D FFT on the right, radial profile and
-  harmonic-sum spacing estimate below.
+  on the left with a simulated hand mark, log-magnitude 2D FFT on the right,
+  radial profile and its smoothed peak (the spacing) below, then the
+  coherence map (center and phase).
 - `fftspacing.js` — the FFT and spacing estimate, no DOM: FFT tables,
   `computeSpectrum(src, removeDC, useWindow)` (fills `mag` and `profile`),
-  `computeHarmonicScore`, `hBest`/`hStages`/`hWin`, `evenWeight`. Used by
-  spacing.js (which keeps the drawing) and cardpipe.js.
+  `annulusMask`, `normalizeInMask`, `fftInput`, `profilePeak` / `peak` /
+  `peakProfile` (as cardlab/lowres.py), and `evenWeight` (only for the
+  frozen cardpipe.js). Used by spacing.js (which keeps the drawing) and
+  cardpipe.js.
 - `coherence.js` — center and phase from the spiral coherence map, a JS port
   of `cardlab/lowres.py` find_center (used by spacing.html): `fft2(re, im,
   M)` (radix-2, any power-of-two M, tables cached per M), `coherenceMap`
@@ -49,7 +52,8 @@ Adam's preferences and open questions.
   map for the selected chunk. Sticky, scrollable controls panel on the right.
   The page's hint paragraphs describe each control.
 - `gradcenter.js` — gradient-line center (`gradientCenter`, `tangentialBlur`,
-  `gradientLines`, `ransacCenter`, …), shared by both pages; no DOM, uses
+  `gradientLines`, `ransacCenter`, …), used by the center page and the
+  frozen card_js.html (no longer by the spacing page); no DOM, uses
   `N` and `gaussianBlur` from render.js. The tangential blur follows the
   circle (tangent plus a second-order inward term u²/(2r)), so curved rings
   aren't shifted inward.
@@ -57,7 +61,7 @@ Adam's preferences and open questions.
   (with `chunkData`, `evalLoss`, `phaseFor`, `fitJoint`), `costMap`, plus
   `mulberry32`, `lm`, `solve`. Scripts load in the order render.js,
   gradcenter.js, chunkfit.js, center.js (spacing page: render.js, fftspacing.js,
-  gradcenter.js, coherence.js, spacing.js).
+  coherence.js, spacing.js).
 
 Controls and their defaults live in the HTML `value` / `checked` attributes;
 each page's `ids` list and `params()` read them, and "Defaults" resets to them.
@@ -134,6 +138,13 @@ Pages serves them (nothing is built on GitHub).
   scipy.ndimage.map_coordinates (cv2.remap rounds bilinear weights to
   1/32 px: 0.3% demodulation error), and Nelder–Mead runs over (x, y, mid
   radius) so all three parameters are in px.
+- Spacing search (Nov 2026, `experiments/spacing_window.py`, results in
+  `experiments/spacing_window_results.md`): window ±50% (then of the nominal spacing; now of the expected peak radius, below)
+  (`spacing_window`; ±10/20/50% identical), profile smoothing 1.5 bins
+  (`profile_smoothing`; 1.5 a little better than 1, 0 worst), and no
+  fallback to the nominal except for a peak on the window's edge: the old
+  rule (nominal if > 3% off) turned cards cut at 25.9 / 32.2 px searched
+  with the 29-px nominal into 9.5–12.9% errors (peak itself right to 0.08%).
 - FFT window (tested Nov 2026, 4 presets × 10 seeds): the soft annulus mask
   is the only window — no Hann on top (it starved the outer turns: spacing
   rms error 0.071 → 0.046 % on typical/loud/clean, peak 11 → 8 bins wide;
@@ -182,6 +193,8 @@ Pages serves them (nothing is built on GitHub).
   use the same pixels less directly than Z. Not in the procedure or report;
   card_js.html (frozen) still has the line method as an option. Possible
   future idea (Adam): RANSAC over N > 2 lines.
+- Sound readout window (Nov 2026, typical, 5 seeds): ±1/2/3/4 px → corr
+  0.875 / 0.886 / 0.896 / 0.902; default still ±3 (±4 not adopted yet).
 - Card model (Nov 2026): the groove's lateral wobble (0.3 px rms, 200–3000
   px along the groove, assumed) was removed: results unchanged within the
   seed-to-seed spread (trace −0.01–0.03 px). Drift vs. the real card
@@ -295,6 +308,44 @@ Robustness (8 random offset sets, uniform in ±amp at each knot):
 
 ## Spacing page: key design points
 
+- Same pipeline as cardlab's low-res stage (Nov 2026), all in fftspacing.js:
+  a simulated hand mark (`handMark` in spacing.js: true center + "Hand-mark
+  error" × fixed normal draws `noiseField[0..1]`, radii ±1% from
+  `noiseField[2..3]`), the soft annulus mask (`annulusMask`, ramp 1
+  spacing), `normalizeInMask`, 1/√r about the mark with the mask as the only
+  window (`fftInput`; no Hann), and the spacing as the peak of the profile
+  smoothed by 1.5 bins within 0.5–1.5 × the expected peak radius N /
+  target, i.e. ±50% in frequency (`profilePeak({ target,
+  window, blur })` → `peak` = { rho, spacing, measured, lo, hi, edge }; a
+  peak on the window's edge → the target, with a warning). The coherence map
+  runs on the masked, normalized image. The plot draws the smoothed profile
+  (`peakProfile`) in red only inside the window (dashed lines).
+- Removed in Nov 2026 (procedure Part 1, steps 1 and 5): the harmonic-sum
+  score with its coarse-to-fine "Advanced peak search" and "Expected spacing
+  variation" (replaced by the profile peak so both pipelines use one method;
+  on drawn spirals it was ~2–3× more accurate when the local spacing
+  varies, e.g. spacing 10 ±0.25: 0.83 vs 1.62% median, and at spacing 40:
+  0.22 vs 1.99%), and the gradient-line center with its controls (lines per
+  orientation, strength floor, tangential blur, show blurred image): too
+  unstable on realistic (simulated) card data. gradcenter.js stays for the
+  center page and the frozen card_js.html. Also removed: "Subtract mean",
+  "Hann window". Tests: mask beat the old no-mask + Hann + ×0.5–2 pipeline
+  everywhere (perfect spacing 20: 0.83 → 0.08%); Hann on top of the mask
+  hurt; ±10/20/50% windows identical; profile smoothing 0 better at spacing
+  10, worse at 20. Profile peak now (8 offset sets): perfect spacing 5–20
+  0.05–0.5%; spacing 40 2%; offsets ±0.1 0.9%, ±0.25 1.6–2%; fails (> 20%)
+  at spacing 20 ±0.5 and with under 2 turns (as the harmonic sum did).
+- Search window in frequency (both pipelines, Nov 2026): 0.5–1.5 × the
+  expected peak radius, from halfway to zero frequency to halfway to the
+  second harmonic; for a true spacing within ~0.67–1.33 × nominal only the
+  fundamental fits. The earlier ±50% of the spacing (radii 0.67–2 ×) put the
+  second harmonic on its edge. Same answers on spirals and cards (also with
+  the nominal 30–40% off); chosen for the guarantee. Robust before accurate
+  (Adam): the coherence center tolerates ~5% spacing error and the refit
+  re-fits the spacing (±2.5%), so a method that never lands on the wrong
+  peak matters more than precision; failing with 2–3 turns is acceptable.
+- Remaining difference from cardlab: the coherence symmetry window (σ 3 vs
+  10 spacings).
 - `N = 512` is the internal resolution of all canvases and the FFT size. The
   FFT is radix-2, so `N` must stay a power of two. Canvases are displayed at
   400×400 and cropped (`.crop`) to their right 2/3; the full image is still
@@ -310,53 +361,11 @@ Robustness (8 random offset sets, uniform in ±amp at each knot):
   removes them.
 - `drawProfile` bins FFT pixels by round(distance from DC) (tables built once)
   and plots the mean of `mag / max` per bin, independent of the contrast slider.
-- `computeHarmonicScore`: for each candidate fundamental radius rho, sum over
-  harmonics of (peak minus the mean of the half-way troughs), divided by
-  sqrt(K) (a plain average picks a higher harmonic, a plain sum picks tiny
-  rho). The profile is blurred first (`H_BLUR` = 1.5 bins; ~3× lower rms error
-  for rings, 3 bins breaks large spacings). Tested error ~0.2–0.65% rms.
 - Overlays are drawn only on the visible canvases, never into `img`.
-- Gradient-line center (checkbox, off by default; `gradientCenter`): blur
-  σ 1, Sobel; lines along the gradients, binned by orientation (64 bins over
-  180°); keep the strongest "Lines per orientation" (150) per bin above a
-  global floor (70th percentile of magnitude), weight = magnitude − floor.
-  RANSAC over pairs (`ransacCenter`): first line ∝ weight, partner bin ∝
-  count · sin²(angle), uniform within the bin; each candidate is spiral-
-  corrected (lines shifted by b·(−sin α, cos α) about it; not for rings) and
-  scored by Σ w·min(d², 2²) over a subset of lines; the best is refined by the
-  weighted intersection of its inliers (3×). Then the tangential-blur loop
-  (`tangentialBlur`, σ 3 px): blur along circles about the current center
-  (a gather along the local tangent, bilinear, step shrinks near the center),
-  recompute lines and center, until it moves < 1 px (≤ 5 rounds; ~1 px is
-  plenty for 1/r weighting). Groundwork
-  for weighting every turn equally (1/r about this center) before the FFT.
-  Tests (off-center spirals, 3 positions): clean 0.02–0.05 px; noise σ 0.3 /
-  0.6 / 1.0: without tangential blur ~4–8 / 8.5 / 20–27 px, with it ~0.3–0.5 /
-  1.8–1.9 / 3.6–4.7 px (the tangential blur is the big win; RANSAC alone ≈ the
-  Hough vote it replaced). Speed (headless Chromium): first RANSAC 600
-  candidates × 1500 scoring lines, later rounds 150 × 1000 (they start
-  close); the spiral correction uses vector math, no trig.
-  Per later round: tangential blur ~60 ms, gradients + lines ~40 ms, RANSAC
-  ~12 ms (was ~210 ms at 600 × 3000); ~0.6 s total with 5 rounds (was ~1.6 s).
-  Accuracy about the same (noise 0.3: median 0.6–0.8 px, was 0.3–0.5; noise
-  1.0: 2.3–3.8 px, was 3.6–4.7). Under noise the loop still usually runs all
-  5 rounds: the estimate keeps moving by > 0.2 px.
-- "Advanced peak search" (checkbox, default on; `computeHarmonicScore({
-  advanced, vMin, target })`): search only spacings within ×0.5–2 of the
-  target spacing (the true spacing stands in for a device's nominal one;
-  dashed lines on the plot), coarse to fine down to "Expected spacing
-  variation" (default 10%), and warn when the answer is at the window's edge.
-  Off: the original single sharp stage over all spacings. Benchmark
-  (spiral, 10 offset sets, median/max %): spacing 20, offsets ±0.1: original
-  2.1/70 → advanced 0.55/1.1; ±0.25: 70/71 → 2.5/12. Perfect spiral costs
-  0.3–1%. Beyond ~±30% local variation it still fails, but within ×0.5–2;
-  such failures land on strong local peaks inside the window, so the edge
-  warning rarely fires and is not a reliable failure detector.
-- Turn weighting (select: none / 1/√r / 1/r; `evenWeight(src, c, spacing,
-  ex)`): multiply the image by max(r, 2·spacing)^−ex about the gradient-line
-  center (computed even if not shown), normalized to mean 1, before the FFT
-  (`computeFFT(p, src)`). Estimated vs true center gave identical results.
-  Test (advanced, vMin 10%, 10 offset sets, off-center spiral; median / max
+- Turn weighting (select: none / 1/√r / 1/r; in `fftInput`): multiply the
+  image by max(r, 2·spacing)^−ex about the hand mark, normalized to mean 1,
+  before the FFT. Estimated vs true center gave identical results. Test
+  (harmonic sum, before the mask; advanced, vMin 10%, 10 offset sets, off-center spiral; median / max
   %): 1/r makes mild offsets worse (±0.1: 0.37 → 0.87, 0.42 → 1.57) but cuts
   the worst cases; 1/√r keeps the medians about as good as none (sometimes
   better: spacing 10 ±0.25 0.80 → 0.48; noise 0.3 1.35 → 0.85) and cuts the
@@ -386,19 +395,6 @@ Robustness (8 random offset sets, uniform in ±amp at each knot):
   50–200 and 30–100, spacing 10/20, noise 0–1.5, 6 patterns): differences
   within ±0.2 percentage points either way, slightly worse with no noise.
   The FFT is already noise-tolerant (errors ≤ ~2% even at noise 1.5).
-- Coarse to fine (`vMin`, "Expected spacing variation" slider): stages smooth the profile in log radius (σ = v/2), use harmonics
-  k ≤ 1/(4v), halve v each stage from max(0.3, 3·vMin) and search within ±v
-  of the previous answer; the final stage is at vMin (0 → the sharp score).
-  In advanced mode the coarse stages always run first, even at vMin = 0,
-  which removes most wrong-peak failures at no cost for a perfect spiral. With radius offsets,
-  refining past the real variation locks onto one region's spacing (e.g.
-  spacing 20, offsets ±0.25: 0.9% at v = 0.3 → 9.9% at v = 0), so vMin
-  should match the expected variation. Benchmarks (10 offset sets, median /
-  max error): spacing 20, offsets ±0.1 (local ±13%): vMin 0 → 2.1/5.8%,
-  10% → 0.55/1.1%; offsets ±0.25 (±33%): 0 → 9.9/12%, 15% → 1.6/2.9%.
-  Cost on a perfect spiral: up to ~1% at vMin 15% (spacing 20), ~0.0–0.5%
-  otherwise. Beyond ~±33% local variation nothing works well; the FFT's
-  pixel-weighted mean spacing itself then differs from the target.
 
 ## Center page: pipeline
 

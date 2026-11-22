@@ -43,14 +43,21 @@ calibrated from those images.
    led to the current method — the spiral coherence map Z at every pixel by
    one FFT correlation with a spiral-wave kernel, then a J0 ring-pattern fit
    (experiments/center_search.py: median 0.07 px, never fails, no search
-   window). Later ported to JS (coherence.js) and shown live on spacing.html.
+   window). Later ported to JS (coherence.js) and shown live on spacing.html. Gradient-based centers (RANSAC lines; Adam's "tilt" idea) were
+   tested and dropped (sound in the depth makes along-groove gradients).
 7. Symmetry center: on the spacing page Adam saw that a stretched spiral
    (aspect ≠ 1) splits the map's bright spot into lobes (the J0 fit then
    locks onto one) but the map stays point-symmetric about the true center.
    The center is now that symmetry center (self-convolution of the windowed
    |Z| on a crop), in JS and cardlab; the J0 fit is dropped (Adam: sub-pixel
-   accuracy isn't needed, the full-res refit fits the center anyway). Gradient-based centers (RANSAC lines; Adam's "tilt" idea) were
-   tested and dropped (sound in the depth makes along-groove gradients).
+   accuracy isn't needed, the full-res refit fits the center anyway).
+8. Aligned the spacing page with cardlab (Nov 2026): a simulated hand
+   mark and donut mask, no Hann, ±50% window, profile smoothing 1.5, and the
+   spacing as the peak of the smoothed profile; the harmonic sum and the
+   gradient-line center were dropped from the page (the harmonic sum was
+   more accurate on drawn spirals with varying spacing, but failed on
+   cards). cardlab also dropped its 3%-from-nominal fallback, which broke
+   cards cut on other machines (25.9 / 32.2 px vs. 29 nominal).
 
 ## Current pipeline (cardlab, see procedure.html Part 3)
 
