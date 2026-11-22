@@ -95,7 +95,9 @@ def detail_columns(run, count=16, wrong_spots=4):
     return sorted(columns)
 
 
-def strip_window(run, columns):
+def strip_window(run, turns):
+    # the columns of `turns` turns about the middle one (columns are equal steps in theta)
+    columns = int(round(turns * TAU / (run.strip.theta[1] - run.strip.theta[0])))
     middle = len(run.strip.theta) // 2
     start = max(0, middle - columns // 2)
     return slice(start, min(len(run.strip.theta), start + columns))
@@ -291,9 +293,14 @@ def offsets_explainer(path):
     save(figure, path)
 
 
+def turns_along(run, theta):
+    # turns from the first column (columns are equal steps in theta)
+    return (theta - run.strip.theta[0]) / TAU
+
+
 def wedge_dots(run, cells, every_wedge=1):
-    # the wedges as (column index, offset, grey brightness by |Z|)
-    columns = np.interp(cells.theta, run.strip.theta, np.arange(len(run.strip.theta)))
+    # the wedges as (turns along the groove, offset, grey brightness by |Z|)
+    columns = turns_along(run, cells.theta)
     brightness = np.clip(cells.confidence, 0.25, 1)  # median wedge: white
     return columns[::every_wedge], cells.offsets[::every_wedge], np.stack([brightness[::every_wedge]] * 3, axis=1)
 
@@ -304,16 +311,16 @@ def offsets_mod_spacing(run, path):
     # the refit (the geometry model)
     strip, spacing = run.strip, run.strip.spiral.spacing
     true_offset = run.card.nearest_groove(*spiral_points(strip.spiral, strip.theta))[0]
-    columns = np.arange(len(strip.theta))
+    columns = turns_along(run, strip.theta)
     figure = new_figure(900, 900)
     axes = figure.add_axes([0.08, 0.06, 0.9, 0.92])
     x, offsets, grey = wedge_dots(run, run.wedges.first)
-    axes.plot(columns[::40], wrap(true_offset[::40], spacing), ".", color=COLORS["true"], ms=1.5)
-    axes.plot(columns[::5], wrap(ideal_offset(run.card, strip)[::5], spacing), ".", color=COLORS["geometry"], ms=1)
-    axes.plot(columns[::5], wrap(run.model[::5], spacing), ".", color=COLORS["refit"], ms=1)
+    axes.plot(columns[::120], wrap(true_offset[::120], spacing), ".", color=COLORS["true"], ms=1.5)
+    axes.plot(columns[::15], wrap(ideal_offset(run.card, strip)[::15], spacing), ".", color=COLORS["geometry"], ms=1)
+    axes.plot(columns[::15], wrap(run.model[::15], spacing), ".", color=COLORS["refit"], ms=1)
     axes.scatter(x, wrap(offsets, spacing), s=9, c=grey, zorder=3)
     axes.set_ylim(-spacing / 2, spacing / 2)
-    axes.set_xlabel("column (inner turns left)")
+    axes.set_xlabel("turns along the groove (inner turns left)")
     axes.set_ylabel("offset from the low-res spiral, px (mod spacing)")
     save(figure, path)
 
@@ -325,32 +332,32 @@ def offsets_vs_truth(run, path):
     strip, spacing, card = run.strip, run.strip.spiral.spacing, run.card
     ideal = ideal_offset(card, strip)
     true_offset = card.nearest_groove(*spiral_points(strip.spiral, strip.theta))[0]
-    columns = np.arange(len(strip.theta))
+    columns = turns_along(run, strip.theta)
     x, offsets, grey = wedge_dots(run, run.wedges.first)
     figure = new_figure(900, 900)
     axes = figure.add_axes([0.08, 0.33, 0.9, 0.65])
-    axes.plot(columns[::40], wrap(true_offset[::40] - ideal[::40], spacing), ".", color=COLORS["true"], ms=1.5)
+    axes.plot(columns[::120], wrap(true_offset[::120] - ideal[::120], spacing), ".", color=COLORS["true"], ms=1.5)
     axes.axhline(0, color=COLORS["geometry"], lw=1.5)
-    axes.plot(columns[::5], wrap(run.model[::5] - ideal[::5], spacing), ".", color=COLORS["refit"], ms=1)
+    axes.plot(columns[::15], wrap(run.model[::15] - ideal[::15], spacing), ".", color=COLORS["refit"], ms=1)
     axes.scatter(x, wrap(offsets - np.interp(x, columns, ideal), spacing), s=9, c=grey, zorder=3)
     axes.set_ylim(-spacing / 2, spacing / 2)
     axes.tick_params(labelbottom=False)
     axes.set_ylabel("offset from the true spiral, px (mod spacing)")
     zoom = figure.add_axes([0.08, 0.06, 0.9, 0.22], sharex=axes)
     zoom.axhline(0, color=COLORS["geometry"], lw=1.5)
-    zoom.plot(columns[::5], wrap(run.model[::5] - ideal[::5], spacing), "-", color=COLORS["refit"], lw=1.5)
+    zoom.plot(columns[::15], wrap(run.model[::15] - ideal[::15], spacing), "-", color=COLORS["refit"], lw=1.5)
     zoom.set_ylim(-1, 1)
     zoom.set_ylabel("refit error, px")
-    zoom.set_xlabel("column (inner turns left)")
+    zoom.set_xlabel("turns along the groove (inner turns left)")
     save(figure, path)
 
 
-def rectangle_image(run, path, columns=1040):
+def rectangle_image(run, path, turns=0.25):
     # the rectangle around the detail spot, rows +-1.6 S (outward up), each
     # column's mean removed; yellow the refitted spiral (+-S faint), violet
     # pass 2's rows, green (wide) the true groove, orange the path
     strip, spacing = run.strip, run.strip.spiral.spacing
-    window = strip_window(run, columns)
+    window = strip_window(run, turns)
     reach = int(round(1.6 * spacing))
     rows = np.arange(-reach, reach + 1, dtype=float)
     samples = sample_strip(run.image, strip.spiral, strip.theta[window], rows)
@@ -370,22 +377,28 @@ def rectangle_image(run, path, columns=1040):
     save(figure, path)
 
 
-def line_plot(path, series, ylabel, columns_label):
-    figure = new_figure(1040, 280)
-    axes = figure.add_axes([0.07, 0.12, 0.91, 0.84])
+def window_degrees(run, window):
+    theta = run.strip.theta[window]
+    return np.degrees(theta - theta[0])
+
+
+def line_plot(path, x, series, ylabel, columns_label):
+    figure = new_figure(1040, 300)
+    axes = figure.add_axes([0.07, 0.19, 0.91, 0.78])
     for k, (values, color) in enumerate(series):  # the first series is the truth: wider, underneath
-        axes.plot(values, color=color, lw=3.5 if k == 0 else 1.3, alpha=0.8 if k == 0 else 1)
+        axes.plot(x, values, color=color, lw=3.5 if k == 0 else 1.3, alpha=0.8 if k == 0 else 1)
+    axes.set_xlim(x[0], x[-1])
     axes.set_ylabel(ylabel)
     axes.set_xlabel(columns_label)
     axes.grid(color="#333")
     save(figure, path)
 
 
-def trace_offset(run, path, columns=1040):
-    window = strip_window(run, columns)
+def trace_offset(run, path, turns=0.25):
+    window = strip_window(run, turns)
     model = run.model[window]
-    line_plot(path, [(run.score.true_offset[window] - model, COLORS["true"]), (run.trace[window] - model, COLORS["trace"])],
-              "px from the refitted spiral", f"columns ({run.strip.step:g} px of groove each)")
+    line_plot(path, window_degrees(run, window), [(run.score.true_offset[window] - model, COLORS["true"]), (run.trace[window] - model, COLORS["trace"])],
+              "px from the refitted spiral", "degrees along the groove (middle turn)")
 
 
 def errors_per_turn(run, path):
@@ -410,10 +423,10 @@ def errors_per_turn(run, path):
     save(figure, path)
 
 
-def sound(run, path, columns=350):
-    window = strip_window(run, columns)
-    line_plot(path, [(run.score.true_sound[window], COLORS["true"]), (run.sound[window], COLORS["trace"])],
-              "relative depth", f"columns ({run.strip.step:g} px of groove each)")
+def sound(run, path, turns=0.075):
+    window = strip_window(run, turns)
+    line_plot(path, window_degrees(run, window), [(run.score.true_sound[window], COLORS["true"]), (run.sound[window], COLORS["trace"])],
+              "relative depth", "degrees along the groove (middle turn)")
 
 
 # ---------- The unrolled rectangle and its wedges (cardlab/wedges.py) ----------

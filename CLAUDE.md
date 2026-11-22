@@ -115,7 +115,10 @@ Pages serves them (nothing is built on GitHub).
 - Full-res stage = the unrolled rectangle and its wedges (`wedges.py`,
   Nov 2026, Adam's idea; replaced the strip, which stays in `strip.py` for
   the experiments and shared helpers): columns along the low-res spiral at
-  equal arc length (3 px; 1 px gives the same), rows = radial offset; rows
+  equal steps in theta (Adam: the card turns at a constant rate, so theta
+  is time), 1 px of groove apart on the outermost turn (~17 k per turn; no
+  turn undersampled, so bilinear needs no prefilter); readout lengths are px
+  at the middle turn (`Unrolled.step`). Rows = radial offset; rows
   ±S/2 cover every pixel once. Never stored: `Unrolled.pull` samples a block
   when needed. Wedges of 1/40 turn; per column one untapered period of rows
   × e^{−2πid/S}, summed per wedge. Pass 1: rows about the spiral →
@@ -260,6 +263,9 @@ Pages serves them (nothing is built on GitHub).
   future idea (Adam): RANSAC over N > 2 lines.
 - Sound readout window (Nov 2026, typical, 5 seeds): ±1/2/3/4 px → corr
   0.875 / 0.886 / 0.896 / 0.902; default still ±3 (±4 not adopted yet).
+- Test sound (Nov 2026, Adam): a function of theta, not arc length (the
+  card turns at a constant rate, so a frequency's wavelength grows with r);
+  `sound_wavelengths` 15–300 px are at the mid radius.
 - Card model (Nov 2026): the groove's lateral wobble (0.3 px rms, 200–3000
   px along the groove, assumed) was removed: results unchanged within the
   seed-to-seed spread (trace −0.01–0.03 px). Drift vs. the real card

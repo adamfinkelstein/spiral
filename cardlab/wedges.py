@@ -4,12 +4,14 @@ import numpy as np
 from scipy.optimize import least_squares
 
 from .geometry import TAU, nearest_turn_theta, polar, spiral_points, wrap
-from .strip import Strip, refit_basis, refit_start, sample_at, strip_columns
+from .strip import Strip, refit_basis, refit_start, sample_at
 
 # The full-res stage (Nov 2026; replaced the strip, see strip.py and
 # experiments/unrolled_wedges.py): the annulus unrolled into a rectangle
 # along the low-res spiral (Adam's idea). Columns run along the spiral at
-# equal arc length, rows are the radial offset d from it; rows -S/2..S/2
+# equal steps in theta (time: the card turns at a constant rate), about 1 px
+# of groove apart on the outer turn (so no turn is undersampled and bilinear
+# sampling needs no prefilter), rows are the radial offset d from it; rows -S/2..S/2
 # cover every annulus pixel once (offset +S is the next turn at the same
 # angle). The rectangle is never stored: `Unrolled.pull` samples just the
 # columns and rows asked for. Wedges = blocks of columns, `sectors` per turn;
@@ -32,7 +34,7 @@ from .strip import Strip, refit_basis, refit_start, sample_at, strip_columns
 @dataclass
 class WedgeSettings:
     sectors: int = 40         # wedges per turn
-    column_step: float = 3.0  # px of groove between columns (1 px: the same results)
+    column_step: float = 1.0  # px of groove between columns on the outermost turn (equal steps in theta)
 
 
 @dataclass
@@ -46,10 +48,21 @@ class WedgeRun:
     path: np.ndarray        # the groove's offset from the low-res spiral at the columns, px
 
 
+def theta_columns(spiral, mark, outer_step):
+    # equal steps in theta from 1.5 spacings inside the marked inner edge to 1.5
+    # inside the outer one, `outer_step` px of groove apart on the outermost turn
+    first = (mark.r_inner + 1.5 * spiral.spacing) / spiral.pitch
+    last = (mark.r_outer - 1.5 * spiral.spacing) / spiral.pitch
+    return np.arange(first, last, outer_step / (spiral.pitch * last))
+
+
 class Unrolled:
     def __init__(self, image, spiral, mark, column_step, sectors):
-        self.image, self.spiral, self.spacing, self.step = image, spiral, spiral.spacing, column_step
-        self.theta = strip_columns(spiral, mark, column_step)
+        self.image, self.spiral, self.spacing = image, spiral, spiral.spacing
+        self.theta = theta_columns(spiral, mark, column_step)
+        # px of groove per column at the middle turn (readout lengths are in px there)
+        self.step = spiral.pitch * np.median(self.theta) * (self.theta[1] - self.theta[0])
+        self.per_turn = TAU / (self.theta[1] - self.theta[0])
         reach = int(np.ceil(self.spacing / 2))
         self.rows = np.arange(-reach, reach + 1, dtype=float)
         # one period exactly: rows within S/2 weigh 1, the end rows the fraction inside

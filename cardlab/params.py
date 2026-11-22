@@ -51,7 +51,7 @@ PARAM_NOTES = {
     "groove_width": ("Groove width at nominal depth", "× spacing", "assumed; round stylus (parabola)"),
     "edge_fade": ("Depth fade at the ends", "px", "assumed"),
     "sound_rms": ("Sound: depth modulation (rms)", "× depth", "assumed; at −1 the stylus leaves the card"),
-    "sound_wavelengths": ("Sound wavelengths along the groove", "px", "assumed"),
+    "sound_wavelengths": ("Sound wavelengths along the groove at the mid radius", "px", "assumed; the sound is a function of the angle (the card turns at a constant rate), so a wavelength scales with the radius"),
     "grain": ("Grain (rms)", "× groove rms", "measured: 2.6 vs. groove 5.0 rms (image 21)"),
     "grain_size": ("Grain size", "px", "measured ACF 0.5 at ~3–5 px"),
     "drift_rms": ("Groove drift from the spiral (rms)", "px", "measured 2.9 / 3.5 px rms per turn vs. Tomaz's fitted spiral (images 21 / 26)"),

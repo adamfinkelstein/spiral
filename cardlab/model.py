@@ -9,6 +9,8 @@ from .geometry import TAU, Mark, Spiral, pitch_of, polar, smoothstep
 # follows r = pitch*theta + drift and moves up and down with the sound
 # (hill-and-dale): cut depth = 1 + sound. Where the stylus is above the card
 # nothing is cut, so the surface is min(0, stylus) over the nearest arms.
+# The sound is a function of theta (time: the card turns at a constant rate),
+# so a given frequency is cut longer on the outer turns (wavelength ~ r).
 
 
 def band_limited(rng, positions, rms, wavelengths, n_waves=40):
@@ -37,21 +39,18 @@ class Card:
     mark: Mark
     theta_grid: np.ndarray
     drift: np.ndarray
-    arc_grid: np.ndarray
+    sound_theta: np.ndarray
     sound_track: np.ndarray
 
     @property
     def spacing(self):
         return self.spiral.spacing
 
-    def arc_length(self, theta):
-        return self.spiral.pitch * theta**2 / 2
-
     def lateral_offset(self, theta):
         return np.interp(theta, self.theta_grid, self.drift)
 
     def sound(self, theta):
-        return np.interp(self.arc_length(theta), self.arc_grid, self.sound_track)
+        return np.interp(theta, self.sound_theta, self.sound_track)
 
     def cut_depth(self, theta):
         r = self.spiral.pitch * theta
@@ -103,9 +102,13 @@ def make_card(params, seed):
     theta_grid = np.arange(max(1, (params.r_inner - margin) / pitch), (params.r_outer + margin) / pitch, 0.005)
     drift_wavelengths = tuple(TAU * turns for turns in params.drift_turns)
     drift = band_limited(rng, theta_grid, params.drift_rms, drift_wavelengths, n_waves=60)
-    arc_grid = np.arange(pitch * theta_grid[0] ** 2 / 2, pitch * theta_grid[-1] ** 2 / 2, 1.0)
-    sound_track = band_limited(rng, arc_grid, params.sound_rms, params.sound_wavelengths)
-    return Card(params, seed, spiral, mark, theta_grid, drift, arc_grid, sound_track)
+    # sound wavelengths are given in px of groove at the mid radius; in theta
+    # they are that / the mid radius; sampled every <= 0.5 px of groove
+    mid_radius = (params.r_inner + params.r_outer) / 2
+    sound_theta = np.arange(theta_grid[0], theta_grid[-1], 0.5 / (params.r_outer + margin))
+    sound_wavelengths = tuple(length / mid_radius for length in params.sound_wavelengths)
+    sound_track = band_limited(rng, sound_theta, params.sound_rms, sound_wavelengths)
+    return Card(params, seed, spiral, mark, theta_grid, drift, sound_theta, sound_track)
 
 
 def grain_image(card, size):

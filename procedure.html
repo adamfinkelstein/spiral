@@ -681,8 +681,8 @@ the image masked to the hand-marked annulus &rarr; spacing = FFT radial-profile
 peak within 0.5&ndash;1.5 &times; the radius expected from the nominal &rarr; center and phase from the spiral
 coherence map (Z at every pixel by one FFT correlation, then the map's
 center of point symmetry near its peak) &rarr; <b>full-res
-stage</b>: the annulus unrolled into a rectangle along that spiral (a column
-every 3 px of groove, rows &plusmn;S/2 at 1 px, sampled only when needed) &rarr;
+stage</b>: the annulus unrolled into a rectangle along that spiral (columns at
+equal steps in angle, i.e. in time, ~1 px apart on the outer turn; rows &plusmn;S/2 at 1 px, sampled only when needed) &rarr;
 wedges of 1/40 turn, one period of rows demodulated per column &rarr; robust
 refit of the geometry on the wedges, modulo S &rarr; a second pass with each
 column's rows midway between the lands &rarr; the path, locked to the refitted
@@ -731,8 +731,12 @@ wave), the trace 0.54&ndash;0.83 px rms (was 0.39&ndash;0.63), sound correlation
 (5 px fast drift instead of 6 px slow: trace 0.99&ndash;1.69 px, wrong groove
 &le; 0.41%).</p>
 <p>The sound is cut <b>vertically</b> (hill-and-dale): the stylus moves up and down,
-so the depth of the cut is D(s) = D<sub>0</sub>(1 + a(s)), a(s) the sound along the
-groove (0.4 rms, wavelengths 15&ndash;300 px). The stylus profile is
+so the depth of the cut is D(&theta;) = D<sub>0</sub>(1 + a(&theta;)), a the sound (0.4 rms). The
+sound is a function of the angle &theta;, since the card turns at a constant rate:
+a given frequency is cut with a wavelength proportional to the radius. Its
+wavelengths are 15&ndash;300 px of groove at the mid radius (~2200 px), so ~11&ndash;220 px
+on the inner turns and ~19&ndash;380 px on the outer ones (until Nov 2026 the
+sound was a function of arc length, with the same wavelengths everywhere). The stylus profile is
 z = &minus;D + D<sub>0</sub>(2u/W<sub>0</sub>)&sup2; at lateral distance u (W<sub>0</sub> = 0.6 spacing), so a deeper
 cut is also wider and a shallower one narrower. The surface is min(0, stylus)
 over the nearest arms: where the sound lifts the stylus above the card
@@ -844,9 +848,14 @@ just makes using all the data cheap.</p>
 
 <h2>P3.3 Full-res stage: the unrolled rectangle and its wedges</h2>
 <p>(<code>cardlab/wedges.py</code>; Adam's idea, Nov 2026.) The annulus is unrolled
-along the low-res spiral: columns at equal arc length (every 3 px of groove,
-from 1.5 spacings inside the marked inner edge to 1.5 inside the outer one,
-~175 000 columns, ~38 turns), rows the radial offset d from the spiral (1 px,
+along the low-res spiral: columns at equal steps in &theta; (Adam: the card
+turns at a constant rate, so &theta; is time and the readout comes out at a
+constant sample rate), from 1.5 spacings inside the marked inner edge to 1.5
+inside the outer one; the step is 1 px of groove on the outermost turn (~0.6 px
+on the innermost; ~17 000 columns per turn, ~660 000 in all, ~38 turns).
+Since no turn is sampled more coarsely than the pixels, bilinear sampling
+needs no prefilter; a coarser step would need one, as wide as the column
+spacing there, i.e. growing with r. Rows are the radial offset d from the spiral (1 px,
 outward +). Rows &minus;S/2..S/2 cover every annulus pixel exactly once, since
 offset +S is the next turn at the same angle. The rectangle is never stored:
 a block of columns and rows is sampled (bilinear, scipy map_coordinates) only
@@ -860,7 +869,8 @@ is a confidence. One period, untapered, gives the first Fourier component
 exactly; a taper or a wider window lets the neighbouring turns in, and since
 they drift independently of this one they pull the estimate toward the spiral
 (the strip's &plusmn;S cos&sup2; window followed only ~90% of the drift; P3.6b).
-Columns every 1 px give the same results as every 3 px.</p>
+With columns at equal arc length, every 1 px gave the same paths as every 3 px
+(until Nov 2026 the columns were at equal arc length, every 3 px).</p>
 <p><b>Two passes.</b> Pass 1: rows about the spiral &rarr; ~1500 wedge offsets &rarr; the
 geometry refit (P3.4), on the wedges alone, no resampling. Pass 2: each column's
 period of rows centered <b>midway between the lands</b> either side of the
@@ -971,12 +981,12 @@ frozen card_js.html, so it no longer covers the pipeline's full-res stage.</p>
 <figure><img class="wide" src="card/img/j_sound.png" alt=""><figcaption>Step j: the sound read from the groove's depth (orange) against the truth (green).</figcaption></figure>
 <table>
 <tr><th>Preset (5 seeds)</th><th>Low-res center</th><th>Refit center</th><th>Path rms</th><th>Wrong groove</th><th>No cut</th><th>Sound readout corr.</th></tr>
-<tr><td>Clean</td><td class="n">0.14&ndash;0.33 px</td><td class="n">0.09&ndash;0.35 px</td><td class="n">0.06&ndash;0.11 px</td><td class="n">0</td><td class="n">0.5&ndash;0.6%</td><td class="n">0.953&ndash;0.972</td></tr>
-<tr><td>Typical</td><td class="n">0.14&ndash;0.35 px</td><td class="n">0.10&ndash;0.35 px</td><td class="n">0.14&ndash;0.22 px</td><td class="n">0</td><td class="n">0.5&ndash;0.6%</td><td class="n">0.886&ndash;0.906</td></tr>
-<tr><td>Loud</td><td class="n">0.14&ndash;0.36 px</td><td class="n">0.10&ndash;0.35 px</td><td class="n">0.15&ndash;0.25 px</td><td class="n">0</td><td class="n">7.6&ndash;7.7%</td><td class="n">0.924&ndash;0.941</td></tr>
-<tr><td>Hard</td><td class="n">0.17&ndash;0.39 px</td><td class="n">0.16&ndash;0.52 px</td><td class="n">0.44&ndash;1.29 px</td><td class="n">0&ndash;0.2%</td><td class="n">4.7&ndash;4.8%</td><td class="n">0.796&ndash;0.825</td></tr>
+<tr><td>Clean</td><td class="n">0.14&ndash;0.32 px</td><td class="n">0.08&ndash;0.34 px</td><td class="n">0.06&ndash;0.12 px</td><td class="n">0</td><td class="n">0.5&ndash;0.6%</td><td class="n">0.947&ndash;0.972</td></tr>
+<tr><td>Typical</td><td class="n">0.14&ndash;0.36 px</td><td class="n">0.09&ndash;0.34 px</td><td class="n">0.14&ndash;0.22 px</td><td class="n">0</td><td class="n">0.5&ndash;0.6%</td><td class="n">0.880&ndash;0.905</td></tr>
+<tr><td>Loud</td><td class="n">0.14&ndash;0.35 px</td><td class="n">0.09&ndash;0.34 px</td><td class="n">0.15&ndash;0.23 px</td><td class="n">0</td><td class="n">7.7&ndash;7.8%</td><td class="n">0.919&ndash;0.939</td></tr>
+<tr><td>Hard</td><td class="n">0.17&ndash;0.39 px</td><td class="n">0.13&ndash;0.50 px</td><td class="n">0.45&ndash;1.51 px</td><td class="n">0&ndash;0.2%</td><td class="n">4.7&ndash;4.8%</td><td class="n">0.789&ndash;0.820</td></tr>
 </table>
-<p class="muted">Python pipeline (unrolled rectangle and wedges), all turns, default settings, drift 3.2 px (hard 5 px); from card/results.json (Nov 2026). Hand marks 6&ndash;26 px off
+<p class="muted">Python pipeline (unrolled rectangle and wedges, columns and test sound in &theta;), all turns, default settings, drift 3.2 px (hard 5 px); from card/results.json (Nov 2026). Hand marks 6&ndash;26 px off
 (hard: 13&ndash;53 px). Path rms: distance from each point of the path to the nearest true groove centerline.
 Sound: correlation of the read-out depth signal with the true sound of the traced groove. With the strip
 (until Nov 2026) the trace was 0.51&ndash;0.83 / 0.54&ndash;0.84 / 0.61&ndash;0.91 / 0.99&ndash;1.70 px and the sound the same within ~0.005.</p>
@@ -984,7 +994,7 @@ Sound: correlation of the read-out depth signal with the true sound of the trace
 <li>On the idealized card, <b>geometry and tracking are solved</b>: center to
 ~0.1&ndash;0.3 px after the refit, from a hand mark tens of px off (the low-res
 center doesn't use the mark), spacing to 0.01&ndash;0.05%, and the path stays within
-~0.1&ndash;0.25 px of the groove centerline (0.4&ndash;1.3 px on hard cards), through
+~0.1&ndash;0.25 px of the groove centerline (0.4&ndash;1.5 px on hard cards), through
 the gaps where the sound lifts the stylus out of the card. The groove's own
 drift, ~3 px from turn to turn, is what limits the refitted center.</li>
 <li><b>The sound comes out of the depth</b> with correlation ~0.9 at the measured

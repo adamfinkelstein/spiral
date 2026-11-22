@@ -64,8 +64,9 @@ calibrated from those images.
 Low res (1024²): mask to the hand-marked annulus → FFT spacing (peak within
 ±10% of nominal) → coherence map → its center of point symmetry (center),
 arg Z there (phase). Full res (Nov 2026, Adam's idea; replaced the strip):
-the annulus unrolled into a rectangle along that spiral (a column every 3 px
-of groove, rows ±S/2, sampled only when needed) → wedges of 1/40 turn, one
+the annulus unrolled into a rectangle along that spiral (columns at equal
+steps in theta, i.e. time, ~1 px apart on the outer turn; rows ±S/2, sampled
+only when needed; the test sound is also a function of theta) → wedges of 1/40 turn, one
 period of rows demodulated per column → geometry refit modulo the spacing on
 the wedges (grid start + robust least squares) → pass 2 with each column's
 rows midway between the lands → path locked to the refitted spiral → sound =

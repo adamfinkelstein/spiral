@@ -14,8 +14,8 @@ from .strip import sample_strip
 @dataclass
 class ReadoutSettings:
     half_window: int = 3            # px across the groove
-    average_length: float = 300     # px along the groove
-    smoothing: float = 3            # px along the groove
+    average_length: float = 300     # px along the groove at the middle turn (columns are equal steps in theta)
+    smoothing: float = 3            # px along the groove at the middle turn
 
 
 def mean_across(image, strip, centers, half_window):
