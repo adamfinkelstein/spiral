@@ -95,6 +95,13 @@ Pages serves them (nothing is built on GitHub).
   comments, no docstrings; factor shared code; lean on vetted libraries
   (OpenCV, scipy, scikit-image / scikit-learn, e.g. their RANSAC) and
   vectorized numpy instead of loops.
+- Constants (Adam's, for a paper later): prefer round, justifiable values
+  over fitted decimals, e.g. a peak at least 2× its background (ln 2), not
+  0.65; a window from halfway to zero frequency to halfway to the second
+  harmonic (0.5–1.5 × the expected radius). Find the range empirically on
+  the synthetic experiments, then pick the round value inside it, check it
+  still separates the cases, and record both the measured range and the
+  reason in the docs.
 - Modules: `params.py` (CardParams dataclass, PRESETS, PARAM_NOTES with
   sources), `geometry.py` (Spiral, Mark, TAU, wrap, smoothstep,
   spiral_points), `model.py` (make_card, Card.groove_height /

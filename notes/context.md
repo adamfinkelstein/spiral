@@ -73,6 +73,9 @@ correlation ~0.9 (limited by the measured grain level).
 
 ## Adam's preferences
 
+- Constants: round and justifiable (he plans a paper), chosen inside the
+  range the synthetic experiments allow, with the reason written down
+  (e.g. a peak at least 2× its background rather than a fitted 0.65).
 - Python for experiments: small, easy-to-read functions; descriptive names;
   a few comments, no docstrings; factor shared code; lean on vetted
   libraries (OpenCV, scipy, scikit-image/learn, their RANSAC) and vectorized
