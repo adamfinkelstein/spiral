@@ -4,7 +4,6 @@
   "seed": 1,
   "mark_error": 12.112985123446883,
   "fft_spacing_error": 0.0007616855894541086,
-  "fft_ok": true,
   "low_center_error": 0.2055509770611929,
   "low_spacing_error": 0.0007616855894538865,
   "low_vs_grooves": 3.364997203471039,
