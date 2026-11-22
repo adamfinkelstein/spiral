@@ -72,10 +72,20 @@ def radial_profile(spectrum, smoothing):
     return gaussian_filter1d(profile, smoothing) if smoothing > 0 else profile
 
 
-def parabolic_peak(values, index):
-    left, center, right = values[index - 1 : index + 2]
-    curvature = left - 2 * center + right
-    return index + (0.5 * (left - right) / curvature if curvature < 0 else 0.0)
+def peak_without_slope(profile, index):
+    # sub-bin peak position: subtract the local background, a line through the
+    # profile at the halfway troughs (0.5 and 1.5 x the peak's radius), from the
+    # 5 bins around the peak, then the vertex of a least-squares parabola. The
+    # peak sits on a falling background, which pulls a plain parabola toward
+    # smaller radii (Nov 2026: cards 0.049 -> 0.024 % median spacing error).
+    bins = np.arange(len(profile))
+    x1, x2 = 0.5 * index, 1.5 * index
+    y1, y2 = np.interp([x1, x2], bins, profile)
+    offsets = np.arange(-2, 3)
+    values = profile[index - 2 : index + 3] - (y1 + (y2 - y1) / (x2 - x1) * (index + offsets - x1))
+    a, b, _ = np.polyfit(offsets, values, 2)
+    vertex = -b / (2 * a) if a < 0 else 0.0
+    return index + float(np.clip(vertex, -2, 2))
 
 
 def fft_spacing(image, mask, mark, scale, nominal, settings):
@@ -92,7 +102,7 @@ def fft_spacing(image, mask, mark, scale, nominal, settings):
     high = int(np.ceil((1 + settings.spacing_window) * expected))
     best = low + int(np.argmax(profile[low : high + 1]))
     on_edge = best in (low, high)
-    peak = best if on_edge else parabolic_peak(profile, best)
+    peak = best if on_edge else peak_without_slope(profile, best)
     spacing = size / peak
     ok = not on_edge  # a peak on the window's edge: use the nominal
     return spectrum, profile, (low, high), peak, spacing, ok

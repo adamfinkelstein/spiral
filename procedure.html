@@ -172,11 +172,26 @@ narrow band rather than a smooth wave, fainter harmonics at
 <h2>4. Spacing: the peak of the smoothed profile</h2>
 <p>The same rule as on the cards (<code>profilePeak</code> in fftspacing.js,
 <code>fft_spacing</code> in cardlab): the largest value of the smoothed profile
-within 0.5&ndash;1.5 &times; the expected peak radius &rho;<sub>0</sub> = 512&nbsp;/&nbsp;<i>s</i><sub>0</sub>,
-refined by a parabola through it and its two neighbours:
-&rho;* = &rho;<sub>i</sub> + &frac12;(P<sub>i&minus;1</sub> &minus; P<sub>i+1</sub>)/(P<sub>i&minus;1</sub> &minus; 2P<sub>i</sub> + P<sub>i+1</sub>),
-spacing = 512&nbsp;/&nbsp;&rho;*. A peak on the window's edge is unreliable, and
+within 0.5&ndash;1.5 &times; the expected peak radius &rho;<sub>0</sub> = 512&nbsp;/&nbsp;<i>s</i><sub>0</sub>
+(bin &rho;<sub>i</sub>), refined below a bin: subtract the local background, a
+straight line through the smoothed profile at the halfway troughs
+0.5&nbsp;&rho;<sub>i</sub> and 1.5&nbsp;&rho;<sub>i</sub>, from the 5 bins &rho;<sub>i</sub>&minus;2 &hellip;
+&rho;<sub>i</sub>+2, and take the vertex of a least-squares parabola through them
+(&rho;* = &rho;<sub>i</sub> &minus; b/2a). Spacing = 512&nbsp;/&nbsp;&rho;*. The peak never moves to
+another bin's neighbourhood: the background only shifts its sub-bin position. A peak on the window's edge is unreliable, and
 the nominal is used instead (with a warning).</p>
+<p><b>Why the slope.</b> The peak sits on a falling background (from the
+mask's own spectrum, the soft line edges, noise, the weighting and the log),
+which pulls a plain parabola toward smaller radii, i.e. larger spacings:
+most at large spacings, where the peak sits on the steepest part. The
+background can't be written down for an unknown card, but near the peak a
+line through the troughs on either side describes it, the same troughs the
+harmonic sum used. Before (a 3-bin parabola, no slope removal) vs. now,
+median spacing error: perfect spirals at spacing 10 / 30 / 40: 0.13 / 1.05 /
+1.72% &rarr; 0.03 / 0.37 / 0.51%; noise 1.5 about the same; offsets &plusmn;0.1&ndash;0.25 at
+spacing 20 slightly worse (0.99 / 1.84 &rarr; 1.19 / 2.13%: a broad, lopsided
+peak isn't a parabola on a line). On the 26 cards: 0.049 &rarr; 0.023% (20
+standard), 0.063 &rarr; 0.032% (off-nominal), hard cards 0.077 &rarr; 0.025%.</p>
 <p><b>Why that window.</b> The profile has peaks at &rho;<sub>1</sub>, 2&rho;<sub>1</sub>,
 3&rho;<sub>1</sub>, &hellip; and natural troughs halfway between neighbours; below the
 fundamental there is no harmonic, only zero frequency. So the window runs from
@@ -238,6 +253,7 @@ variation locked onto one region's spacing.</p>
 <tr><td>2</td><td>Turn weighting</td><td>1/&radic;r about the mark, capped at 2<i>s</i><sub>0</sub></td><td>none, 1/&radic;r, 1/r</td></tr>
 <tr><td>3</td><td>Mask (from the hand mark), mean removed inside it</td><td>ramp 1 spacing; no Hann window</td><td>Hann on top of the mask: worse; no mask + Hann: worse</td></tr>
 <tr><td>3</td><td>Profile smoothing</td><td>1.5 bins</td><td>0, 1, 1.5, 3 (also on the cards)</td></tr>
+<tr><td>4</td><td>Sub-bin refinement</td><td>5-bin least-squares parabola after removing the trough line</td><td>3-bin parabola (2&times; worse on cards); re-searching the whole window after the subtraction (not kept: could move the peak); a line through the valley bottoms instead of the halfway troughs: the deepest point in 0.5&ndash;1 / 1&ndash;1.5 &times; the peak radius about the same, the first dip walking downhill fragile (stops on ripple: 3.5 vs 1.0% at spacing 40 with noise)</td></tr>
 <tr><td>4</td><td>Search window</td><td>0.5&ndash;1.5 &times; the expected radius 512&nbsp;/&nbsp;<i>s</i><sub>0</sub></td><td>&plusmn;10/20/50% identical on cards and spirals; &times;0.5&ndash;2 before</td></tr>
 </table>
 
@@ -691,12 +707,14 @@ turns: over 40 cards, spacing rms error 0.071 &rarr; 0.046% and the peak 11 &rar
 bins wide without it); the mean is subtracted inside the mask only. The
 spacing is the peak of the radial profile (smoothed by 1.5 bins) within
 0.5&ndash;1.5 &times; the radius expected from the nominal (the device spec; why:
-Part 1, step 4), refined parabolically. It needs to be reliable more than
+Part 1, step 4), refined below a bin by a parabola through the 5 bins
+around it after subtracting the local slope (a line through the halfway
+troughs; Part 1, step 4). It needs to be reliable more than
 precise: the refit (P3.4) fits the spacing again. The groove has few useful harmonics, and the profile's
 own ripple (from the annulus edges) spoiled the harmonic sum's trough samples
 (it locked &minus;11% off on some cards). If the peak is on the window's edge,
 the nominal is used instead (no test card has needed it; the FFT spacing is
-within 0.11% on typical cards, 0.14% on hard ones). Until Nov 2026 the window
+within 0.08% on typical cards, 0.11% on hard ones). Until Nov 2026 the window
 was &plusmn;10%, the smoothing 1 bin, and the nominal was also used when the peak
 was more than 3% from it; that rule turned cards cut at 25.9 or 32.2 px (the
 range over Tomaz's five cards, searched with the 29-px nominal) into 9.5&ndash;12.9%

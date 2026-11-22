@@ -184,8 +184,9 @@ not affect it.</dd>
 <dt><span style="color:#ff4040">Red curve</span></dt>
 <dd>The same profile smoothed by a Gaussian of 1.5 bins, drawn only inside
 the search window, which is all that is searched. Its highest point (red
-dot), refined by a parabola through it and its neighbours, gives the
-estimate: spacing = 512 / radius.</dd>
+dot) gives the estimate, refined below a bin by a parabola through the 5 bins around it
+after subtracting the local slope (a line through the profile halfway to
+zero frequency and halfway to the second harmonic): spacing = 512 / radius.</dd>
 <dt>Text</dt>
 <dd>The peak radius and the estimated spacing, and a warning if the peak is
 on the edge of the search window.</dd>

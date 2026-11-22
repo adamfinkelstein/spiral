@@ -46,3 +46,19 @@ nominal). Same cards:
 No change on these cards (the fundamental always dominates); the new window
 is chosen for its guarantee: for a true spacing within ~0.67–1.33 × the
 nominal, the fundamental is inside and the second harmonic outside.
+
+## Sub-bin refinement with the local slope removed (Nov 2026)
+
+`cardlab.lowres.peak_without_slope`: a line through the smoothed profile at
+0.5 and 1.5 × the peak bin is subtracted from the 5 bins around the peak,
+then the vertex of a least-squares parabola (was: a 3-bin parabola). Same
+cards: standard 20 median 0.049 → 0.023 % (max 0.14 → 0.11 %), off-nominal 6
+0.063 → 0.032 %; hard 0.077 → 0.025 %, typical 0.045 → 0.023 %, clean 0.041
+→ 0.017 %.
+
+Also tried: the line through the valley bottoms instead of the halfway
+troughs. Deepest point in 0.5–1 and 1–1.5 × the peak radius: standard 20
+cards 0.016 %, off-nominal 0.037 % (about the same); first dip walking
+downhill from the peak: 0.012 % / 0.041 %, but it stops on the profile's
+ripple after 9–10 bins (troughs are ~95 bins away), and on drawn spirals it
+failed worse (spacing 40, noise 1.5: 3.5 vs 1.0 %). Kept the halfway troughs.

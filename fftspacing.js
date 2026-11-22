@@ -223,10 +223,23 @@ function profilePeak({ target, window = 0.5, blur = 1.5 }) {
   let best = lo;
   for (let i = lo; i <= hi; i++) if (peakProfile[i] > peakProfile[best]) best = i;
   const edge = best === lo || best === hi;
+  // Sub-bin position (as cardlab's peak_without_slope): subtract the local
+  // background, a line through the profile at the halfway troughs (0.5 and
+  // 1.5 × the peak's radius), from the 5 bins around the peak, then take the
+  // vertex of a least-squares parabola (x = -2..2: b = Σxy/10,
+  // a = (5Σx²y − 10Σy)/70). A plain parabola is pulled toward smaller radii
+  // by the falling background.
   let rho = best;
   if (!edge) {
-    const a = peakProfile[best - 1], b = peakProfile[best], c = peakProfile[best + 1], den = a - 2 * b + c;
-    if (den < 0) rho += (0.5 * (a - c)) / den;
+    const at = r => { const i = Math.floor(r), f = r - i; return peakProfile[i] * (1 - f) + peakProfile[i + 1] * f; };
+    const x1 = 0.5 * best, x2 = Math.min(1.5 * best, NBINS - 2), y1 = at(x1), k = (at(x2) - y1) / (x2 - x1);
+    let sy = 0, sxy = 0, sx2y = 0;
+    for (let x = -2; x <= 2; x++) {
+      const y = peakProfile[best + x] - (y1 + k * (best + x - x1));
+      sy += y; sxy += x * y; sx2y += x * x * y;
+    }
+    const a = (5 * sx2y - 10 * sy) / 70, b = sxy / 10;
+    if (a < 0) rho += Math.max(-2, Math.min(2, -b / (2 * a)));
   }
   peak = { rho, spacing: edge ? target : N / rho, measured: N / rho, lo, hi, edge };
   return peak;

@@ -316,7 +316,13 @@ Robustness (8 random offset sets, uniform in ±amp at each knot):
   window (`fftInput`; no Hann), and the spacing as the peak of the profile
   smoothed by 1.5 bins within 0.5–1.5 × the expected peak radius N /
   target, i.e. ±50% in frequency (`profilePeak({ target,
-  window, blur })` → `peak` = { rho, spacing, measured, lo, hi, edge }; a
+  window, blur })` → `peak` = { rho, spacing, measured, lo, hi, edge }; sub-bin
+  position: the trough line (profile at 0.5 and 1.5 × the peak bin)
+  subtracted from the 5 bins around the peak, vertex of a least-squares
+  parabola (cardlab `peak_without_slope`; cards 0.049 → 0.023 % median,
+  spirals at spacing 40 1.72 → 0.51 %, varying spacing slightly worse; a line
+  through valley bottoms tried instead: deepest point ≈ the same, first dip
+  fragile, stops on ripple: 3.5 vs 1.0 % at spacing 40 with noise); a
   peak on the window's edge → the target, with a warning). The coherence map
   runs on the masked, normalized image. The plot draws the smoothed profile
   (`peakProfile`) in red only inside the window (dashed lines).
