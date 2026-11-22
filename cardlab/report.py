@@ -63,6 +63,8 @@ def summary_table(results):
     ]
     head = "<tr><th>Preset (seeds)</th>" + "".join(f"<th>{name}</th>" for name, _, _ in columns) + "</tr>"
     rows = []
+    failed = [r for r in results if "failed" in r]
+    results = [r for r in results if "failed" not in r]
     for preset in PRESETS:
         runs = [r for r in results if r["preset_key"] == preset]
         if not runs:
@@ -70,7 +72,8 @@ def summary_table(results):
         seeds = ", ".join(str(r["seed"]) for r in runs)
         cells = "".join(f"<td>{value_range([r[key] for r in runs], fmt)}</td>" for _, key, fmt in columns)
         rows.append(f"<tr><td>{escape(PRESETS[preset].label)} ({seeds})</td>{cells}</tr>")
-    return f"<table>{head}{''.join(rows)}</table>"
+    note = "".join(f"<p class='note'>Failed: {escape(r['preset_key'])} seed {r['seed']}, {escape(r['failed'])}.</p>" for r in failed)
+    return f"<table>{head}{''.join(rows)}</table>{note}"
 
 
 def params_table(params):
@@ -183,7 +186,7 @@ Showcase: preset <b>{escape(card.params.label)}</b>, seed {card.seed}. <a href="
 {step(img("b_fft"), "b. FFT of a × 1/√r about the mark (central half of log |FFT|)",
       "Weighting by 1/√r keeps the outer turns from dominating. The rings sit at radius N/spacing. Dashed: the search window, 0.5–1.5 × the radius expected from the nominal spacing (the device spec): from halfway to zero frequency to halfway to the second harmonic; <span class='c'>cyan</span>: the peak.")}
 {step(img("c_profile"), "c. Radial profile → spacing",
-      "Mean log |FFT| per radius; the spacing is the peak inside the window (grey: 0.5–1.5 × the expected radius, so only the fundamental fits for any spacing within ~0.67–1.33 × the nominal), refined parabolically; a peak on the window's edge → the nominal is used. Profile smoothed by 1.5 bins.",
+      "Mean log |FFT| per radius; the spacing is the peak inside the window (grey: 0.5–1.5 × the expected radius, so only the fundamental fits for any spacing within ~0.67–1.33 × the nominal), refined below a bin by a parabola after removing the local slope; a peak on the window's edge → no reliable spacing, and the card fails. Profile smoothed by 1.5 bins.",
       "White dashed: nominal; <span class='r'>red</span>: true; <span class='c'>cyan</span>: measured.",
       f"<span class='num'>Measured {low.fft_spacing:.3f} px ({pct(s['fft_spacing_error'])} vs. true {card.spacing:.3f}).</span>")}
 {step(img("d_coherence"), "d. Center, spacing and phase: the spiral coherence map",

@@ -4,6 +4,7 @@ import time
 from pathlib import Path
 
 from cardlab.params import PRESETS
+from cardlab.lowres import SpacingNotFound
 from cardlab.pipeline import run_pipeline, summarize
 from cardlab.report import make_figures, write_report
 
@@ -34,7 +35,11 @@ def save_results(results):
 
 def run_and_summarize(preset, seed):
     started = time.time()
-    run = run_pipeline(preset, seed)
+    try:
+        run = run_pipeline(preset, seed)
+    except SpacingNotFound as error:
+        print(f"{preset} {seed}: FAILED, spacing not found: {error}")
+        return None, {"preset_key": preset, "seed": seed, "failed": f"spacing not found: {error}"}
     summary = summarize(run) | {"preset_key": preset}
     print(f"{preset} {seed}: {time.time() - started:.1f} s, trace {summary['trace_rms']:.2f} px, "
           f"sound corr {summary['sound_correlation']:.3f}")
@@ -53,6 +58,8 @@ def main():
     showcase_preset, showcase_seed = args.showcase.split(":")
     showcase_key = f"{showcase_preset}:{int(showcase_seed)}"
     showcase, results[showcase_key] = run_and_summarize(showcase_preset, int(showcase_seed))
+    if showcase is None:
+        raise SystemExit(f"the showcase card {showcase_key} failed: {results[showcase_key]['failed']}")
     for preset in args.presets.split(","):
         for seed in parse_seeds(args.seeds):
             key = f"{preset}:{seed}"

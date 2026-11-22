@@ -138,11 +138,25 @@ Pages serves them (nothing is built on GitHub).
   scipy.ndimage.map_coordinates (cv2.remap rounds bilinear weights to
   1/32 px: 0.3% demodulation error), and Nelder–Mead runs over (x, y, mid
   radius) so all three parameters are in px.
+- Spacing error budget (Nov 2026, `experiments/spacing_budget.py`, results
+  in `experiments/spacing_budget_results.md`; 6 cards, spacing forced to
+  truth × (1 + error)): ±1% no change; ±2–3% the low-res center is up to
+  ~10 px off (cards: 95 spacings out, so ~5× less tolerant than the page's
+  spirals) and the trace degrades (1–3 px, sound 0.85), though the refit
+  recovers center (0.1–0.5 px) and spacing; ±5% hard cards fail, ±10% all.
+  FFT within 0.1% → 10–40× margin; a fallback to the nominal is not
+  survivable, so an edge peak now fails the card (`lowres.SpacingNotFound`;
+  build_card.py records {"failed": ...} and the report lists it; the page
+  shows no spacing and skips the coherence center). Not caught: a nominal
+  far too large (typical card: found for 0.6–1.5 × truth, fails at 0.5 ×,
+  but 1.7 × / 2 × give 37 / 61 px silently); a peak-prominence or coherence
+  check could catch it (not built). Idea (full-res refit on
+  hold, Adam): a second strip pass only when the refit corrects a lot.
 - Spacing search (Nov 2026, `experiments/spacing_window.py`, results in
   `experiments/spacing_window_results.md`): window ±50% (then of the nominal spacing; now of the expected peak radius, below)
   (`spacing_window`; ±10/20/50% identical), profile smoothing 1.5 bins
   (`profile_smoothing`; 1.5 a little better than 1, 0 worst), and no
-  fallback to the nominal except for a peak on the window's edge: the old
+  fallback to the nominal (now not even for an edge peak, which fails): the old
   rule (nominal if > 3% off) turned cards cut at 25.9 / 32.2 px searched
   with the 29-px nominal into 9.5–12.9% errors (peak itself right to 0.08%).
 - FFT window (tested Nov 2026, 4 presets × 10 seeds): the soft annulus mask
@@ -323,7 +337,7 @@ Robustness (8 random offset sets, uniform in ±amp at each knot):
   spirals at spacing 40 1.72 → 0.51 %, varying spacing slightly worse; a line
   through valley bottoms tried instead: deepest point ≈ the same, first dip
   fragile, stops on ripple: 3.5 vs 1.0 % at spacing 40 with noise); a
-  peak on the window's edge → the target, with a warning). The coherence map
+  peak on the window's edge → spacing NaN: warning, coherence skipped). The coherence map
   runs on the masked, normalized image. The plot draws the smoothed profile
   (`peakProfile`) in red only inside the window (dashed lines).
 - Removed in Nov 2026 (procedure Part 1, steps 1 and 5): the harmonic-sum

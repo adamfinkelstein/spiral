@@ -10,6 +10,13 @@ from .geometry import Spiral, pitch_of, smoothstep
 LOW_SIZE = 1024
 
 
+class SpacingNotFound(Exception):
+    # the profile's maximum is on the edge of the search window: no clear peak.
+    # The card fails here (falling back to the nominal would be up to ~33% off,
+    # far outside what the later steps survive: experiments/spacing_budget.py)
+    pass
+
+
 @dataclass
 class LowResSettings:
     turn_weight_power: float = 0.5   # FFT input weighted by r^-power about the mark
@@ -28,7 +35,6 @@ class LowResResult:
     window: tuple
     peak_radius: float
     fft_spacing: float
-    fft_ok: bool
     coherence_map: np.ndarray        # complex Z at every low-res pixel
     coherence: float
     spiral: Spiral
@@ -104,7 +110,7 @@ def fft_spacing(image, mask, mark, scale, nominal, settings):
     on_edge = best in (low, high)
     peak = best if on_edge else peak_without_slope(profile, best)
     spacing = size / peak
-    ok = not on_edge  # a peak on the window's edge: use the nominal
+    ok = not on_edge  # a peak on the window's edge: no reliable spacing
     return spectrum, profile, (low, high), peak, spacing, ok
 
 
@@ -185,6 +191,8 @@ def low_res_stage(full, mark, nominal_spacing, settings=LowResSettings()):
     mask = annulus_mask(LOW_SIZE, mark, scale, ramp=nominal)
     image = normalize_in_mask(downsample(full), mask)
     spectrum, profile, window, peak, measured, ok = fft_spacing(image, mask, mark, scale, nominal, settings)
-    spacing = measured if ok else nominal
-    spiral, z_map, coherence = find_center(image, mark, scale, spacing, settings)
-    return LowResResult(scale, image, mask, spectrum, profile, window, peak, measured * scale, ok, z_map, coherence, spiral)
+    if not ok:
+        raise SpacingNotFound(f"the profile's maximum is on the edge of the search window "
+                              f"({measured * scale:.2f} px, nominal {nominal_spacing:.2f} px)")
+    spiral, z_map, coherence = find_center(image, mark, scale, measured, settings)
+    return LowResResult(scale, image, mask, spectrum, profile, window, peak, measured * scale, z_map, coherence, spiral)

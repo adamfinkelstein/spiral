@@ -195,7 +195,7 @@ function drawProfile(p) {
   ctx.fillText('white: mean log |FFT|; red: smoothed, where searched', right, T + 34);
   if (peak.edge) {
     ctx.fillStyle = '#ffb020';
-    ctx.fillText(`⚠ on the edge of the search window (±${Math.round(p.sWin * 100)}% of the expected radius): the nominal spacing is used`, right, T + 50);
+    ctx.fillText('⚠ maximum on the edge of the search window: no reliable spacing (the pipeline stops)', right, T + 50);
   }
 }
 
@@ -375,8 +375,11 @@ function render() {
     el.cohSp.disabled = !p.spiral || !p.cohOn;
     document.getElementById('cohRow').style.display = p.cohOn && p.spiral ? '' : 'none';
     const cohOut = document.getElementById('cohOut');
-    if (p.cohOn && p.spiral) {
-      const sp = p.cohTrue || !isFinite(peak.spacing) ? p.spacing : peak.spacing;
+    if (p.cohOn && p.spiral && !p.cohTrue && !isFinite(peak.spacing)) {
+      clearCoherence();
+      cohOut.textContent = 'Coherence center: skipped, no reliable spacing (the FFT peak is on the edge of the search window).';
+    } else if (p.cohOn && p.spiral) {
+      const sp = p.cohTrue ? p.spacing : peak.spacing;
       const r = coherenceCenter(norm, sp); // the masked image, as in cardlab
       drawCoherence(r, sp);
       drawPlus(sctx, r.c, 9, CYAN);

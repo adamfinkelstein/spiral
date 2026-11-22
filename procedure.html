@@ -178,8 +178,21 @@ straight line through the smoothed profile at the halfway troughs
 0.5&nbsp;&rho;<sub>i</sub> and 1.5&nbsp;&rho;<sub>i</sub>, from the 5 bins &rho;<sub>i</sub>&minus;2 &hellip;
 &rho;<sub>i</sub>+2, and take the vertex of a least-squares parabola through them
 (&rho;* = &rho;<sub>i</sub> &minus; b/2a). Spacing = 512&nbsp;/&nbsp;&rho;*. The peak never moves to
-another bin's neighbourhood: the background only shifts its sub-bin position. A peak on the window's edge is unreliable, and
-the nominal is used instead (with a warning).</p>
+another bin's neighbourhood: the background only shifts its sub-bin position.
+If the maximum is on the window's edge, there is no clear peak, and the
+method <b>fails</b>: no spacing is reported and nothing after it runs (on the
+page, a warning, and the coherence center is skipped; on the cards,
+<code>SpacingNotFound</code>, and the report lists the card as failed). Falling back
+to the nominal spacing, as before, is not survivable: across machines it can
+be ~33% off, and the later steps fail beyond ~&plusmn;3&ndash;5% (P3.1).</p>
+<p><b>Not caught:</b> a nominal far too <i>large</i>. On a typical card (true 29
+px) the spacing is found for a nominal 0.6&ndash;1.5 &times; the truth and fails
+cleanly at 0.5 &times;; but at 1.7 &times; and 2 &times; the window misses the real peak
+and its maximum is a low-frequency bump inside it, so a wrong spacing (37,
+61 px) comes out without a failure. That is outside the window's guarantee
+(true spacing &ge; 0.67 &times; nominal), but silent. A check on the peak's
+prominence above the slope line, or on the coherence it gives, could catch
+it; not yet built.</p>
 <p><b>Why the slope.</b> The peak sits on a falling background (from the
 mask's own spectrum, the soft line edges, noise, the weighting and the log),
 which pulls a plain parabola toward smaller radii, i.e. larger spacings:
@@ -209,12 +222,17 @@ harmonic at the nominal spacing. On the test spirals and cards both gave the
 same answers, even with the nominal 30&ndash;40% off (the fundamental always
 dominated); the new window is chosen for its guarantee.</p>
 <p><b>Robust before accurate.</b> The estimate doesn't need to be very
-precise, only reliable, because the later steps tolerate a few percent of
-spacing error by design: the coherence center (step 8) moved by only 0.14 px
-with the spacing 5% off, and on the cards the full-res refit fits the spacing
-itself (searching &plusmn;2.5%). So a method that never lands on the wrong peak
-matters more than the last tenth of a percent, and failing on spirals with
-only 2&ndash;3 turns is acceptable.</p>
+precise, only reliable, because the later steps tolerate some spacing error:
+the coherence center (step 8) moved by only 0.14 px with the spacing 5% off
+on these spirals, and on the cards the full-res refit fits the spacing again.
+Measured on the cards (<code>experiments/spacing_budget.py</code>): within &plusmn;1%
+nothing changes; from &plusmn;2% the low-res center can be several px off (cards
+reach ~95 spacings out, so their turns fall out of step ~5&times; sooner than
+here) and the trace degrades, though the refit still recovers the geometry
+up to &plusmn;3%; at &plusmn;5&ndash;10% it fails. The FFT is 10&ndash;40&times; inside that
+budget. So a method that never lands on the wrong peak matters more than the
+last tenth of a percent, and failing on spirals with only 2&ndash;3 turns is
+acceptable.</p>
 <figure><img class="wide" src="procedure/09_profile_peak.png" alt=""><figcaption>The default spiral. White: the radial profile; red: smoothed by 1.5 bins, drawn only inside the search window, 0.5&ndash;1.5 &times; the expected radius (dashed); its highest point (dot) gives the spacing (10.00 px). Purple bar: the estimate on a 0&ndash;64 px scale.</figcaption></figure>
 
 <h2>5. Earlier: the harmonic-sum score (until Nov 2026)</h2>
@@ -709,11 +727,18 @@ spacing is the peak of the radial profile (smoothed by 1.5 bins) within
 0.5&ndash;1.5 &times; the radius expected from the nominal (the device spec; why:
 Part 1, step 4), refined below a bin by a parabola through the 5 bins
 around it after subtracting the local slope (a line through the halfway
-troughs; Part 1, step 4). It needs to be reliable more than
+troughs; Part 1, step 4). <b>Error budget</b> (<code>experiments/spacing_budget.py</code>,
+6 cards, the spacing forced to the truth &times; (1 + error)): within &plusmn;1% every
+result is unchanged; at &plusmn;2&ndash;3% the low-res center is up to ~10 px off and
+the trace degrades (1&ndash;3 px instead of 0.6&ndash;0.8, sound 0.85 instead of 0.90),
+although the refit still finds the center to 0.1&ndash;0.5 px and the spacing to
+0.1%; at &plusmn;5% hard cards fail, at &plusmn;10% all. The FFT (within 0.1%) is far
+inside; the nominal spacing (up to ~33% off across machines) is far
+outside, so an edge peak now fails the card instead of falling back to it. It needs to be reliable more than
 precise: the refit (P3.4) fits the spacing again. The groove has few useful harmonics, and the profile's
 own ripple (from the annulus edges) spoiled the harmonic sum's trough samples
 (it locked &minus;11% off on some cards). If the peak is on the window's edge,
-the nominal is used instead (no test card has needed it; the FFT spacing is
+the card fails with <code>SpacingNotFound</code> (no test card has; the FFT spacing is
 within 0.08% on typical cards, 0.11% on hard ones). Until Nov 2026 the window
 was &plusmn;10%, the smoothing 1 bin, and the nominal was also used when the peak
 was more than 3% from it; that rule turned cards cut at 25.9 or 32.2 px (the

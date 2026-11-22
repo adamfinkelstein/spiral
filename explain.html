@@ -105,8 +105,9 @@ a fraction of a pixel, and the spiral is drawn exactly there.</p>
   halfway to the second harmonic, so for any true spacing within about
   0.67&ndash;1.33 &times; the target only the fundamental peak fits. The spacing
   is the highest point of the smoothed radial profile inside this window (red
-  in the plot); a peak on its edge is unreliable, and the target is used
-  instead (warning in the plot).</dd>
+  in the plot). If the maximum is on the window's edge there is no clear
+  peak: no spacing is reported (warning in the plot) and the coherence
+  center is skipped, as the card pipeline stops there.</dd>
   <dt>Coherence center</dt>
   <dd>The center and phase from the spiral coherence map, the method of the
   card pipeline (<a href="procedure.html#p1coh">Procedure</a>, step 8; spiral

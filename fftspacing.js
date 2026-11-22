@@ -201,7 +201,8 @@ function fftInput(norm, mask, mark, spacing, ex) { // fills fftIn
 // runs from halfway to zero frequency (0.5 rho0) to halfway to the second
 // harmonic (1.5 rho0), so for any true spacing within ~0.67–1.33 × the target
 // the fundamental is inside and its second harmonic outside. A peak on the
-// window's edge is unreliable: the target is used instead.
+// window's edge means there is no clear peak: spacing = NaN (the card
+// pipeline stops there too; falling back to the nominal is not survivable).
 const peakProfile = new Float64Array(NBINS);
 let peak = { rho: NaN, spacing: NaN, lo: NaN, hi: NaN, edge: false };
 
@@ -241,6 +242,6 @@ function profilePeak({ target, window = 0.5, blur = 1.5 }) {
     const a = (5 * sx2y - 10 * sy) / 70, b = sxy / 10;
     if (a < 0) rho += Math.max(-2, Math.min(2, -b / (2 * a)));
   }
-  peak = { rho, spacing: edge ? target : N / rho, measured: N / rho, lo, hi, edge };
+  peak = { rho, spacing: edge ? NaN : N / rho, measured: N / rho, lo, hi, edge };
   return peak;
 }

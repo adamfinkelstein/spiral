@@ -48,7 +48,6 @@ def summarize(run):
         "seed": card.seed,
         "mark_error": center_error(card, run.card.mark),
         "fft_spacing_error": run.low.fft_spacing / card.spacing - 1,
-        "fft_ok": run.low.fft_ok,
         "low_center_error": center_error(card, run.low.spiral),
         "low_spacing_error": spacing_error(card, run.low.spiral),
         "low_vs_grooves": spiral_vs_grooves(card, score, 0),

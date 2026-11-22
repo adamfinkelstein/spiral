@@ -100,6 +100,10 @@ correlation ~0.9 (limited by the measured grain level).
   radius); the full-res refit fits the spacing anyway.
 - Better sound readout: fit the groove cross-section per column (matched
   filter), filter along the groove with the grain's spectrum.
+- Spacing failures (Nov 2026): an FFT peak on the edge of the search window
+  now fails the card (no fallback to the nominal; the later steps survive
+  only ~±3–5% spacing error). Come back to such cards later (Adam). The
+  full-res refit is on hold.
 - Drift: the real card's groove offsets (Tomaz's images 21, 26) are ~3 px
   rms and change almost completely from one turn to the next; the model
   now matches (3.2 px rms, periods 0.3–1 turn). Wobble was removed. A
