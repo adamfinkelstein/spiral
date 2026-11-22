@@ -21,6 +21,9 @@ from cardlab.params import PRESETS
 #   fft+J0    cardlab's method until this experiment: J0 fit around the brightest pixel
 # Result: the symmetry center (sigma 10) replaced the J0 fit in cardlab
 # (lowres.symmetry_center, crop +-3 sigma); see symmetry_center_results.md.
+# Later (aligning with the spacing page): sigma = 0.12 x the marked outer
+# radius, search within 1.5 sigma of the peak, kernel reach = outer radius +
+# 2 spacings; compared here with the sigma-10-spacings version.
 #   sym wN    self-convolution of the windowed zero-mean |Z| (Gaussian window,
 #             sigma N spacings, on a crop around the peak); its maximum is at
 #             twice the center of symmetry (results file: crop +-4 sigma)
@@ -65,10 +68,10 @@ def j0_center(z_map, spacing):
     return fit_ring_pattern(points, values, start, spacing)[0]
 
 
-METHODS = {
-    "fft+J0": j0_center,
-    "sym w3": lambda z_map, spacing: symmetry_center(z_map, spacing, 3),
-    "sym w10": lambda z_map, spacing: symmetry_center(z_map, spacing, 10),
+METHODS = {  # name: function of (z_map with the old reach, z_map with the current reach, spacing, outer radius), low-res px
+    "fft+J0": lambda z_old, z_new, spacing, r_outer: j0_center(z_old, spacing),
+    "sym σ 10 S (before)": lambda z_old, z_new, spacing, r_outer: symmetry_center(z_old, 10 * spacing, search=3),
+    "sym σ 0.12 r_outer (now)": lambda z_old, z_new, spacing, r_outer: symmetry_center(z_new, 0.12 * r_outer, search=1.5),
 }
 
 
@@ -85,11 +88,12 @@ def run_card(preset, seed):
             image = normalize_in_mask(image_low, mask)
             *_, measured, ok = fft_spacing(image, mask, mark, scale, nominal, SETTINGS)
             spacing = measured if ok else nominal
-            z_map = coherence_map(image, pitch_of(spacing), reach=int(mark.r_outer / scale + 100))
-            peak_error = np.hypot(*(map_peak(z_map) * scale - truth))
+            z_old = coherence_map(image, pitch_of(spacing), reach=int(mark.r_outer / scale + 100))
+            z_new = coherence_map(image, pitch_of(spacing), reach=int(np.ceil(mark.r_outer / scale + 2 * spacing)))
+            peak_error = np.hypot(*(map_peak(z_old) * scale - truth))
             for name, method in METHODS.items():
                 started = time.time()
-                center = method(z_map, spacing) * scale
+                center = method(z_old, z_new, spacing, mark.r_outer / scale) * scale
                 rows.append({"preset": preset, "seed": seed, "aspect": aspect, "mark_error": mark_error,
                              "method": name, "error": float(np.hypot(*(center - truth))),
                              "peak_error": float(peak_error), "seconds": time.time() - started})

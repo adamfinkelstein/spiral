@@ -28,13 +28,15 @@ Adam's preferences and open questions.
 - `coherence.js` — center and phase from the spiral coherence map, a JS port
   of `cardlab/lowres.py` find_center (used by spacing.html): `fft2(re, im,
   M)` (radix-2, any power-of-two M, tables cached per M), `coherenceMap`
-  (three N² FFTs, circular, kernel reach N/2 − 1, fills `zRe`/`zIm`/`zAbs`),
+  (three N² FFTs, circular, kernel reach = marked outer radius + 2 spacings,
+  at most N/2 − 1; fills `zRe`/`zIm`/`zAbs`),
   `mapPeak`, `mapAt` (bilinear Z), `symmetryCenter` (point symmetry of the
   map near its peak: self-convolution of the windowed zero-mean |Z| on an
   M×M crop, M = power of two ≥ 6σ, at most N; max at twice the center),
-  `coherenceCenter(src, spacing, windowSpacings = 3)` (phase = arg Z at the
-  center). No DOM. Bright arms, so Z has no minus sign (Python's grooves
-  do). Same method as cardlab, which uses σ 10 spacings (bigger spirals).
+  `coherenceCenter(src, spacing, mark, windowFraction = 0.12, search = 1.5)`
+  (σ = 0.12 × mark.rOuter, center within 1.5σ of the peak; phase = arg Z at
+  the center). No DOM. Bright arms, so Z has no minus sign (Python's
+  grooves do). Same rules as cardlab's find_center.
 - `explain.html` — help page for `spacing.html` controls ("Explain"
   button). Keep it in sync when its controls change.
 - `procedure.html` + `procedure/*.png` — both methods step by step, in three
@@ -191,6 +193,7 @@ Pages serves them (nothing is built on GitHub).
   clean: 0.16–0.30 px median at any stretch ≤ 3% (none > 1 px); unstretched
   0.28 vs J0's 0.04 px, fine since the refit searches ±1.5 spacings and
   fits the center (Adam: no need for sub-pixel here). σ 3 handles only 1%.
+  Now σ = 0.12 × the marked outer radius (≈ 11 spacings), search ±1.5σ.
   Hard cards: ~0.8 px unstretched, 1 of 5 fails at 2%. The full-res refit
   has no stretch term yet (a 1% stretch moves outer turns ±28 px).
 - Gradient-based centers dropped (Adam's decision, Nov 2026): the spiral
@@ -227,7 +230,7 @@ Pages serves them (nothing is built on GitHub).
   still takes the strip and model to show.
 - Results (Python, 5 seeds, symmetry center; J0 fit before it gave
   0.01–0.16 px and the same trace and sound): typical — low-res center
-  0.12–0.50 px, refit 0.09–0.33 px, trace 0.54–0.83 px, no wrong groove,
+  0.14–0.36 px, refit 0.09–0.33 px, trace 0.54–0.84 px, no wrong groove,
   sound corr 0.89–0.91 (drift 3.2 px from Nov 2026; before: trace
   0.39–0.63, sound 0.89–0.92);
   (results before the drift change:) clean 0.98–0.99; loud 0.94–0.96; hard center 0.3–2.0 px, trace
@@ -364,8 +367,13 @@ Robustness (8 random offset sets, uniform in ±amp at each knot):
   (Adam): the coherence center tolerates ~5% spacing error and the refit
   re-fits the spacing (±2.5%), so a method that never lands on the wrong
   peak matters more than precision; failing with 2–3 turns is acceptable.
-- Remaining difference from cardlab: the coherence symmetry window (σ 3 vs
-  10 spacings).
+- Coherence aligned with cardlab (Nov 2026): σ = 0.12 × the marked outer
+  radius (was 3 spacings here, 10 on cards), center within 1.5σ of the
+  peak, kernel reach = outer radius + 2 spacings. Page: same centers (aspect
+  1.05 0.12 vs 0.10 px). Cards (experiments/symmetry_center.py, re-run with
+  the current drift, 360 runs per rule): medians a little better, failures
+  > 20 px 7 → 1. Only implementation differences remain (circular 512²
+  FFTs here, scipy linear convolution there).
 - `N = 512` is the internal resolution of all canvases and the FFT size. The
   FFT is radix-2, so `N` must stay a power of two. Canvases are displayed at
   400×400 and cropped (`.crop`) to their right 2/3; the full image is still

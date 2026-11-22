@@ -380,7 +380,7 @@ function render() {
       cohOut.textContent = 'Coherence center: skipped, no reliable spacing (the FFT peak is on the edge of the search window).';
     } else if (p.cohOn && p.spiral) {
       const sp = p.cohTrue ? p.spacing : peak.spacing;
-      const r = coherenceCenter(norm, sp); // the masked image, as in cardlab
+      const r = coherenceCenter(norm, sp, mark); // the masked image and the mark, as in cardlab
       drawCoherence(r, sp);
       drawPlus(sctx, r.c, 9, CYAN);
       cohOut.textContent = coherenceText(p, r, sp);

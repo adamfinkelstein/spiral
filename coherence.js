@@ -128,15 +128,14 @@ function mapAt(c) { // bilinear Z at a point (pixel i's center is i + 0.5; the m
 
 // ---------- Center of point symmetry ----------
 
-// For g = (|Z| - its window mean) × a Gaussian window (σ = windowSpacings
-// spacings) about the peak, the self-convolution C(s) = Σ_p g(p) g(s - p) is
-// largest at s = 2 c0, where every term is g(p)². It runs on an M×M crop about
-// the peak, M = the power of two ≥ 6σ (at most N): circular, but the window
-// is ~1e-4 of its peak where the wrap could reach. The maximum is searched
-// within ±M/4 of the peak (≈ ±1.5σ; s in pixel-index sums, i.e. half-pixel
-// steps of c), then refined by a parabola along x and y.
-function symmetryCenter(peak, spacing, windowSpacings = 3) {
-  const sigma = windowSpacings * spacing;
+// For g = (|Z| - its window mean) × a Gaussian window (σ px) about the peak,
+// the self-convolution C(s) = Σ_p g(p) g(s - p) is largest at s = 2 c0, where
+// every term is g(p)². It runs on an M×M crop about the peak, M = the power of
+// two ≥ 6σ (at most N): circular, but the window is ~1e-4 of its peak where
+// the wrap could reach. The center is searched within `search` σ of the peak
+// (s in pixel-index sums, i.e. half-pixel steps of c), then refined by a
+// parabola along x and y. (Same rule as cardlab/lowres.py symmetry_center.)
+function symmetryCenter(peak, sigma, search = 1.5) {
   const M = Math.min(N, 2 ** Math.ceil(Math.log2(6 * sigma)));
   const ox = Math.floor(peak.x) - M / 2, oy = Math.floor(peak.y) - M / 2; // crop origin: the peak pixel is at M/2
   const gRe = new Float64Array(M * M), gIm = new Float64Array(M * M), w = new Float64Array(M * M);
@@ -154,8 +153,11 @@ function symmetryCenter(peak, spacing, windowSpacings = 3) {
   fft2(gRe, gIm, M, true);
   // crop sums b1 + b2 = M + d (mod M), d = 0 at the peak pixel; image sums i1 + i2 = M + d + 2·origin
   const C = (dx, dy) => gRe[((dy % M + M) % M) * M + ((dx % M + M) % M)];
+  // c within `search` sigma of the peak: index-sum offsets up to 2·search·sigma
+  // (and at most M/4, where the circular crop is still clean)
+  const R = Math.min(M / 4, Math.ceil(2 * search * sigma));
   let bx = 0, by = 0;
-  for (let dy = -M / 4; dy < M / 4; dy++) for (let dx = -M / 4; dx < M / 4; dx++) if (C(dx, dy) > C(bx, by)) { bx = dx; by = dy; }
+  for (let dy = -R; dy < R; dy++) for (let dx = -R; dx < R; dx++) if (C(dx, dy) > C(bx, by)) { bx = dx; by = dy; }
   const parabola = (l, m, r) => { const cu = l - 2 * m + r; return cu < 0 ? (0.5 * (l - r)) / cu : 0; };
   const fx = parabola(C(bx - 1, by), C(bx, by), C(bx + 1, by)), fy = parabola(C(bx, by - 1), C(bx, by), C(bx, by + 1));
   return { x: (M + bx + fx + 2 * ox + 1) / 2, y: (M + by + fy + 2 * oy + 1) / 2, M };
@@ -164,12 +166,15 @@ function symmetryCenter(peak, spacing, windowSpacings = 3) {
 // The whole step: map, peak, symmetry center, phase = arg Z there. Returns
 // center, phase (radians, same convention as renderSpiral's p.phase), the map
 // peak, a relative coherence score, the crop size and timings in ms.
-function coherenceCenter(src, spacing, windowSpacings = 3) {
+// As cardlab/lowres.py find_center: kernel reach = marked outer radius + 2
+// spacings (here at most N/2 − 1), symmetry window σ = 0.12 × the marked outer
+// radius, the center within 1.5σ of the map's peak.
+function coherenceCenter(src, spacing, mark, windowFraction = 0.12, search = 1.5) {
   const t0 = performance.now();
-  const sumAbs = coherenceMap(src, spacing);
+  const sumAbs = coherenceMap(src, spacing, Math.min(N / 2 - 1, Math.ceil(mark.rOuter + 2 * spacing)));
   const t1 = performance.now();
   const peak = mapPeak();
-  const c = symmetryCenter(peak, spacing, windowSpacings);
+  const c = symmetryCenter(peak, windowFraction * mark.rOuter, search);
   const z = mapAt(c);
   const t2 = performance.now();
   return {

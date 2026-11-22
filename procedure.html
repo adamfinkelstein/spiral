@@ -336,8 +336,9 @@ coherence map (<a href="#part3">Part 3</a>, P3.2), ported to JS
 (<code>coherence.js</code>; "Coherence center", on by default). With b = S/2&pi;,
 Z(c) = &sum;<sub>p</sub> v(p) e<sup>&minus;i(|p &minus; c|/b &minus; angle(p &minus; c))</sup> (no minus sign here:
 the arms are bright, not grooves) is a correlation with a spiral-wave kernel,
-computed by three 512&sup2; FFTs (image, kernel, inverse; circular, kernel reach
-255 px, image mean subtracted).</p>
+computed by three 512&sup2; FFTs (image, kernel, inverse; circular, image mean
+subtracted), on the masked, normalized image. The kernel reaches the marked
+outer radius + 2 spacings (at most 255 px here), as on the cards.</p>
 <p><b>Center: point symmetry of the map, not its peak.</b> A fit of
 a&middot;J<sub>0</sub>(2&pi;|c &minus; c<sub>0</sub>|/S) around the map's brightest pixel (the card
 pipeline's first method) fails as soon as the spiral is slightly stretched
@@ -346,11 +347,17 @@ splits into lobes, and the fit locks onto the brightest lobe, 5 px off at
 aspect 0.98 and 20 px at 1.05. The map stays symmetric under a 180&deg; turn
 about the true center, though (Adam's observation), and the self-convolution
 finds that symmetry: for g = (|Z| &minus; its window mean) &times; a Gaussian window
-(&sigma; = 3 spacings) about the peak, C(s) = &sum;<sub>p</sub> g(p)&middot;g(s &minus; p) is largest
-at s = 2c<sub>0</sub>, where every term is g(p)&sup2;. It runs on a crop about the peak,
-M&times;M with M the power of two &ge; 6&sigma; (128&sup2; at spacing 5, 256&sup2; at 10, the
-whole 512&sup2; map from 20 up); the maximum is searched in half-pixel steps of c
-within &plusmn;M/4 and refined by a parabola. Point symmetry needs no axis: a
+(&sigma; = 0.12 &times; the marked outer radius: 24 px on the default spiral) about the
+peak, C(s) = &sum;<sub>p</sub> g(p)&middot;g(s &minus; p) is largest at s = 2c<sub>0</sub>, where every
+term is g(p)&sup2;. It runs on a crop about the peak, M&times;M with M the power of two
+&ge; 6&sigma; (the crop is circular here, as is the map); the center is searched
+within 1.5&sigma; of the peak in half-pixel steps of c and refined by a parabola.
+The same rules as on the cards: &sigma; scales with the outer radius because a
+stretch moves the brightest lobe away from the center in proportion to the
+radius (about 2 spacings on this page at aspect 1.05, 7 on a card at 3%).
+Until Nov 2026 the page used &sigma; = 3 spacings and the cards 10; on the
+page's spirals the two rules give the same centers (aspect 1.05: 0.12 vs
+0.10 px). Point symmetry needs no axis: a
 stretch along any direction keeps it, while left&ndash;right and up&ndash;down mirror
 symmetry only hold for a stretch along the image axes. The phase is the angle
 of Z at that center (bilinear). About 46 ms per frame in all, almost all of it
@@ -768,16 +775,23 @@ is the FFT's (the full-res refit tunes it). The hand mark only places the
 mask: the map covers the frame, so there is no search window.</p>
 <p><b>The center is the map's center of point symmetry</b> near its brightest
 pixel (<code>lowres.symmetry_center</code>): g = (|Z| &minus; its window mean) &times; a
-Gaussian window (&sigma; 10 spacings) about the peak, on a crop of &plusmn;3&sigma;, convolved
-with itself (scipy fftconvolve, ~7 ms); the maximum is at twice the center
-(half-pixel steps, then a parabola). The phase is the angle of Z there
+Gaussian window (&sigma; = 0.12 &times; the marked outer radius, ~61 low-res px or 11
+spacings) about the peak, on a crop of &plusmn;3&sigma;, convolved with itself (scipy
+fftconvolve, ~8 ms); the maximum, searched within 1.5&sigma; of the peak, is at
+twice the center (half-pixel steps, then a parabola). The kernel reaches the
+marked outer radius + 2 spacings. These are the spacing page's rules too. The phase is the angle of Z there
 (bilinear). Why not the peak: a card stretched by only 1% (a slightly
 non-circular scan) no longer adds its turns in step at the center, since they
 reach ~95 spacings out; the bright spot splits into lobes and the brightest is
 2 spacings off at 1%, 4.5 at 2%, 7 at 3%. The map stays symmetric under a
 180&deg; turn about the center (Adam's observation on the spacing page, Part 1
 step 8). The window has to reach from the peak to the center: &sigma; 3 spacings
-handles 1%, &sigma; 10 up to 3%.</p>
+handled 1%, &sigma; 10 spacings up to 3%. The current rule (Nov 2026, aligned with
+the page), re-tested on 20 cards &times; 6 stretches &times; 3 marks with the current
+drift: medians a little better than &sigma; 10 spacings almost everywhere
+(typical unstretched 0.27 &rarr; 0.24 px, at 2% 0.26 &rarr; 0.20 px), and fewer
+failures (over 20 px: 1 instead of 7 in 360 runs; hard cards at 3% worst case
+240 &rarr; 13 px; the one new failure is a loud card at 3%).</p>
 <p>Tested offline (<code>experiments/symmetry_center.py</code>, results in
 <code>experiments/symmetry_center_results.md</code>): 20 cards (4 presets &times; 5 seeds)
 &times; 3 hand marks, each warped by x &times; aspect, y / aspect about the true center.
@@ -787,9 +801,9 @@ typical, loud and clean cards 0.16&ndash;0.30 px median, none over 1 px, at any
 stretch up to 3%; unstretched 0.28 px vs. the J<sub>0</sub> fit's 0.04 px, which the
 full-res refit doesn't need (it searches &plusmn;1.5 spacings for the center and
 fits it). Hard cards (drift 6 px): ~0.8 px unstretched, fine at 1%, 1 of 5
-fails at 2%, nearly all at 3%. (Measured with the earlier drift model, 2 px
-slow drift on typical cards and 6 px on hard ones; not yet repeated with the
-current one.) The full-res refit has no stretch term
+fails at 2%, nearly all at 3% (measured with the earlier drift model, 2 px
+slow drift on typical cards and 6 px on hard ones; the re-run with the
+current drift is in the paragraph above). The full-res refit has no stretch term
 yet, so a stretched card would still fail there.</p>
 <p>Earlier test (<code>experiments/center_search.py</code>, results in
 <code>experiments/center_search_results.md</code>), before the symmetry center: 32
@@ -868,10 +882,10 @@ before the grain and drift changes.)</p>
 <figure><img class="wide" src="card/img/j_sound.png" alt=""><figcaption>Step j: the sound read from the groove's depth (red) against the truth (green).</figcaption></figure>
 <table>
 <tr><th>Preset (5 seeds)</th><th>Low-res center</th><th>Refit center</th><th>Trace rms</th><th>Wrong groove</th><th>No cut</th><th>Sound readout corr.</th></tr>
-<tr><td>Clean</td><td class="n">0.12&ndash;0.49 px</td><td class="n">0.09&ndash;0.32 px</td><td class="n">0.51&ndash;0.82 px</td><td class="n">0</td><td class="n">0.5&ndash;0.6%</td><td class="n">0.960&ndash;0.976</td></tr>
-<tr><td>Typical</td><td class="n">0.12&ndash;0.50 px</td><td class="n">0.09&ndash;0.33 px</td><td class="n">0.54&ndash;0.83 px</td><td class="n">0</td><td class="n">0.5&ndash;0.6%</td><td class="n">0.891&ndash;0.910</td></tr>
-<tr><td>Loud</td><td class="n">0.11&ndash;0.50 px</td><td class="n">0.09&ndash;0.33 px</td><td class="n">0.61&ndash;0.90 px</td><td class="n">0</td><td class="n">7.6&ndash;7.7%</td><td class="n">0.930&ndash;0.945</td></tr>
-<tr><td>Hard</td><td class="n">0.22&ndash;0.48 px</td><td class="n">0.16&ndash;0.42 px</td><td class="n">0.99&ndash;1.69 px</td><td class="n">0.03&ndash;0.41%</td><td class="n">4.7&ndash;4.8%</td><td class="n">0.800&ndash;0.829</td></tr>
+<tr><td>Clean</td><td class="n">0.14&ndash;0.33 px</td><td class="n">0.09&ndash;0.32 px</td><td class="n">0.51&ndash;0.82 px</td><td class="n">0</td><td class="n">0.5&ndash;0.6%</td><td class="n">0.960&ndash;0.976</td></tr>
+<tr><td>Typical</td><td class="n">0.14&ndash;0.36 px</td><td class="n">0.09&ndash;0.33 px</td><td class="n">0.54&ndash;0.83 px</td><td class="n">0</td><td class="n">0.5&ndash;0.6%</td><td class="n">0.891&ndash;0.910</td></tr>
+<tr><td>Loud</td><td class="n">0.14&ndash;0.36 px</td><td class="n">0.09&ndash;0.33 px</td><td class="n">0.61&ndash;0.90 px</td><td class="n">0</td><td class="n">7.6&ndash;7.7%</td><td class="n">0.930&ndash;0.945</td></tr>
+<tr><td>Hard</td><td class="n">0.17&ndash;0.42 px</td><td class="n">0.15&ndash;0.43 px</td><td class="n">0.99&ndash;1.69 px</td><td class="n">0.03&ndash;0.41%</td><td class="n">4.7&ndash;4.8%</td><td class="n">0.800&ndash;0.829</td></tr>
 </table>
 <p class="muted">Python pipeline, all turns, default settings, drift 3.2 px (hard 5 px); from card/results.json (Nov 2026). Hand marks 6&ndash;26 px off
 (hard: 13&ndash;53 px). Trace rms: distance from each traced point to the nearest true groove centerline.

@@ -22,7 +22,8 @@ class LowResSettings:
     turn_weight_power: float = 0.5   # FFT input weighted by r^-power about the mark
     spacing_window: float = 0.5      # search ± this fraction of the expected peak radius (frequency): 0.5-1.5 x size / nominal
     profile_smoothing: float = 1.5   # bins, Gaussian, before the peak search
-    symmetry_window: float = 10      # spacings, Gaussian window (sigma) about the map's peak, for the symmetry center
+    symmetry_window: float = 0.12    # sigma of the Gaussian window about the map's peak, x the marked outer radius
+    symmetry_search: float = 1.5     # the symmetry center lies within this many sigma of the peak
 
 
 @dataclass
@@ -155,13 +156,13 @@ def parabola_offset(left, middle, right):
     return 0.5 * (left - right) / curvature if curvature < 0 else 0.0
 
 
-def symmetry_center(z_map, spacing, window_spacings):
-    # g = (|Z| - its window mean) * a Gaussian window about the peak, on a crop of
-    # +-3 sigma. C = g * g (self-convolution) is largest at index sums
-    # i1 + i2 = 2 c - 1, where every term is g^2; half-pixel steps of c, then a
-    # parabola along x and y.
+def symmetry_center(z_map, sigma, search=1.5):
+    # g = (|Z| - its window mean) * a Gaussian window (sigma px) about the peak,
+    # on a crop of +-3 sigma. C = g * g (self-convolution) is largest at index
+    # sums i1 + i2 = 2 c - 1, where every term is g^2; searched for c within
+    # `search` sigma of the peak, in half-pixel steps, then a parabola along x
+    # and y. (Same rule as coherence.js symmetryCenter.)
     peak = map_peak(z_map)
-    sigma = window_spacings * spacing
     half = int(np.ceil(3 * sigma))
     col0, row0 = max(int(peak[0]) - half, 0), max(int(peak[1]) - half, 0)
     crop = np.abs(z_map[row0 : int(peak[1]) + half + 1, col0 : int(peak[0]) + half + 1])
@@ -169,8 +170,13 @@ def symmetry_center(z_map, spacing, window_spacings):
     window = np.exp(-((cols + col0 + 0.5 - peak[0]) ** 2 + (rows + row0 + 0.5 - peak[1]) ** 2) / (2 * sigma**2))
     g = window * (crop - np.sum(window * crop) / np.sum(window))
     conv = fftconvolve(g, g, mode="full")
-    row, col = np.unravel_index(np.argmax(conv[1:-1, 1:-1]), (conv.shape[0] - 2, conv.shape[1] - 2))
-    row, col = row + 1, col + 1
+    center_k = np.round(2 * peak - 1 - 2 * np.array([col0, row0])).astype(int)  # index sum of the peak
+    reach = int(np.ceil(2 * search * sigma))
+    lo = np.maximum(center_k - reach, 1)
+    hi = np.minimum(center_k + reach, np.array(conv.shape[::-1]) - 2)
+    sub = conv[lo[1] : hi[1] + 1, lo[0] : hi[0] + 1]
+    row, col = np.unravel_index(np.argmax(sub), sub.shape)
+    row, col = row + lo[1], col + lo[0]
     dx = parabola_offset(conv[row, col - 1], conv[row, col], conv[row, col + 1])
     dy = parabola_offset(conv[row - 1, col], conv[row, col], conv[row + 1, col])
     return (np.array([col + dx, row + dy]) + 2 * np.array([col0, row0]) + 1) / 2
@@ -178,8 +184,9 @@ def symmetry_center(z_map, spacing, window_spacings):
 
 def find_center(image, mark, scale, spacing, settings):
     pitch = pitch_of(spacing)
-    z_map = coherence_map(image, pitch, reach=int(mark.r_outer / scale + 100))
-    center = symmetry_center(z_map, spacing, settings.symmetry_window)
+    r_outer = mark.r_outer / scale
+    z_map = coherence_map(image, pitch, reach=int(np.ceil(r_outer + 2 * spacing)))  # the annulus, plus a margin
+    center = symmetry_center(z_map, settings.symmetry_window * r_outer, settings.symmetry_search)
     z = map_at(z_map, center)
     coherence = 2 * np.abs(z) / np.sum(np.abs(image)) / (np.pi / 2)
     return Spiral(center[0], center[1], pitch, float(np.angle(z))).scaled(scale), z_map, coherence
