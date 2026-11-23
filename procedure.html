@@ -872,7 +872,13 @@ they drift independently of this one they pull the estimate toward the spiral
 With columns at equal arc length, every 1 px gave the same paths as every 3 px
 (until Nov 2026 the columns were at equal arc length, every 3 px).</p>
 <p><b>Two passes.</b> Pass 1: rows about the spiral &rarr; ~1500 wedge offsets &rarr; the
-geometry refit (P3.4), on the wedges alone, no resampling. Pass 2: each column's
+geometry refit (P3.4), on the wedges alone, no resampling. Pass 1 uses coarser
+columns, every 4 px on the outer turn (Adam, Nov 2026): the refit is limited by
+the groove's drift, not by sampling, so on the 20 cards 2 or 4 px columns gave
+the same center (within 0.001 px) and spacing as 1 px, the path within 0.008 px
+(hard cards only) and the same sound, and the full-res stage dropped from
+~1.1 s to ~0.75 s; 8 px began to slip on the hard cards
+(<code>experiments/coarse_pass1.py</code>). Pass 2: each column's
 period of rows centered <b>midway between the lands</b> either side of the
 groove, at (o<sub>n</sub> + &frac12;(o<sub>n&minus;1</sub> + o<sub>n+1</sub>)) / 2, where o<sub>n&plusmn;1</sub> are pass 1's
 offsets of the turns either side (the same column one turn, 2&pi;, away in the
@@ -952,7 +958,7 @@ path.</p>
 <tr><td>Pixel sectors: each annulus pixel to its nearest arm and one of 40 sectors per turn (cells), three passes over the full frame (refit, drift, bands re-centered on the groove)</td><td class="n">0.22 / 0.28 / 1.07 / 0.18</td><td class="n">0.01%</td><td class="n">3.3 s</td></tr>
 <tr><td>Unrolled rectangle, pass 1 only</td><td class="n">0.21 / 0.26 / 1.06 / 0.16</td><td class="n">0.06%</td><td class="n">0.20 s</td></tr>
 <tr><td>Unrolled rectangle, pass 2 rows centered on the groove</td><td class="n">0.23 / 0.29 / 1.13 / 0.19</td><td class="n">0.53%</td><td class="n">0.37 s</td></tr>
-<tr><td><b>Unrolled rectangle, pass 2 rows midway between the lands (now)</b></td><td class="n">0.15 / 0.16 / 0.81 / 0.08</td><td class="n">0.07%</td><td class="n">0.37 s</td></tr>
+<tr><td><b>Unrolled rectangle, pass 2 rows midway between the lands (now; pass 1 later on 4 px columns, same results)</b></td><td class="n">0.15 / 0.16 / 0.81 / 0.08</td><td class="n">0.07%</td><td class="n">0.37 s</td></tr>
 </table>
 <p><b>Why the strip was worse.</b> Its path followed only ~90% of the groove's
 drift (path error vs. true drift: slope &minus;0.10, correlation &minus;0.57 on typical

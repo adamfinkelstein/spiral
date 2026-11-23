@@ -68,7 +68,7 @@ the annulus unrolled into a rectangle along that spiral (columns at equal
 steps in theta, i.e. time, ~1 px apart on the outer turn; rows ±S/2, sampled
 only when needed; the test sound is also a function of theta) → wedges of 1/40 turn, one
 period of rows demodulated per column → geometry refit modulo the spacing on
-the wedges (grid start + robust least squares) → pass 2 with each column's
+the wedges (pass 1, on 4 px columns: the refit is limited by drift, not sampling) (grid start + robust least squares) → pass 2 with each column's
 rows midway between the lands → path locked to the refitted spiral → sound =
 land minus groove bottom, relative to its slow average. Typical cards:
 center ~0.1–0.3 px, path ~0.15 px, no wrong groove, sound correlation ~0.9

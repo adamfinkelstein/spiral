@@ -20,7 +20,10 @@ from .strip import Strip, refit_basis, refit_start, sample_at
 # a taper or a wider window lets the neighbouring turns, which drift
 # differently, pull it toward the spiral), summed over the wedge: the angle
 # of Z is the groove's offset (mod S), |Z| its strength.
-#   Pass 1: rows about the spiral; the geometry refit (as the strip's) on the
+#   Pass 1: rows about the spiral, on coarser columns (every `pass1_step` px
+#     on the outer turn: the refit is limited by the groove's drift, not by
+#     sampling; 4 px gave the same center to 0.001 px on 20 cards, see
+#     experiments/coarse_pass1.py); the geometry refit (as the strip's) on the
 #     wedge offsets, no resampling, gives the geometry and an unwrapped model
 #     of the low-res spiral's error; path = model + the wedges' offsets from
 #     it within +-S/2.
@@ -35,12 +38,13 @@ from .strip import Strip, refit_basis, refit_start, sample_at
 class WedgeSettings:
     sectors: int = 40         # wedges per turn
     column_step: float = 1.0  # px of groove between columns on the outermost turn (equal steps in theta)
+    pass1_step: float = 4.0   # the same for pass 1 (the geometry refit only)
 
 
 @dataclass
 class WedgeRun:
     unrolled: object        # the rectangle, along the low-res spiral
-    first: Strip            # pass 1's wedges (offsets from the low-res spiral, mod S)
+    first: Strip            # pass 1's wedges, on the coarse columns (offsets from the low-res spiral, mod S)
     final: Strip            # pass 2's wedges (offsets from the low-res spiral, mod S)
     spiral: object          # refitted geometry
     model: np.ndarray       # the refitted spiral's offset from the low-res one at the columns, px
@@ -134,10 +138,11 @@ def neighbours_mean(theta, offsets):
 
 
 def run_wedges(image, low_spiral, mark, settings=WedgeSettings()):
+    coarse = Unrolled(image, low_spiral, mark, settings.pass1_step, settings.sectors)
+    first = wedges(coarse, coarse.column_phasors(np.zeros(len(coarse.theta))))
     unrolled = Unrolled(image, low_spiral, mark, settings.column_step, settings.sectors)
     spacing, theta = unrolled.spacing, unrolled.theta
     near = lambda reference, cells: reference + wrap(drift_at(cells, theta) - reference, spacing)
-    first = wedges(unrolled, unrolled.column_phasors(np.zeros(len(theta))))
     spiral, model = refit_wedges(first)
     path = near(model(theta), first)
     window = (path + neighbours_mean(theta, path)) / 2

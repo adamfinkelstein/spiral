@@ -121,7 +121,9 @@ Pages serves them (nothing is built on GitHub).
   at the middle turn (`Unrolled.step`). Rows = radial offset; rows
   ±S/2 cover every pixel once. Never stored: `Unrolled.pull` samples a block
   when needed. Wedges of 1/40 turn; per column one untapered period of rows
-  × e^{−2πid/S}, summed per wedge. Pass 1: rows about the spiral →
+  × e^{−2πid/S}, summed per wedge. Pass 1 (on 4 px columns, `pass1_step`:
+  the refit is drift-limited, same center as 1 px to 0.001 px, ~1/3 faster;
+  experiments/coarse_pass1.py): rows about the spiral →
   `refit_wedges` (the strip's refit on ~1500 wedge offsets, no resampling)
   → path = model + offsets within ±S/2. Pass 2: rows centered midway between
   the lands, (groove + mean of the turns either side) / 2 (on the groove

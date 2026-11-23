@@ -109,6 +109,7 @@ def detail_spots(run, size):
 
 def make_figures(run, folder, detail_size=256):
     spots = detail_spots(run, detail_size)
+    run.pass1 = figures.pass1_compare(run)
     steps = {
         "a_input": lambda p: figures.low_res_input(run, p, detail_size, [(s["x"], s["y"]) for s in spots]),
         "b_fft": lambda p: figures.spectrum(run, p),
@@ -119,6 +120,7 @@ def make_figures(run, folder, detail_size=256):
         "f_explain": figures.offsets_explainer,
         "f_offsets": lambda p: figures.offsets_mod_spacing(run, p),
         "f_truth": lambda p: figures.offsets_vs_truth(run, p),
+        "f_pass1": lambda p: setattr(run, "pass1_wedge_change", figures.pass1_before_after(run, run.pass1, p)),
         "g_rectangle": lambda p: figures.rectangle_image(run, p),
         "h_trace": lambda p: figures.trace_offset(run, p),
         "h_rows": lambda p: figures.turns_rows(run, p),
@@ -160,6 +162,16 @@ function showSpot(k) {{
 document.querySelectorAll('.spot').forEach(e => e.addEventListener('click', () => showSpot(+e.dataset.k)));
 showSpot({selected});
 </script>"""
+
+
+def pass1_step(image, run):
+    b, a = run.pass1["before"], run.pass1["after"]
+    change = run.pass1_wedge_change
+    path_change = a["run"].path - b["run"].path
+    return step(image, f"f3. Pass 1 on coarser columns: before / after",
+        f"Until Nov 2026 pass 1 read the rectangle at the same 1 px columns as pass 2. But the refit only needs pass 1's wedges, and its error is set by the groove's drift (f2), not by how densely the wedges are sampled: a wedge's offset from 1/4 of its columns differs only by noise, which the least-squares fit over ~1500 wedges averages away. So pass 1 now reads every 4th column (every {a['step']:g} px of the outer turn; same wedges, same rows, bilinear without a prefilter since the rows across the groove are still 1 px), and pass 2 reads all of them.",
+        "Top: each pass-1 wedge's offset with 4 px columns minus with 1 px (grey, brighter = higher |Z|). Middle: the refit's error against the true spiral (<span class='p'>pale green</span> = 0), before (<span class='y'>yellow</span>, wide and faint) and now (yellow, thin): they lie on top of each other. Bottom: the path, now minus before (<span class='o'>orange</span>). Note the scales: ±0.05 px top, ±0.01 px bottom.",
+        f"<span class='num'>This card, before → now: pass-1 columns {b['columns']:,} → {a['columns']:,}; wedges differ by {np.sqrt(np.mean(change ** 2)):.3f} px rms; refit center {b['center']:.4f} → {a['center']:.4f} px, spacing {pct(b['spacing'], 4)} → {pct(a['spacing'], 4)}; path rms {b['path_rms']:.4f} → {a['path_rms']:.4f} px (paths differ by {np.sqrt(np.mean(path_change ** 2)):.4f} px rms); full-res stage {b['seconds']:.2f} → {a['seconds']:.2f} s. On all 20 cards: section 4.</span>")
 
 
 def write_report(path, run, summary, results, image_folder, spots):
@@ -213,7 +225,7 @@ Showcase: preset <b>{escape(card.params.label)}</b>, seed {card.seed}. <a href="
 {step(img("f_rectangle"), "f0. The unrolled rectangle and its wedges",
       f"The annulus unrolled along the low-res spiral: columns at equal steps in angle θ ({run.wedges.unrolled.per_turn:,.0f} per turn), i.e. equal steps in time, since the card turns at a constant rate; about 1 px of groove apart on the outermost turn ({run.strip.step:.2f} px on the middle one), so no turn is undersampled and bilinear sampling needs no prefilter. Rows are the radial offset from the spiral (1 px, outward up). Rows −S/2..S/2 cover every annulus pixel exactly once: offset +S is the next turn at the same angle. The rectangle is never stored; each block of columns is sampled (bilinear, scipy map_coordinates) when it is needed. Shown: the same 4 wedges (36°) of 5 consecutive turns about the middle one, stacked outward up, so the stack tiles the card (stretched vertically). Turns are numbered from the spiral's center (r = turn × S), so this card's grooves are turns ~55–96; “card” counts from the first whole turn read.",
       "A wedge is 1/40 turn of columns (between the <span class='v'>violet</span> vertical lines). Per column, Z = Σ v·e<sup>−2πi d/S</sup> over exactly one period of rows, untapered: one period gives the groove's first Fourier component, while a taper or a wider window lets the neighbouring turns, which drift differently, pull it toward the spiral. Summed over the wedge, the angle of Z is the groove's offset (mod S), |Z| its strength.",
-      "Pass 1: rows about the spiral (each turn's band, between the <span class='v'>violet</span> dotted lines) → the geometry refit (f1). Pass 2: each column's period of rows (<span class='v'>violet</span> solid) centered midway between the lands either side of the groove, at (groove + mean of the turns either side) / 2, so the window's ends fall in the land; centered on the groove itself was worse. <span class='o'>Orange</span>: the path; <span class='g'>green</span>: the true groove.",
+      "Pass 1: rows about the spiral (each turn's band, between the <span class='v'>violet</span> dotted lines), on columns every 4 px of the outer turn (the refit is limited by the groove's drift, not by sampling) → the geometry refit (f1). Pass 2: each column's period of rows (<span class='v'>violet</span> solid) centered midway between the lands either side of the groove, at (groove + mean of the turns either side) / 2, so the window's ends fall in the land; centered on the groove itself was worse. <span class='o'>Orange</span>: the path; <span class='g'>green</span>: the true groove.",
       f"<span class='num'>{s['columns']:,} columns, {s['wedges']:,} wedges, {s['turns']:.1f} turns.</span>")}
 {step(img("f_wedges"), "f0b. The same on the card",
       "A full-res crop at the default detail spot: <span class='v'>violet</span> pass 2's rows (one period about the midway line along each turn) and the wedge edges (radial; one turn's band sits beside the next, so its edges come in pairs); <span class='g'>green</span> (wide) the true groove; <span class='o'>orange</span> the path.")}
@@ -227,6 +239,7 @@ Showcase: preset <b>{escape(card.params.label)}</b>, seed {card.seed}. <a href="
 {step(img("f_truth"), "f2. The same, relative to the true spiral",
       "Everything minus the true geometry (<span class='p'>pale green</span>, now the zero line); possible only on a simulated card. <span class='y'>Yellow</span>: what is left of the refit's error, a small one-turn wave (center) and slope (spacing); below, alone at ±1 px. <span class='g'>Green</span>: the groove's own drift from a perfect spiral, a few px from turn to turn; grey: the wedges.",
       f"<span class='num'>Refit error {refit_error:.2f} px rms (center {s['refit_center_error']:.2f} px, spacing {pct(s['refit_spacing_error'], 3)}); drift {drift:.2f} px rms.</span>")}
+{pass1_step(img("f_pass1"), run)}
 {step(img("g_rectangle"), "g. The rectangle around the spot",
       "Rows across the groove (1 px, outward up, ±1.6 S), each column's mean removed. <span class='y'>Yellow</span>: refitted spiral (±S faint); <span class='v'>violet</span>: pass 2's rows; <span class='o'>orange</span>: the path; <span class='g'>green</span>: true groove.")}
 {step(img("h_trace"), "h. The path: offset from the refitted spiral",
@@ -255,6 +268,15 @@ Showcase: preset <b>{escape(card.params.label)}</b>, seed {card.seed}. <a href="
 <tr><td>Unrolled rectangle, pass 2 rows centered on the groove</td><td>0.23 / 0.29 / 1.13 / 0.19</td><td>0.53%</td><td>0.37 s</td><td class='src'>re-centering on the groove brings the neighbours' edges in</td></tr>
 <tr><td><b>Unrolled rectangle, pass 2 rows midway between the lands (now)</b></td><td>0.15 / 0.16 / 0.81 / 0.08</td><td>0.07%</td><td>0.37 s</td><td class='src'>per-wedge tilt (slope along the groove): 1.9 / 4.9 px on 2 cards, too noisy</td></tr>
 </table>
+<p class="note" style="margin-top:14px"><b>Pass 1 on coarser columns</b> (Nov 2026, step f3; experiments/coarse_pass1_results.md). Medians over the 20 cards, typical / loud / hard / clean; the full-res stage only.</p>
+<table>
+<tr><th>Pass 1 columns</th><th>Refit center, px</th><th>Path rms, px</th><th>Hard: wrong groove</th><th>Sound corr.</th><th>Pass 1</th><th>Full-res stage</th></tr>
+<tr><td>1 px (before)</td><td>0.126 / 0.130 / 0.197 / 0.129</td><td>0.146 / 0.165 / 0.787 / 0.070</td><td>0.08%</td><td>0.896 / 0.934 / 0.810 / 0.960</td><td>0.58 s</td><td>1.15 s</td></tr>
+<tr><td>2 px</td><td>0.126 / 0.130 / 0.197 / 0.129</td><td>0.146 / 0.165 / 0.793 / 0.070</td><td>0.08%</td><td>the same</td><td>0.32 s</td><td>0.89 s</td></tr>
+<tr><td><b>4 px (now)</b></td><td>0.126 / 0.130 / 0.197 / 0.129</td><td>0.146 / 0.165 / 0.796 / 0.070</td><td>0.10%</td><td>the same</td><td>0.18 s</td><td>0.76 s</td></tr>
+<tr><td>8 px</td><td>0.126 / 0.130 / 0.196 / 0.129</td><td>0.146 / 0.165 / 0.814 / 0.070</td><td>0.12%</td><td>the same</td><td>0.12 s</td><td>0.70 s</td></tr>
+</table>
+<p class="note">Card by card, 2 and 4 px change the refit center by less than 0.001 px (8 px: 0.008) and the path rms by at most 0.005 / 0.008 / 0.026 px, all on hard seed 1. 4 px is the coarsest step with no visible cost.</p>
 <p class="note">The sound correlation is the same for all of them (within ~0.005): the readout and the grain limit it, not the path. All of them name a groove's turn by the nearest arm of the geometry model, so a groove drifting more than S/2 from it lands on the wrong turn in every method.</p>
 
 <h2>Card parameters ({escape(card.params.label)})</h2>

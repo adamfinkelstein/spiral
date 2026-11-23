@@ -546,3 +546,61 @@ def turns_rows(run, path, row_height=48, y_range=12, errors=False):
         axes.tick_params(labelbottom=row == len(turns) - 1)
     axes.set_xlabel(f"angle (degrees); one row per turn (number from the center at left), inner at the top; each row ±{y_range} px")
     save(figure, path)
+
+
+def pass1_compare(run):
+    # the full-res stage again with pass 1 on 1 px columns (before Nov 2026)
+    # and on the default 4 px (now), timed; for step f3
+    from time import perf_counter
+    from dataclasses import replace
+    from .scoring import center_error, rms, score_trace, spacing_error
+    from .wedges import WedgeSettings, run_wedges
+    out = {}
+    for name, step in (("before", 1.0), ("after", WedgeSettings().pass1_step)):
+        start = perf_counter()
+        wedge_run = run_wedges(run.image, run.low.spiral, run.card.mark, replace(WedgeSettings(), pass1_step=step))
+        seconds = perf_counter() - start
+        score = score_trace(run.card, run.strip, wedge_run.path)
+        out[name] = {"run": wedge_run, "step": step, "seconds": seconds, "wedges": len(wedge_run.first.theta),
+                     "columns": int(np.ceil(len(run.strip.theta) / step)),
+                     "center": center_error(run.card, wedge_run.spiral), "spacing": spacing_error(run.card, wedge_run.spiral),
+                     "path_rms": rms(score.distance)}
+    return out
+
+
+def pass1_before_after(run, compare, path):
+    # step f3: pass 1 on 1 px columns (before) vs 4 px (now). Top: each pass-1
+    # wedge's offset, 4 px minus 1 px (grey); middle: the refit's error against
+    # the true spiral, before (wide, faint) and now (thin), yellow; bottom: the
+    # path, now minus before (orange)
+    before, after = compare["before"]["run"], compare["after"]["run"]
+    spacing = run.strip.spiral.spacing
+    columns = turns_along(run, run.strip.theta)
+    ideal = ideal_offset(run.card, run.strip)
+    match = np.clip(np.searchsorted(before.first.theta, after.first.theta), 1, len(before.first.theta) - 1)
+    nearer = np.abs(before.first.theta[match - 1] - after.first.theta) < np.abs(before.first.theta[match] - after.first.theta)
+    match = match - nearer
+    wedge_change = wrap(after.first.offsets - before.first.offsets[match], spacing)
+    x, _, grey = wedge_dots(run, after.first)
+    figure = new_figure(900, 760)
+    panels = [figure.add_axes([0.12, y, 0.86, 0.25]) for y in (0.71, 0.395, 0.08)]
+    top, middle, bottom = panels
+    top.scatter(x, wedge_change, s=9, c=grey)
+    top.set_ylim(-0.05, 0.05)
+    top.set_ylabel("wedges, px\n(4 px − 1 px)")
+    middle.axhline(0, color=COLORS["geometry"], lw=1.5)
+    middle.plot(columns[::15], wrap(before.model[::15] - ideal[::15], spacing), color=COLORS["refit"], lw=6, alpha=0.35)
+    middle.plot(columns[::15], wrap(after.model[::15] - ideal[::15], spacing), color=COLORS["refit"], lw=1.3)
+    middle.set_ylim(-0.5, 0.5)
+    middle.set_ylabel("refit error, px\n(wide 1 px, thin 4 px)")
+    bottom.plot(columns[::5], (after.path - before.path)[::5], color=COLORS["trace"], lw=1)
+    bottom.set_ylim(-0.01, 0.01)
+    bottom.set_ylabel("path, px\n(4 px − 1 px)")
+    bottom.set_xlabel("turns along the groove (inner turns left)")
+    for axes in panels:
+        axes.set_xlim(columns[0], columns[-1])
+        axes.grid(color="#333")
+    for axes in (top, middle):
+        axes.tick_params(labelbottom=False)
+    save(figure, path)
+    return wedge_change
