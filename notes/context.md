@@ -92,7 +92,7 @@ re-centering on the groove, per-wedge tilt): considered.html Part 3.
 - Keep docs current: procedure.html (method step by step), considered.html
   (alternatives dropped), CLAUDE.md,
   README, index.html.
-- Commit locally when asked ("check it in"); push when asked (works only
+- Commit locally when asked ("check it in"), and never offer to; push when asked (works only
   from a session running on the Mac, e.g. remote-control; the Cowork sandbox
   can't push).
 - Asks probing "why" questions; explain math concretely (e.g. the coherence

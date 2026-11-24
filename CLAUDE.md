@@ -6,7 +6,20 @@ experiment page. No build step, no dependencies — open `index.html` directly
 work from `file://`. Deployed to GitHub Pages on every push to `main`.
 
 New session? Read `notes/context.md` first: the project's story, goals,
-Adam's preferences and open questions.
+Adam's preferences and open questions; then the "Handoff" section at the end
+of this file. Moving to another computer: `SETUP.md`.
+
+## Working with Adam (from Claude's memory, Nov 2026, so it travels with the repo)
+
+- Don't offer to commit or push (no "commit?" questions, no commit buttons
+  in wrap-ups). Make the change, report it, mention uncommitted state if it
+  matters; commit only when Adam says so ("check it in"), push when he says
+  so. Why: the docs are being cleaned up step by step, and the offers got in
+  the way.
+- Markdown documents (READMEs, notes, plans): top-level bullets with `*`,
+  nested with `-`. (This file predates the rule and keeps `-`.)
+- More preferences (constants, code style, honest numbers, robust methods):
+  `notes/context.md`, "Adam's preferences".
 
 ## Files
 

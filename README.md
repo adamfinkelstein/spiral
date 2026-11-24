@@ -7,6 +7,9 @@ dependencies — and pick an experiment.
 Live version: https://adamfinkelstein.github.io/spiral/ (deployed automatically
 by GitHub Actions on every push to `main`).
 
+Setting up on a new computer (tools, Python environment for the card
+pipeline in `cardlab/`, what lives outside the repo): see `SETUP.md`.
+
 ## Ring spacing (`spacing.html`)
 
 Estimate the ring spacing from the 2D Fourier transform.
