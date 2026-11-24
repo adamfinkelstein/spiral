@@ -733,8 +733,9 @@ Open ideas (not started; ask Adam before starting any):
   correction.
 - Port the FFT weighting (1/√r, weights summing to 1, log(|F|+ε)) to the JS
   pages.
-- Run the pipeline on the real cards (Tomaz's aligned depth maps, Ezra's
-  photo) end to end.
+- Real cards: the pipeline already runs on Ezra's photo
+  (experiments/ezra_card/pipeline_on_ezra.py); next would be Tomaz's
+  depth maps, and listening to the sound.
 
 Closed earlier: the "gradient tilt" center experiment (JS work in progress,
 gitignored, in `Claude outputs/`) and the gradient-line method were dropped
