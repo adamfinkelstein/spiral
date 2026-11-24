@@ -122,7 +122,8 @@ def make_figures(run, folder, detail_size=256):
         "f_rectangle": lambda p: figures.rectangle_turns(run, p),
         "f_wedges": lambda p: figures.wedges_on_card(run, p),
         "f_explain": figures.offsets_explainer,
-        "f_offsets": lambda p: figures.offsets_mod_spacing(run, p),
+        "f_fit": lambda p: setattr(run, "fit_demo", figures.fit_residuals(run, p)),
+        "f_check": lambda p: setattr(run, "check_demo", figures.check_on_damage(run, p)),
         "f_truth": lambda p: figures.offsets_vs_truth(run, p),
         "f_pass1": lambda p: setattr(run, "pass1_wedge_change", figures.pass1_before_after(run, run.pass1, p)),
         "g_rectangle": lambda p: figures.rectangle_image(run, p),
@@ -172,8 +173,8 @@ def pass1_step(image, run):
     b, a = run.pass1["before"], run.pass1["after"]
     change = run.pass1_wedge_change
     path_change = a["run"].path - b["run"].path
-    return step(image, "4e. Every 4th column: before / after",
-        f"Until Nov 2026 this step read every column, as step 5 does. But the fit only needs the wedges' offsets, and its error is set by the groove's drift (4d), not by how densely the wedges are sampled: a wedge's offset from 1/4 of its columns differs only by noise, which the least-squares fit over ~1500 wedges averages away. So this step reads every 4th column (every {a['step']:g} px of the outer turn; the same wedges and rows), and step 5 reads all of them.",
+    return step(image, "4f. Every 4th column: before / after",
+        f"Until Nov 2026 this step read every column, as step 5 does. But the fit only needs the wedges' offsets, and its error is set by the groove's drift (4e), not by how densely the wedges are sampled: a wedge's offset from 1/4 of its columns differs only by noise, which the least-squares fit over ~1500 wedges averages away. So this step reads every 4th column (every {a['step']:g} px of the outer turn; the same wedges and rows), and step 5 reads all of them.",
         "Top: each wedge's offset from every 4th column minus from every column (grey, brighter = higher |Z|). Middle: the fit's error against the true spiral (<span class='p'>pale green</span> = 0), before (<span class='y'>yellow</span>, wide and faint) and now (yellow, thin): they lie on top of each other. Bottom: the path, now minus before (<span class='o'>orange</span>). Note the scales: ±0.05 px top, ±0.01 px bottom.",
         f"<span class='num'>This card, before → now: columns {b['columns']:,} → {a['columns']:,}; wedges differ by {np.sqrt(np.mean(change ** 2)):.3f} px rms; corrected center {b['center']:.4f} → {a['center']:.4f} px, spacing {pct(b['spacing'], 4)} → {pct(a['spacing'], 4)}; path rms {b['path_rms']:.4f} → {a['path_rms']:.4f} px (paths differ by {np.sqrt(np.mean(path_change ** 2)):.4f} px rms); steps 4–5 {b['seconds']:.2f} → {a['seconds']:.2f} s. On all 20 cards: the table below.</span>")
 
@@ -189,6 +190,9 @@ def write_report(path, run, summary, results, image_folder, spots):
     wrong_note = " — none on this card" if s["wrong_groove"] == 0 else ""
     ideal = ideal_offset(card, run.strip)
     refit_error = float(np.sqrt(np.mean(wrap(run.model - ideal, card.spacing) ** 2)))
+    fd, cd = run.fit_demo, run.check_demo
+    true_at = card.nearest_groove(*figures.spiral_points(run.strip.spiral, run.strip.theta))[0]
+    wedge_noise = float(np.sqrt(np.mean(wrap(run.wedges.first.offsets - np.interp(run.wedges.first.theta, run.strip.theta, true_at), card.spacing) ** 2)))
     drift = float(np.sqrt(np.mean(wrap(card.nearest_groove(*figures.spiral_points(run.strip.spiral, run.strip.theta))[0] - ideal, card.spacing) ** 2)))
     body = f"""
 <h1>Spiral: the procedure on a simulated card</h1>
@@ -200,7 +204,7 @@ Showcase: preset <b>{escape(card.params.label)}</b>, seed {card.seed}. <a href="
 <p class="note key"><b>Colors, in every figure:</b> <span class='w'>white</span> input (hand mark, nominal spacing) ·
 <span class='c'>cyan</span> low-res estimate · <span class='y'>yellow</span> the corrected geometry (step 4) ·
 <span class='o'>orange</span> path and read-out sound · <span class='g'>green</span> true groove and true sound ·
-<span class='p'>pale green</span> true geometry (center, spacing, ideal spiral) · <span class='m'>magenta</span> wrong groove ·
+<span class='p'>pale green</span> true geometry (center, spacing, ideal spiral) · <span class='m'>magenta</span> wrong groove (in step 4, the sectors the check drops) ·
 <span class='k'>grey</span> raw measurements (the wedges) · <span class='v'>violet</span> annotations (detail-spot boxes, cartoon labels, the rectangle's rows and wedge edges)</p>
 
 <h2>Summary over runs</h2>
@@ -231,19 +235,24 @@ Showcase: preset <b>{escape(card.params.label)}</b>, seed {card.seed}. <a href="
 
 <h2 id="step4">4. Geometry correction: coarse wedges <a class="xref" href="procedure.html#step4">procedure →</a></h2>
 {step(img("f_explain"), "4a. How to read the offsets (a cartoon)",
-      "Top: a toy card with 4 turns. The rectangle follows the low-res spiral (<span class='c'>cyan</span>, dashed), which is a little off: here its center by 0.45 spacing and its spacing by 4%. Each column is a radial line ±S/2 about it (grey bars). Where the line meets the groove (<span class='g'>green</span>), the distance from the cyan spiral, outward positive, is the column's offset (<span class='v'>violet</span>).",
-      "Middle: the offsets along the rectangle, unrolled. A center error gives one wave per turn, a spacing error a slow rise. Every turn of the groove shows up, one spacing apart.",
-      "Bottom: what 4c plots. A column can't tell which turn it sees, only where the nearest groove sits, so the offsets are taken modulo the spacing, in −S/2…+S/2; when a curve passes ±S/2 the next turn is nearer and it wraps around. The fit (<span class='y'>yellow</span> in 4c) fits exactly this kind of curve, modulo S.")}
+      "Top: a toy card with 6 turns. The rectangle follows the initial estimate from steps 1–3 (<span class='c'>cyan</span>, dashed), here off in all three ways: center by 0.2 spacing, spacing by 8%, spiral phase by 0.6 rad. Each column is a radial line ±S/2 about it (grey bars). Where the line meets the groove (<span class='g'>green</span>), the distance from the cyan spiral, outward positive, is the column's offset (<span class='v'>violet</span>).",
+      "Second: the offsets along the rectangle, unrolled; every turn of the groove shows up, one spacing apart. Third: the bold curve's three parts (<span class='v'>violet</span>): the center error gives one wave per turn, the spacing error a slope, the spiral-phase error a constant. They add up to the bold curve; the fit (4c) fits exactly this.",
+      "Bottom: what 4c plots. A column can't tell which turn it sees, only where the nearest groove sits, so the offsets are taken modulo the spacing, in −S/2…+S/2; when a curve passes ±S/2 the next turn is nearer and it wraps around.")}
 {step(img("f_rectangle"), "4b. The unrolled rectangle and its wedges",
       f"The annulus unrolled along the low-res spiral: columns at equal steps in angle θ ({run.wedges.unrolled.per_turn:,.0f} per turn at full resolution), i.e. equal steps in time; rows are the radial offset from the spiral (1 px, outward up); rows −S/2..S/2 cover every annulus pixel exactly once. Sampled (bilinear) only when needed. Shown: the same 4 wedges (36°) of 5 consecutive turns about the middle one, stacked outward up, so the stack tiles the card (stretched vertically). Turns are numbered from the spiral's center (r = turn × S); “card” counts from the first whole turn read.",
       "A wedge is 1/40 turn of columns (between the <span class='v'>violet</span> vertical lines). Per column, z = Σ v·e<sup>−2πi d/S</sup> over exactly one period of rows; summed over the wedge, the angle of Z is the groove's offset (mod S), |Z| its strength. This step reads every 4th column on the rows about the spiral (<span class='v'>violet</span> dotted); step 5 reads every column on rows midway between the lands (<span class='v'>violet</span> solid). <span class='o'>Orange</span>: the path; <span class='g'>green</span>: the true groove.",
       f"<span class='num'>{s['columns']:,} columns ({run.pass1['after']['columns']:,} in this step), {s['wedges']:,} wedges, {s['turns']:.1f} turns.</span>")}
-{step(img("f_offsets"), "4c. The coarse wedges and the geometry fit",
-      "Grey dots: the wedges (brighter = higher |Z|), as offsets from the low-res spiral, mod S. Relative to that spiral a center error is a one-turn wave (its cos and sin amplitudes are the x and y errors), a spacing error a slope, a spiral-phase error an offset. The fit (<span class='y'>yellow</span>) fits exactly that modulo S, on the wedges alone: a grid over spacing and center, then robust least squares. <span class='p'>Pale green</span>: the true geometry; <span class='g'>green</span>: the true grooves, which drift a few px from turn to turn.",
-      f"<span class='num'>Step 3's center was {s['low_center_error']:.2f} px from the truth, the corrected one is {s['refit_center_error']:.2f} px (moved {moved:.2f} px); spacing {pct(s['refit_spacing_error'], 3)}; spiral vs. grooves {s['refit_vs_grooves']:.2f} px rms.</span>")}
-{step(img("f_truth"), "4d. The same, relative to the true spiral",
-      "Everything minus the true geometry (<span class='p'>pale green</span>, now the zero line); possible only on a simulated card. <span class='y'>Yellow</span>: what is left of the fit's error, a small one-turn wave (center) and slope (spacing); below, alone at ±1 px. It comes from the groove's drift (<span class='g'>green</span>, a few px from turn to turn), whose random one-turn component looks like a center error; grey: the wedges.",
-      f"<span class='num'>Fit error {refit_error:.2f} px rms (center {s['refit_center_error']:.2f} px, spacing {pct(s['refit_spacing_error'], 3)}); drift {drift:.2f} px rms.</span>")}
+{step(img("f_fit"), "4c. The geometry fit: residuals before and after",
+      f"The fit updates the spiral's globals (center, spacing, spiral phase) from the coarse wedges: grid search, then robust least squares on the residuals wrapped to ±S/2 (4a's model: a one-turn wave for the center, a slope for the spacing, a constant for the spiral phase). Step 3 is already so close on this card (center {s['low_center_error']:.2f} px off) that before and after would look alike, so this figure starts from a deliberately worse initial estimate: center {fd['start_center']:.1f} px off, spacing {pct(fd['start_spacing'])}, spiral phase 0.3 rad.",
+      "Top, before: each wedge's offset from that estimate, mod S (grey, brighter = higher |Z|), with the fitted model (<span class='y'>yellow</span>; under it, <span class='p'>pale green</span>, the same curve for the true geometry) and the true grooves (<span class='g'>green</span>). Middle, after: offset minus model, wrapped, on the same scale: the wave and the slope are gone; what is left is the groove's own drift from turn to turn. Bottom: the consistency check, the residuals' median in each of 40 angular sectors (9°) over all turns; a sector outside the band (<span class='v'>violet</span>, median ± 3 MADs) would be dropped and the fit repeated. Here none is.",
+      f"<span class='num'>From this start: residual {fd['before_rms']:.1f} → {fd['after_rms']:.1f} px rms; center {fd['start_center']:.1f} → {fd['center']:.2f} px from the truth, spacing {pct(fd['start_spacing'])} → {pct(fd['spacing'], 3)}. From step 3's estimate (the pipeline): center {s['low_center_error']:.2f} → {s['refit_center_error']:.2f} px (moved {moved:.2f} px); spacing {pct(s['refit_spacing_error'], 3)}; spiral vs. grooves {s['refit_vs_grooves']:.2f} px rms; {len(run.wedges.dropped)} of 40 sectors dropped.</span>")}
+{step(img("f_check"), "4d. The consistency check on a damaged card",
+      "The same card with a damaged patch: a 30° sector (60°–90°) whose grooves look clean but sit S/3 further out, as on a warped or lifted patch. Its wedges have high |Z|, so the plain fit follows them part way. Top: residuals after the plain fit; the patch's wedges (<span class='m'>magenta</span>) stand out at the same angle on every turn. Middle: the sector medians against the final model; the check drops the sectors outside the band (<span class='m'>magenta</span>; the first round drops the three inside the patch, the second the one it overlaps at 54–63°) and fits again. Bottom: the final fit: the rest is flat and the patch sits S/3 off, ignored.",
+      f"<span class='num'>Center from the truth: plain fit {cd['plain']:.2f} px, with the check {cd['checked']:.2f} px ({cd['dropped']} sectors dropped); undamaged {s['refit_center_error']:.2f} px.</span>")}
+{step(img("f_truth"), "4e. The same, relative to the true spiral",
+      "Everything minus the true geometry (<span class='p'>pale green</span>, now the zero line); possible only on a simulated card. <span class='y'>Yellow</span>: what is left of the fit's error, a small one-turn wave (center) and slope (spacing); below, alone at ±1 px. Grey: the wedges; <span class='g'>green</span>: the groove's drift.",
+      "The error is random, different on every card, and nothing in the data can remove it: a one-turn wave or slope that is really in the measured offsets can't be told from a center or spacing error. Two things put one there by chance, about equally: the wedges' measurement noise (the grain; each wedge's offset is off from the true groove at its angle by a fraction of a px) and the groove's drift (a few px from turn to turn, whose own one-turn wave over all turns is a few hundredths of a px). The robust loss weights the wedges by how far they sit from the model, so the error is not simply either part's least-squares fit. It is tiny next to one turn's rise in radius (S per turn): plotted as radius against θ it would not show at all, only after subtracting the true spiral as here. And step 5's path follows the groove itself, so it hardly matters downstream.",
+      f"<span class='num'>Fit error {refit_error:.2f} px rms (center {s['refit_center_error']:.2f} px, spacing {pct(s['refit_spacing_error'], 3)}); wedges vs. the true groove {wedge_noise:.2f} px rms; drift {drift:.2f} px rms.</span>")}
 {pass1_step(img("f_pass1"), run)}
 <p class="note" style="margin-top:14px"><b>Every 4th column vs. others</b> (experiments/coarse_pass1_results.md). Medians over the 20 cards, typical / loud / hard / clean; time for steps 4–5 only.</p>
 <table>

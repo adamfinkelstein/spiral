@@ -46,7 +46,7 @@ Adam's preferences and open questions.
   colors match card.html) and the experiments in separate grey "Tested"
   boxes, never mixed into the description. Each step links to
   card.html#stepN. `card.html` — the same steps run on simulated cards
-  (figures 0a, 1a, 2a, 3a, 4a–4e, 5a–5g, 6a; sections `id="step0"`…`step6`
+  (figures 0a, 1a, 2a, 3a, 4a–4f, 5a–5g, 6a; sections `id="step0"`…`step6`
   link back to procedure.html#stepN). `considered.html` — everything
   tried and dropped: Part 1 (the spacing page's method and experiments,
   ids part1 / p1coh), Part 2 (the center page's chunk method, part2),
@@ -136,6 +136,12 @@ Pages serves them (nothing is built on GitHub).
   × e^{−2πid/S}, summed per wedge. Pass 1 (on 4 px columns, `pass1_step`:
   the refit is drift-limited, same center as 1 px to 0.001 px, ~1/3 faster;
   experiments/coarse_pass1.py): rows about the spiral →
+  `refit_checked` (Nov 2026, Adam: `refit_wedges`, then residuals by 40
+  angular sectors over all turns; sectors > 3 MADs out dropped, refit; drops
+  nothing on undamaged cards, fixes a displaced 30° patch 1.19 → 0.12 px;
+  `WedgeRun.dropped`, summary `dropped_sectors`; experiments/
+  fit_columns_vs_wedges.py: per-column fits, noise weights, Cauchy, per-wedge
+  trimming no better) wrapping
   `refit_wedges` (the strip's refit on ~1500 wedge offsets, no resampling)
   → path = model + offsets within ±S/2. Pass 2: rows centered midway between
   the lands, (groove + mean of the turns either side) / 2 (on the groove
@@ -174,10 +180,18 @@ Pages serves them (nothing is built on GitHub).
   `f_explain.png`: toy card with the rectangle's spiral off center, the
   offsets unrolled, and modulo S, columns A, B, C), 4b the rectangle
   (`rectangle_turns`: 4 wedges of 5 consecutive turns, stacked so they
-  tile), 4c the coarse wedges about the low-res spiral with the fit
-  (`f_offsets.png`), 4d the same minus the true spiral (`f_truth.png`,
+  tile), 4c the fit's residuals before / after (`figures.fit_residuals`,
+  `f_fit.png`: re-reads the coarse wedges about a deliberately worse
+  start — center (5, −3) px, spacing +0.25%, spiral phase +0.3 rad —
+  because step 3 is already ~0.2 px off and before/after would look the
+  same; top offsets with the fit, middle residuals, bottom the sector
+  check's medians and ±3 MAD band), 4d the check on a damaged copy
+  (`check_on_damage`, `f_check.png`: `shifted_patch` moves the grooves of
+  60–90° out by S/3; residuals of the plain fit, sector medians against
+  the final model with dropped sectors magenta, residuals of the final
+  fit), 4e the wedges minus the true spiral (`f_truth.png`,
   yellow = the fit's remaining error with a ±1 px zoom, green = drift),
-  4e every 4th vs every column (`figures.pass1_compare` reruns the
+  4f every 4th vs every column (`figures.pass1_compare` reruns the
   full-res stage both ways at build time, ~2 s; `f_pass1.png`) plus the
   20-card 1/2/4/8 px table. Step 5: 5b `wedges_on_card`, 5c rectangle
   around the spot, 5d path, 5e/5f one row per turn (offsets / errors),

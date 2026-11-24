@@ -1,0 +1,4202 @@
+[
+ {
+  "preset": "typical",
+  "seed": 1,
+  "condition": "clean",
+  "method": "A wedges |Z|",
+  "low_center": 0.22458593056387602,
+  "center": 0.05987509291203031,
+  "spacing": 6.0064119297376095e-05,
+  "seconds": 0.03564524999999996
+ },
+ {
+  "preset": "typical",
+  "seed": 1,
+  "condition": "clean",
+  "method": "B columns",
+  "low_center": 0.22458593056387602,
+  "center": 0.05854715998858085,
+  "spacing": 5.091265747036999e-05,
+  "seconds": 3.180758666
+ },
+ {
+  "preset": "typical",
+  "seed": 1,
+  "condition": "clean",
+  "method": "C coherence",
+  "low_center": 0.22458593056387602,
+  "center": 0.059245137933146695,
+  "spacing": 2.2372117716162876e-05,
+  "seconds": 0.28547629200000024
+ },
+ {
+  "preset": "typical",
+  "seed": 1,
+  "condition": "clean",
+  "method": "D wedges by noise",
+  "low_center": 0.22458593056387602,
+  "center": 0.08092489147542281,
+  "spacing": 5.417558007336787e-05,
+  "seconds": 0.04456804199999986
+ },
+ {
+  "preset": "typical",
+  "seed": 1,
+  "condition": "clean",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.22458593056387602,
+  "center": 0.07970052574313917,
+  "spacing": 0.00011155576609955808,
+  "seconds": 0.04446445799999843
+ },
+ {
+  "preset": "typical",
+  "seed": 1,
+  "condition": "clean",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.22458593056387602,
+  "center": 0.22009258451405767,
+  "spacing": 0.0002693354888521071,
+  "seconds": 0.08624799999999944
+ },
+ {
+  "preset": "typical",
+  "seed": 1,
+  "condition": "clean",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.22458593056387602,
+  "center": 0.05987509291203031,
+  "spacing": 6.0064119297376095e-05,
+  "seconds": 0.12405500000000025
+ },
+ {
+  "preset": "typical",
+  "seed": 1,
+  "condition": "lost",
+  "method": "A wedges |Z|",
+  "low_center": 0.2854225944577413,
+  "center": 0.06740879811466463,
+  "spacing": -0.00022442231638786225,
+  "seconds": 0.0363869999999995
+ },
+ {
+  "preset": "typical",
+  "seed": 1,
+  "condition": "lost",
+  "method": "B columns",
+  "low_center": 0.2854225944577413,
+  "center": 0.090964576769853,
+  "spacing": -0.00023455786050474714,
+  "seconds": 3.3155635409999995
+ },
+ {
+  "preset": "typical",
+  "seed": 1,
+  "condition": "lost",
+  "method": "C coherence",
+  "low_center": 0.2854225944577413,
+  "center": 0.07475641471815281,
+  "spacing": -0.00022795768017846996,
+  "seconds": 0.2832887909999986
+ },
+ {
+  "preset": "typical",
+  "seed": 1,
+  "condition": "lost",
+  "method": "D wedges by noise",
+  "low_center": 0.2854225944577413,
+  "center": 0.09400238611256909,
+  "spacing": -0.00018739692539482267,
+  "seconds": 0.05153229200000098
+ },
+ {
+  "preset": "typical",
+  "seed": 1,
+  "condition": "lost",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.2854225944577413,
+  "center": 0.09172954809097111,
+  "spacing": -0.00022386906057259015,
+  "seconds": 0.04748550000000051
+ },
+ {
+  "preset": "typical",
+  "seed": 1,
+  "condition": "lost",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.2854225944577413,
+  "center": 0.25208246717455435,
+  "spacing": -0.00015930216915471807,
+  "seconds": 0.08345191599999957
+ },
+ {
+  "preset": "typical",
+  "seed": 1,
+  "condition": "lost",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.2854225944577413,
+  "center": 0.07397111178676279,
+  "spacing": -0.00021997165051057532,
+  "seconds": 0.1232652079999994
+ },
+ {
+  "preset": "typical",
+  "seed": 1,
+  "condition": "shifted",
+  "method": "A wedges |Z|",
+  "low_center": 0.40841682478625774,
+  "center": 0.9155179433946327,
+  "spacing": 0.00025040272981891043,
+  "seconds": 0.036783041000001404
+ },
+ {
+  "preset": "typical",
+  "seed": 1,
+  "condition": "shifted",
+  "method": "B columns",
+  "low_center": 0.40841682478625774,
+  "center": 0.8709222832987961,
+  "spacing": 0.00027970714495983984,
+  "seconds": 3.2182144999999984
+ },
+ {
+  "preset": "typical",
+  "seed": 1,
+  "condition": "shifted",
+  "method": "C coherence",
+  "low_center": 0.40841682478625774,
+  "center": 0.8589898446887485,
+  "spacing": 0.00031222364406136016,
+  "seconds": 0.3692286249999981
+ },
+ {
+  "preset": "typical",
+  "seed": 1,
+  "condition": "shifted",
+  "method": "D wedges by noise",
+  "low_center": 0.40841682478625774,
+  "center": 0.4691052234953435,
+  "spacing": 0.0002668284988804892,
+  "seconds": 0.044400374999998604
+ },
+ {
+  "preset": "typical",
+  "seed": 1,
+  "condition": "shifted",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.40841682478625774,
+  "center": 0.6257914057113452,
+  "spacing": 0.00025603901890081104,
+  "seconds": 0.04514304199999941
+ },
+ {
+  "preset": "typical",
+  "seed": 1,
+  "condition": "shifted",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.40841682478625774,
+  "center": 0.4286979249333469,
+  "spacing": 0.0003553066896697654,
+  "seconds": 0.08267466699999915
+ },
+ {
+  "preset": "typical",
+  "seed": 1,
+  "condition": "shifted",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.40841682478625774,
+  "center": 0.04882674345877172,
+  "spacing": 0.00023006763825050847,
+  "seconds": 0.12306858399999854
+ },
+ {
+  "preset": "typical",
+  "seed": 2,
+  "condition": "clean",
+  "method": "A wedges |Z|",
+  "low_center": 0.21275586455960246,
+  "center": 0.18883119333985846,
+  "spacing": -7.640384720408733e-05,
+  "seconds": 0.036831166999999
+ },
+ {
+  "preset": "typical",
+  "seed": 2,
+  "condition": "clean",
+  "method": "B columns",
+  "low_center": 0.21275586455960246,
+  "center": 0.18727748709200742,
+  "spacing": -7.999007785830514e-05,
+  "seconds": 3.2309361249999995
+ },
+ {
+  "preset": "typical",
+  "seed": 2,
+  "condition": "clean",
+  "method": "C coherence",
+  "low_center": 0.21275586455960246,
+  "center": 0.17609122746433448,
+  "spacing": -8.673060231212393e-05,
+  "seconds": 0.24812149999999988
+ },
+ {
+  "preset": "typical",
+  "seed": 2,
+  "condition": "clean",
+  "method": "D wedges by noise",
+  "low_center": 0.21275586455960246,
+  "center": 0.21005260202380818,
+  "spacing": 4.0085960413049904e-05,
+  "seconds": 0.04481154200000148
+ },
+ {
+  "preset": "typical",
+  "seed": 2,
+  "condition": "clean",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.21275586455960246,
+  "center": 0.20261506912878163,
+  "spacing": -0.00010209965974383728,
+  "seconds": 0.060522167000002014
+ },
+ {
+  "preset": "typical",
+  "seed": 2,
+  "condition": "clean",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.21275586455960246,
+  "center": 0.2699580259610177,
+  "spacing": 3.049886515715805e-05,
+  "seconds": 0.08340204199999945
+ },
+ {
+  "preset": "typical",
+  "seed": 2,
+  "condition": "clean",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.21275586455960246,
+  "center": 0.18883119333985846,
+  "spacing": -7.640384720408733e-05,
+  "seconds": 0.1220951250000013
+ },
+ {
+  "preset": "typical",
+  "seed": 2,
+  "condition": "lost",
+  "method": "A wedges |Z|",
+  "low_center": 0.08015576722730686,
+  "center": 0.12234740411297018,
+  "spacing": 0.0001505367585390438,
+  "seconds": 0.036636292000000736
+ },
+ {
+  "preset": "typical",
+  "seed": 2,
+  "condition": "lost",
+  "method": "B columns",
+  "low_center": 0.08015576722730686,
+  "center": 0.1091901040527767,
+  "spacing": 0.0001687599591342348,
+  "seconds": 3.417273083999998
+ },
+ {
+  "preset": "typical",
+  "seed": 2,
+  "condition": "lost",
+  "method": "C coherence",
+  "low_center": 0.08015576722730686,
+  "center": 0.07350505105051038,
+  "spacing": 0.0001543447512948326,
+  "seconds": 0.3212527499999993
+ },
+ {
+  "preset": "typical",
+  "seed": 2,
+  "condition": "lost",
+  "method": "D wedges by noise",
+  "low_center": 0.08015576722730686,
+  "center": 0.252958853762088,
+  "spacing": 0.00025702004095062847,
+  "seconds": 0.05617449999999735
+ },
+ {
+  "preset": "typical",
+  "seed": 2,
+  "condition": "lost",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.08015576722730686,
+  "center": 0.1979554714293174,
+  "spacing": 0.00012980302952536604,
+  "seconds": 0.046954249999998865
+ },
+ {
+  "preset": "typical",
+  "seed": 2,
+  "condition": "lost",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.08015576722730686,
+  "center": 0.2726650035908612,
+  "spacing": 0.0003235587509169413,
+  "seconds": 0.08671145799999991
+ },
+ {
+  "preset": "typical",
+  "seed": 2,
+  "condition": "lost",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.08015576722730686,
+  "center": 0.10159171911444133,
+  "spacing": 0.00014380894157373092,
+  "seconds": 0.12190270900000044
+ },
+ {
+  "preset": "typical",
+  "seed": 2,
+  "condition": "shifted",
+  "method": "A wedges |Z|",
+  "low_center": 0.1730536842591909,
+  "center": 1.3920246297365217,
+  "spacing": 0.0001821245458855092,
+  "seconds": 0.038691542000002244
+ },
+ {
+  "preset": "typical",
+  "seed": 2,
+  "condition": "shifted",
+  "method": "B columns",
+  "low_center": 0.1730536842591909,
+  "center": 1.3736179883991382,
+  "spacing": 0.00016202282407640212,
+  "seconds": 3.3739936250000007
+ },
+ {
+  "preset": "typical",
+  "seed": 2,
+  "condition": "shifted",
+  "method": "C coherence",
+  "low_center": 0.1730536842591909,
+  "center": 1.3635586014051553,
+  "spacing": 8.74078571553305e-05,
+  "seconds": 0.41218233300000406
+ },
+ {
+  "preset": "typical",
+  "seed": 2,
+  "condition": "shifted",
+  "method": "D wedges by noise",
+  "low_center": 0.1730536842591909,
+  "center": 0.9418527489367163,
+  "spacing": 0.00028445027210843854,
+  "seconds": 0.048320124999996494
+ },
+ {
+  "preset": "typical",
+  "seed": 2,
+  "condition": "shifted",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.1730536842591909,
+  "center": 1.1771023210906504,
+  "spacing": 0.0003767340850462375,
+  "seconds": 0.044700624999997274
+ },
+ {
+  "preset": "typical",
+  "seed": 2,
+  "condition": "shifted",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.1730536842591909,
+  "center": 1.0487634685615281,
+  "spacing": 0.0005582293437562669,
+  "seconds": 0.07759845900000073
+ },
+ {
+  "preset": "typical",
+  "seed": 2,
+  "condition": "shifted",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.1730536842591909,
+  "center": 0.3135712676284623,
+  "spacing": 5.863254349325331e-05,
+  "seconds": 0.13027470900000537
+ },
+ {
+  "preset": "typical",
+  "seed": 3,
+  "condition": "clean",
+  "method": "A wedges |Z|",
+  "low_center": 0.2762131623452166,
+  "center": 0.06269612171256346,
+  "spacing": -5.924333003282101e-06,
+  "seconds": 0.035974750000001166
+ },
+ {
+  "preset": "typical",
+  "seed": 3,
+  "condition": "clean",
+  "method": "B columns",
+  "low_center": 0.2762131623452166,
+  "center": 0.04942302168167145,
+  "spacing": 5.570713974112351e-06,
+  "seconds": 3.2456430420000046
+ },
+ {
+  "preset": "typical",
+  "seed": 3,
+  "condition": "clean",
+  "method": "C coherence",
+  "low_center": 0.2762131623452166,
+  "center": 0.03707112882889445,
+  "spacing": 4.252214034927704e-05,
+  "seconds": 0.30462166699999926
+ },
+ {
+  "preset": "typical",
+  "seed": 3,
+  "condition": "clean",
+  "method": "D wedges by noise",
+  "low_center": 0.2762131623452166,
+  "center": 0.028105264991701514,
+  "spacing": 2.8669422290406033e-05,
+  "seconds": 0.0443562079999964
+ },
+ {
+  "preset": "typical",
+  "seed": 3,
+  "condition": "clean",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.2762131623452166,
+  "center": 0.2409342533011967,
+  "spacing": -0.00014293590349256924,
+  "seconds": 0.0465639999999965
+ },
+ {
+  "preset": "typical",
+  "seed": 3,
+  "condition": "clean",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.2762131623452166,
+  "center": 0.291142276203869,
+  "spacing": -0.00016719804346987388,
+  "seconds": 0.09411808400000155
+ },
+ {
+  "preset": "typical",
+  "seed": 3,
+  "condition": "clean",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.2762131623452166,
+  "center": 0.06269612171256346,
+  "spacing": -5.924333003282101e-06,
+  "seconds": 0.12479754199999604
+ },
+ {
+  "preset": "typical",
+  "seed": 3,
+  "condition": "lost",
+  "method": "A wedges |Z|",
+  "low_center": 0.017931911773050088,
+  "center": 0.06275573054403152,
+  "spacing": 0.0001549312829471905,
+  "seconds": 0.036489207999998996
+ },
+ {
+  "preset": "typical",
+  "seed": 3,
+  "condition": "lost",
+  "method": "B columns",
+  "low_center": 0.017931911773050088,
+  "center": 0.08107256936377888,
+  "spacing": 0.00014849353042967195,
+  "seconds": 3.3369831669999996
+ },
+ {
+  "preset": "typical",
+  "seed": 3,
+  "condition": "lost",
+  "method": "C coherence",
+  "low_center": 0.017931911773050088,
+  "center": 0.15547545665308277,
+  "spacing": 0.0001768633336316494,
+  "seconds": 0.25048299999999557
+ },
+ {
+  "preset": "typical",
+  "seed": 3,
+  "condition": "lost",
+  "method": "D wedges by noise",
+  "low_center": 0.017931911773050088,
+  "center": 0.1344642146452226,
+  "spacing": 0.00013134962052974153,
+  "seconds": 0.04531116599999763
+ },
+ {
+  "preset": "typical",
+  "seed": 3,
+  "condition": "lost",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.017931911773050088,
+  "center": 0.19676296542897423,
+  "spacing": 2.8287412936478518e-05,
+  "seconds": 0.046363291999995226
+ },
+ {
+  "preset": "typical",
+  "seed": 3,
+  "condition": "lost",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.017931911773050088,
+  "center": 0.2925977182396888,
+  "spacing": 4.209532910914859e-06,
+  "seconds": 0.09168104100000107
+ },
+ {
+  "preset": "typical",
+  "seed": 3,
+  "condition": "lost",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.017931911773050088,
+  "center": 0.06275573054403152,
+  "spacing": 0.0001549312829471905,
+  "seconds": 0.12303495900000172
+ },
+ {
+  "preset": "typical",
+  "seed": 3,
+  "condition": "shifted",
+  "method": "A wedges |Z|",
+  "low_center": 0.36679783657620085,
+  "center": 1.1861029872455213,
+  "spacing": 7.212507547249558e-05,
+  "seconds": 0.037221333000005075
+ },
+ {
+  "preset": "typical",
+  "seed": 3,
+  "condition": "shifted",
+  "method": "B columns",
+  "low_center": 0.36679783657620085,
+  "center": 1.1253244029454512,
+  "spacing": 0.0001257027413394951,
+  "seconds": 3.319188791000002
+ },
+ {
+  "preset": "typical",
+  "seed": 3,
+  "condition": "shifted",
+  "method": "C coherence",
+  "low_center": 0.36679783657620085,
+  "center": 1.0095489016031203,
+  "spacing": 0.00020658159648956342,
+  "seconds": 0.4155598329999961
+ },
+ {
+  "preset": "typical",
+  "seed": 3,
+  "condition": "shifted",
+  "method": "D wedges by noise",
+  "low_center": 0.36679783657620085,
+  "center": 0.683620446240497,
+  "spacing": 0.00012654554350133296,
+  "seconds": 0.05210179200000198
+ },
+ {
+  "preset": "typical",
+  "seed": 3,
+  "condition": "shifted",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.36679783657620085,
+  "center": 1.154719978226812,
+  "spacing": -7.283480505015927e-05,
+  "seconds": 0.046534459000000084
+ },
+ {
+  "preset": "typical",
+  "seed": 3,
+  "condition": "shifted",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.36679783657620085,
+  "center": 1.074793221091115,
+  "spacing": -8.514405279702597e-05,
+  "seconds": 0.08239520899999775
+ },
+ {
+  "preset": "typical",
+  "seed": 3,
+  "condition": "shifted",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.36679783657620085,
+  "center": 0.08861929749632193,
+  "spacing": 0.00010509783375933779,
+  "seconds": 0.11291500000000099
+ },
+ {
+  "preset": "typical",
+  "seed": 4,
+  "condition": "clean",
+  "method": "A wedges |Z|",
+  "low_center": 0.4212800354810642,
+  "center": 0.37816441384801835,
+  "spacing": -0.00010387268106792913,
+  "seconds": 0.03444454199999569
+ },
+ {
+  "preset": "typical",
+  "seed": 4,
+  "condition": "clean",
+  "method": "B columns",
+  "low_center": 0.4212800354810642,
+  "center": 0.3713267642037347,
+  "spacing": -9.935136287086976e-05,
+  "seconds": 3.123036207999995
+ },
+ {
+  "preset": "typical",
+  "seed": 4,
+  "condition": "clean",
+  "method": "C coherence",
+  "low_center": 0.4212800354810642,
+  "center": 0.3259467333416097,
+  "spacing": -6.887058373927779e-05,
+  "seconds": 0.20612229200000343
+ },
+ {
+  "preset": "typical",
+  "seed": 4,
+  "condition": "clean",
+  "method": "D wedges by noise",
+  "low_center": 0.4212800354810642,
+  "center": 0.4072240471578111,
+  "spacing": -1.528456490929031e-06,
+  "seconds": 0.049380874999997104
+ },
+ {
+  "preset": "typical",
+  "seed": 4,
+  "condition": "clean",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.4212800354810642,
+  "center": 0.4731229433306863,
+  "spacing": -0.00016459622313880207,
+  "seconds": 0.05046825000000155
+ },
+ {
+  "preset": "typical",
+  "seed": 4,
+  "condition": "clean",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.4212800354810642,
+  "center": 0.4229680864563091,
+  "spacing": -0.0003541000166328301,
+  "seconds": 0.07504266600000165
+ },
+ {
+  "preset": "typical",
+  "seed": 4,
+  "condition": "clean",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.4212800354810642,
+  "center": 0.37816441384801835,
+  "spacing": -0.00010387268106792913,
+  "seconds": 0.11924450000000064
+ },
+ {
+  "preset": "typical",
+  "seed": 4,
+  "condition": "lost",
+  "method": "A wedges |Z|",
+  "low_center": 0.6805055160399968,
+  "center": 0.3983065659149619,
+  "spacing": -0.00022819142168506446,
+  "seconds": 0.03573949999999826
+ },
+ {
+  "preset": "typical",
+  "seed": 4,
+  "condition": "lost",
+  "method": "B columns",
+  "low_center": 0.6805055160399968,
+  "center": 0.3979592619474131,
+  "spacing": -0.0002454942152462225,
+  "seconds": 3.2674379170000023
+ },
+ {
+  "preset": "typical",
+  "seed": 4,
+  "condition": "lost",
+  "method": "C coherence",
+  "low_center": 0.6805055160399968,
+  "center": 0.35437876331769635,
+  "spacing": -0.0002362985343369317,
+  "seconds": 0.2638917920000097
+ },
+ {
+  "preset": "typical",
+  "seed": 4,
+  "condition": "lost",
+  "method": "D wedges by noise",
+  "low_center": 0.6805055160399968,
+  "center": 0.471716649082172,
+  "spacing": -0.00024050340353809485,
+  "seconds": 0.04486095900000464
+ },
+ {
+  "preset": "typical",
+  "seed": 4,
+  "condition": "lost",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.6805055160399968,
+  "center": 0.48159763593247074,
+  "spacing": -0.0002358417188741413,
+  "seconds": 0.04810654200001352
+ },
+ {
+  "preset": "typical",
+  "seed": 4,
+  "condition": "lost",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.6805055160399968,
+  "center": 0.4052693466069689,
+  "spacing": -0.0003735555521556799,
+  "seconds": 0.08282875000000445
+ },
+ {
+  "preset": "typical",
+  "seed": 4,
+  "condition": "lost",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.6805055160399968,
+  "center": 0.3983065659149619,
+  "spacing": -0.00022819142168506446,
+  "seconds": 0.1310760000000073
+ },
+ {
+  "preset": "typical",
+  "seed": 4,
+  "condition": "shifted",
+  "method": "A wedges |Z|",
+  "low_center": 0.9566832060291659,
+  "center": 0.9947294955202869,
+  "spacing": 0.00013375488569145055,
+  "seconds": 0.036029333000001884
+ },
+ {
+  "preset": "typical",
+  "seed": 4,
+  "condition": "shifted",
+  "method": "B columns",
+  "low_center": 0.9566832060291659,
+  "center": 0.9540513692705187,
+  "spacing": 0.00012943451593350197,
+  "seconds": 3.171979833000009
+ },
+ {
+  "preset": "typical",
+  "seed": 4,
+  "condition": "shifted",
+  "method": "C coherence",
+  "low_center": 0.9566832060291659,
+  "center": 0.9477107760406074,
+  "spacing": 0.0001441551057783652,
+  "seconds": 0.35290708299999096
+ },
+ {
+  "preset": "typical",
+  "seed": 4,
+  "condition": "shifted",
+  "method": "D wedges by noise",
+  "low_center": 0.9566832060291659,
+  "center": 0.8471605687623963,
+  "spacing": 0.00038502570566878447,
+  "seconds": 0.046979374999992274
+ },
+ {
+  "preset": "typical",
+  "seed": 4,
+  "condition": "shifted",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.9566832060291659,
+  "center": 0.7043619705234136,
+  "spacing": 0.00019881536453270066,
+  "seconds": 0.045160708000011596
+ },
+ {
+  "preset": "typical",
+  "seed": 4,
+  "condition": "shifted",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.9566832060291659,
+  "center": 0.5782744160107045,
+  "spacing": 0.00015168563443523908,
+  "seconds": 0.08821983400000022
+ },
+ {
+  "preset": "typical",
+  "seed": 4,
+  "condition": "shifted",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.9566832060291659,
+  "center": 0.3482813382760003,
+  "spacing": 0.00013695891352960565,
+  "seconds": 0.11930900000000122
+ },
+ {
+  "preset": "typical",
+  "seed": 5,
+  "condition": "clean",
+  "method": "A wedges |Z|",
+  "low_center": 0.249145466166286,
+  "center": 0.10981516956507573,
+  "spacing": 0.00011896094171603977,
+  "seconds": 0.03436437500000977
+ },
+ {
+  "preset": "typical",
+  "seed": 5,
+  "condition": "clean",
+  "method": "B columns",
+  "low_center": 0.249145466166286,
+  "center": 0.1045687561041202,
+  "spacing": 9.514910598129589e-05,
+  "seconds": 3.02446070900001
+ },
+ {
+  "preset": "typical",
+  "seed": 5,
+  "condition": "clean",
+  "method": "C coherence",
+  "low_center": 0.249145466166286,
+  "center": 0.08342231956000823,
+  "spacing": -2.518967545417361e-05,
+  "seconds": 0.23284804200000053
+ },
+ {
+  "preset": "typical",
+  "seed": 5,
+  "condition": "clean",
+  "method": "D wedges by noise",
+  "low_center": 0.249145466166286,
+  "center": 0.11800677052012369,
+  "spacing": 0.00016681896022530118,
+  "seconds": 0.0422285420000037
+ },
+ {
+  "preset": "typical",
+  "seed": 5,
+  "condition": "clean",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.249145466166286,
+  "center": 0.16668022032567903,
+  "spacing": 0.0003971240266560372,
+  "seconds": 0.04319070799999736
+ },
+ {
+  "preset": "typical",
+  "seed": 5,
+  "condition": "clean",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.249145466166286,
+  "center": 0.2373384290178221,
+  "spacing": 0.0002810798216112964,
+  "seconds": 0.07972250000000258
+ },
+ {
+  "preset": "typical",
+  "seed": 5,
+  "condition": "clean",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.249145466166286,
+  "center": 0.10981516956507573,
+  "spacing": 0.00011896094171603977,
+  "seconds": 0.12412899999999638
+ },
+ {
+  "preset": "typical",
+  "seed": 5,
+  "condition": "lost",
+  "method": "A wedges |Z|",
+  "low_center": 0.8958836501980442,
+  "center": 0.12155855303721255,
+  "spacing": 0.00047214069436263273,
+  "seconds": 0.03599187500000767
+ },
+ {
+  "preset": "typical",
+  "seed": 5,
+  "condition": "lost",
+  "method": "B columns",
+  "low_center": 0.8958836501980442,
+  "center": 0.10756263408672552,
+  "spacing": 0.00043091111356208245,
+  "seconds": 3.240918708999999
+ },
+ {
+  "preset": "typical",
+  "seed": 5,
+  "condition": "lost",
+  "method": "C coherence",
+  "low_center": 0.8958836501980442,
+  "center": 0.0907073245503542,
+  "spacing": 0.000296903296936879,
+  "seconds": 0.34283124999998904
+ },
+ {
+  "preset": "typical",
+  "seed": 5,
+  "condition": "lost",
+  "method": "D wedges by noise",
+  "low_center": 0.8958836501980442,
+  "center": 0.12296945962904382,
+  "spacing": 0.000434516691936393,
+  "seconds": 0.04593441699999801
+ },
+ {
+  "preset": "typical",
+  "seed": 5,
+  "condition": "lost",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.8958836501980442,
+  "center": 0.15353741234274879,
+  "spacing": 0.0008434387422435741,
+  "seconds": 0.04648233400000379
+ },
+ {
+  "preset": "typical",
+  "seed": 5,
+  "condition": "lost",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.8958836501980442,
+  "center": 0.14019746474667447,
+  "spacing": 0.0008190014922266897,
+  "seconds": 0.08266616699999929
+ },
+ {
+  "preset": "typical",
+  "seed": 5,
+  "condition": "lost",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.8958836501980442,
+  "center": 0.12155855303721255,
+  "spacing": 0.00047214069436263273,
+  "seconds": 0.13249820899999065
+ },
+ {
+  "preset": "typical",
+  "seed": 5,
+  "condition": "shifted",
+  "method": "A wedges |Z|",
+  "low_center": 1.0054057529940572,
+  "center": 1.2801727648778443,
+  "spacing": 0.00029724923232476996,
+  "seconds": 0.034868750000001114
+ },
+ {
+  "preset": "typical",
+  "seed": 5,
+  "condition": "shifted",
+  "method": "B columns",
+  "low_center": 1.0054057529940572,
+  "center": 1.248175577248024,
+  "spacing": 0.00024958066354208164,
+  "seconds": 3.0983075829999933
+ },
+ {
+  "preset": "typical",
+  "seed": 5,
+  "condition": "shifted",
+  "method": "C coherence",
+  "low_center": 1.0054057529940572,
+  "center": 1.2432675030263578,
+  "spacing": 8.112555277195455e-05,
+  "seconds": 0.28032441599999913
+ },
+ {
+  "preset": "typical",
+  "seed": 5,
+  "condition": "shifted",
+  "method": "D wedges by noise",
+  "low_center": 1.0054057529940572,
+  "center": 0.8426126633464103,
+  "spacing": 0.00031544232212898926,
+  "seconds": 0.042596500000001924
+ },
+ {
+  "preset": "typical",
+  "seed": 5,
+  "condition": "shifted",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 1.0054057529940572,
+  "center": 1.0588942846630631,
+  "spacing": 0.0007452982406876973,
+  "seconds": 0.04374533399999336
+ },
+ {
+  "preset": "typical",
+  "seed": 5,
+  "condition": "shifted",
+  "method": "F wedges, trim and refit",
+  "low_center": 1.0054057529940572,
+  "center": 0.9814127681001242,
+  "spacing": 0.0008165565263622554,
+  "seconds": 0.09250575000000083
+ },
+ {
+  "preset": "typical",
+  "seed": 5,
+  "condition": "shifted",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 1.0054057529940572,
+  "center": 0.12235175947320022,
+  "spacing": 0.00016738572905672378,
+  "seconds": 0.10775008299999911
+ },
+ {
+  "preset": "loud",
+  "seed": 1,
+  "condition": "clean",
+  "method": "A wedges |Z|",
+  "low_center": 0.22325686476526097,
+  "center": 0.05952403365687011,
+  "spacing": 5.556364210801412e-05,
+  "seconds": 0.038796665999996094
+ },
+ {
+  "preset": "loud",
+  "seed": 1,
+  "condition": "clean",
+  "method": "B columns",
+  "low_center": 0.22325686476526097,
+  "center": 0.06232297634274659,
+  "spacing": 5.2302163620732145e-05,
+  "seconds": 3.4878672499999936
+ },
+ {
+  "preset": "loud",
+  "seed": 1,
+  "condition": "clean",
+  "method": "C coherence",
+  "low_center": 0.22325686476526097,
+  "center": 0.05742510596200014,
+  "spacing": 2.5210920091556233e-05,
+  "seconds": 0.3375309589999915
+ },
+ {
+  "preset": "loud",
+  "seed": 1,
+  "condition": "clean",
+  "method": "D wedges by noise",
+  "low_center": 0.22325686476526097,
+  "center": 0.07821789489489683,
+  "spacing": 0.00012942061162091179,
+  "seconds": 0.05528029200000617
+ },
+ {
+  "preset": "loud",
+  "seed": 1,
+  "condition": "clean",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.22325686476526097,
+  "center": 0.07939607766788126,
+  "spacing": 9.282358219220299e-05,
+  "seconds": 0.055818374999986986
+ },
+ {
+  "preset": "loud",
+  "seed": 1,
+  "condition": "clean",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.22325686476526097,
+  "center": 0.19267825806031513,
+  "spacing": 0.00026068161147474456,
+  "seconds": 0.10204462499999067
+ },
+ {
+  "preset": "loud",
+  "seed": 1,
+  "condition": "clean",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.22325686476526097,
+  "center": 0.05952403365687011,
+  "spacing": 5.556364210801412e-05,
+  "seconds": 0.11166291700000386
+ },
+ {
+  "preset": "loud",
+  "seed": 1,
+  "condition": "lost",
+  "method": "A wedges |Z|",
+  "low_center": 0.28455497145206093,
+  "center": 0.07139564068862458,
+  "spacing": -0.0002023924532864596,
+  "seconds": 0.037260332999991874
+ },
+ {
+  "preset": "loud",
+  "seed": 1,
+  "condition": "lost",
+  "method": "B columns",
+  "low_center": 0.28455497145206093,
+  "center": 0.08968942476286124,
+  "spacing": -0.00023027790836771533,
+  "seconds": 3.510280832999996
+ },
+ {
+  "preset": "loud",
+  "seed": 1,
+  "condition": "lost",
+  "method": "C coherence",
+  "low_center": 0.28455497145206093,
+  "center": 0.07791721618563906,
+  "spacing": -0.0002235085495789768,
+  "seconds": 0.3509074579999947
+ },
+ {
+  "preset": "loud",
+  "seed": 1,
+  "condition": "lost",
+  "method": "D wedges by noise",
+  "low_center": 0.28455497145206093,
+  "center": 0.08174742166702768,
+  "spacing": -0.0001383748654329997,
+  "seconds": 0.045244667000005734
+ },
+ {
+  "preset": "loud",
+  "seed": 1,
+  "condition": "lost",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.28455497145206093,
+  "center": 0.08846796275610357,
+  "spacing": -0.00023444200780031732,
+  "seconds": 0.051891707999999426
+ },
+ {
+  "preset": "loud",
+  "seed": 1,
+  "condition": "lost",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.28455497145206093,
+  "center": 0.23910980768425913,
+  "spacing": -0.00017869206154241812,
+  "seconds": 0.09467091700000196
+ },
+ {
+  "preset": "loud",
+  "seed": 1,
+  "condition": "lost",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.28455497145206093,
+  "center": 0.08976813555546884,
+  "spacing": -0.0002168391524919322,
+  "seconds": 0.11079691700000183
+ },
+ {
+  "preset": "loud",
+  "seed": 1,
+  "condition": "shifted",
+  "method": "A wedges |Z|",
+  "low_center": 0.4125055660912406,
+  "center": 0.9311782671791515,
+  "spacing": 0.00022955608380903492,
+  "seconds": 0.036588084000001686
+ },
+ {
+  "preset": "loud",
+  "seed": 1,
+  "condition": "shifted",
+  "method": "B columns",
+  "low_center": 0.4125055660912406,
+  "center": 0.7858426512540344,
+  "spacing": 0.0002924814866296366,
+  "seconds": 3.4410367079999986
+ },
+ {
+  "preset": "loud",
+  "seed": 1,
+  "condition": "shifted",
+  "method": "C coherence",
+  "low_center": 0.4125055660912406,
+  "center": 0.8569336379312484,
+  "spacing": 0.0003139296105962863,
+  "seconds": 0.4322270000000117
+ },
+ {
+  "preset": "loud",
+  "seed": 1,
+  "condition": "shifted",
+  "method": "D wedges by noise",
+  "low_center": 0.4125055660912406,
+  "center": 0.4525343335041634,
+  "spacing": 0.0003170325745267544,
+  "seconds": 0.045998124999997
+ },
+ {
+  "preset": "loud",
+  "seed": 1,
+  "condition": "shifted",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.4125055660912406,
+  "center": 0.6267498576258008,
+  "spacing": 0.0002466519434467518,
+  "seconds": 0.04764104100000566
+ },
+ {
+  "preset": "loud",
+  "seed": 1,
+  "condition": "shifted",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.4125055660912406,
+  "center": 0.4670842471471793,
+  "spacing": 0.00035496281743774283,
+  "seconds": 0.08079366699999468
+ },
+ {
+  "preset": "loud",
+  "seed": 1,
+  "condition": "shifted",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.4125055660912406,
+  "center": 0.051484812375394234,
+  "spacing": 0.00022904749530927582,
+  "seconds": 0.11944895799999244
+ },
+ {
+  "preset": "loud",
+  "seed": 2,
+  "condition": "clean",
+  "method": "A wedges |Z|",
+  "low_center": 0.2143491306120704,
+  "center": 0.18634677343577558,
+  "spacing": -8.569680483827558e-05,
+  "seconds": 0.0387598330000003
+ },
+ {
+  "preset": "loud",
+  "seed": 2,
+  "condition": "clean",
+  "method": "B columns",
+  "low_center": 0.2143491306120704,
+  "center": 0.18599840954901012,
+  "spacing": -8.89627741923471e-05,
+  "seconds": 3.4594504159999957
+ },
+ {
+  "preset": "loud",
+  "seed": 2,
+  "condition": "clean",
+  "method": "C coherence",
+  "low_center": 0.2143491306120704,
+  "center": 0.1756811082719935,
+  "spacing": -8.925627742406572e-05,
+  "seconds": 0.2799695829999962
+ },
+ {
+  "preset": "loud",
+  "seed": 2,
+  "condition": "clean",
+  "method": "D wedges by noise",
+  "low_center": 0.2143491306120704,
+  "center": 0.2153463478753729,
+  "spacing": 6.443743819950498e-05,
+  "seconds": 0.04404608400000143
+ },
+ {
+  "preset": "loud",
+  "seed": 2,
+  "condition": "clean",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.2143491306120704,
+  "center": 0.19850610922111114,
+  "spacing": -0.00011761139133037446,
+  "seconds": 0.04424695900000586
+ },
+ {
+  "preset": "loud",
+  "seed": 2,
+  "condition": "clean",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.2143491306120704,
+  "center": 0.27553300161711225,
+  "spacing": 3.4615764798129334e-05,
+  "seconds": 0.08191941699999461
+ },
+ {
+  "preset": "loud",
+  "seed": 2,
+  "condition": "clean",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.2143491306120704,
+  "center": 0.18634677343577558,
+  "spacing": -8.569680483827558e-05,
+  "seconds": 0.125158459000005
+ },
+ {
+  "preset": "loud",
+  "seed": 2,
+  "condition": "lost",
+  "method": "A wedges |Z|",
+  "low_center": 0.08090450279959846,
+  "center": 0.10543472528298174,
+  "spacing": 0.00013031134178898007,
+  "seconds": 0.036380000000008295
+ },
+ {
+  "preset": "loud",
+  "seed": 2,
+  "condition": "lost",
+  "method": "B columns",
+  "low_center": 0.08090450279959846,
+  "center": 0.11151177742155496,
+  "spacing": 0.00018298443333208958,
+  "seconds": 3.4556526670000096
+ },
+ {
+  "preset": "loud",
+  "seed": 2,
+  "condition": "lost",
+  "method": "C coherence",
+  "low_center": 0.08090450279959846,
+  "center": 0.06495440100971486,
+  "spacing": 0.00016879642216860447,
+  "seconds": 0.2649887090000078
+ },
+ {
+  "preset": "loud",
+  "seed": 2,
+  "condition": "lost",
+  "method": "D wedges by noise",
+  "low_center": 0.08090450279959846,
+  "center": 0.24222385504730623,
+  "spacing": 0.0002541470132739754,
+  "seconds": 0.048587874999995506
+ },
+ {
+  "preset": "loud",
+  "seed": 2,
+  "condition": "lost",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.08090450279959846,
+  "center": 0.1830559585981793,
+  "spacing": 9.655788005447086e-05,
+  "seconds": 0.04833200000000204
+ },
+ {
+  "preset": "loud",
+  "seed": 2,
+  "condition": "lost",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.08090450279959846,
+  "center": 0.25700317120261695,
+  "spacing": 0.0003191732306906392,
+  "seconds": 0.07547420800000282
+ },
+ {
+  "preset": "loud",
+  "seed": 2,
+  "condition": "lost",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.08090450279959846,
+  "center": 0.10543472528298174,
+  "spacing": 0.00013031134178898007,
+  "seconds": 0.1280317920000016
+ },
+ {
+  "preset": "loud",
+  "seed": 2,
+  "condition": "shifted",
+  "method": "A wedges |Z|",
+  "low_center": 0.17438809421268694,
+  "center": 1.3919945880116342,
+  "spacing": 0.00017678741427840095,
+  "seconds": 0.037053833000001646
+ },
+ {
+  "preset": "loud",
+  "seed": 2,
+  "condition": "shifted",
+  "method": "B columns",
+  "low_center": 0.17438809421268694,
+  "center": 1.3306259722072724,
+  "spacing": 0.00015590927310160652,
+  "seconds": 3.431979915999989
+ },
+ {
+  "preset": "loud",
+  "seed": 2,
+  "condition": "shifted",
+  "method": "C coherence",
+  "low_center": 0.17438809421268694,
+  "center": 1.362822055126078,
+  "spacing": 8.498375103815903e-05,
+  "seconds": 0.4219454169999892
+ },
+ {
+  "preset": "loud",
+  "seed": 2,
+  "condition": "shifted",
+  "method": "D wedges by noise",
+  "low_center": 0.17438809421268694,
+  "center": 0.9249863424959687,
+  "spacing": 0.00029507192616740063,
+  "seconds": 0.05978370799999766
+ },
+ {
+  "preset": "loud",
+  "seed": 2,
+  "condition": "shifted",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.17438809421268694,
+  "center": 1.1725858612367912,
+  "spacing": 0.0003612073857179876,
+  "seconds": 0.05400408299999526
+ },
+ {
+  "preset": "loud",
+  "seed": 2,
+  "condition": "shifted",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.17438809421268694,
+  "center": 1.096520329455814,
+  "spacing": 0.0005652333969090595,
+  "seconds": 0.07713749999999209
+ },
+ {
+  "preset": "loud",
+  "seed": 2,
+  "condition": "shifted",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.17438809421268694,
+  "center": 0.3119074874697257,
+  "spacing": 4.828818691948733e-05,
+  "seconds": 0.14426291700000604
+ },
+ {
+  "preset": "loud",
+  "seed": 3,
+  "condition": "clean",
+  "method": "A wedges |Z|",
+  "low_center": 0.2737684046000934,
+  "center": 0.06555778113146792,
+  "spacing": -9.49220199908396e-06,
+  "seconds": 0.03598370800000339
+ },
+ {
+  "preset": "loud",
+  "seed": 3,
+  "condition": "clean",
+  "method": "B columns",
+  "low_center": 0.2737684046000934,
+  "center": 0.06448256183171669,
+  "spacing": -1.9679933160876573e-07,
+  "seconds": 3.3871293749999865
+ },
+ {
+  "preset": "loud",
+  "seed": 3,
+  "condition": "clean",
+  "method": "C coherence",
+  "low_center": 0.2737684046000934,
+  "center": 0.034267080639027905,
+  "spacing": 4.678723719919731e-05,
+  "seconds": 0.2526014580000151
+ },
+ {
+  "preset": "loud",
+  "seed": 3,
+  "condition": "clean",
+  "method": "D wedges by noise",
+  "low_center": 0.2737684046000934,
+  "center": 0.051145516418219704,
+  "spacing": -1.7717523904670074e-06,
+  "seconds": 0.04862745800002699
+ },
+ {
+  "preset": "loud",
+  "seed": 3,
+  "condition": "clean",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.2737684046000934,
+  "center": 0.24448614900332052,
+  "spacing": -0.00016057255345824917,
+  "seconds": 0.053323540999997476
+ },
+ {
+  "preset": "loud",
+  "seed": 3,
+  "condition": "clean",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.2737684046000934,
+  "center": 0.30611846675605087,
+  "spacing": -0.0002023543796026983,
+  "seconds": 0.08660895799999935
+ },
+ {
+  "preset": "loud",
+  "seed": 3,
+  "condition": "clean",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.2737684046000934,
+  "center": 0.06555778113146792,
+  "spacing": -9.49220199908396e-06,
+  "seconds": 0.11998195799998257
+ },
+ {
+  "preset": "loud",
+  "seed": 3,
+  "condition": "lost",
+  "method": "A wedges |Z|",
+  "low_center": 0.01750147617847246,
+  "center": 0.06721474852361334,
+  "spacing": 0.0001407139986457917,
+  "seconds": 0.036769917000015084
+ },
+ {
+  "preset": "loud",
+  "seed": 3,
+  "condition": "lost",
+  "method": "B columns",
+  "low_center": 0.01750147617847246,
+  "center": 0.07760359793276803,
+  "spacing": 0.00014591382312123535,
+  "seconds": 3.4779859159999944
+ },
+ {
+  "preset": "loud",
+  "seed": 3,
+  "condition": "lost",
+  "method": "C coherence",
+  "low_center": 0.01750147617847246,
+  "center": 0.16342416739431445,
+  "spacing": 0.00018300181586394793,
+  "seconds": 0.286112624999987
+ },
+ {
+  "preset": "loud",
+  "seed": 3,
+  "condition": "lost",
+  "method": "D wedges by noise",
+  "low_center": 0.01750147617847246,
+  "center": 0.11021310409001439,
+  "spacing": 0.00012018607859753949,
+  "seconds": 0.046287665999983574
+ },
+ {
+  "preset": "loud",
+  "seed": 3,
+  "condition": "lost",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.01750147617847246,
+  "center": 0.17423602961479268,
+  "spacing": 3.57680827622886e-05,
+  "seconds": 0.0527216659999965
+ },
+ {
+  "preset": "loud",
+  "seed": 3,
+  "condition": "lost",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.01750147617847246,
+  "center": 0.24909439884776832,
+  "spacing": -1.1463821289248166e-05,
+  "seconds": 0.09011629100001528
+ },
+ {
+  "preset": "loud",
+  "seed": 3,
+  "condition": "lost",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.01750147617847246,
+  "center": 0.06721474852361334,
+  "spacing": 0.0001407139986457917,
+  "seconds": 0.12000812499999824
+ },
+ {
+  "preset": "loud",
+  "seed": 3,
+  "condition": "shifted",
+  "method": "A wedges |Z|",
+  "low_center": 0.36861166531065254,
+  "center": 1.1947662426900523,
+  "spacing": 7.063529525308532e-05,
+  "seconds": 0.036747875000003205
+ },
+ {
+  "preset": "loud",
+  "seed": 3,
+  "condition": "shifted",
+  "method": "B columns",
+  "low_center": 0.36861166531065254,
+  "center": 1.0815958234067307,
+  "spacing": 0.00011643862604504562,
+  "seconds": 3.4031692080000084
+ },
+ {
+  "preset": "loud",
+  "seed": 3,
+  "condition": "shifted",
+  "method": "C coherence",
+  "low_center": 0.36861166531065254,
+  "center": 1.0131148885030212,
+  "spacing": 0.00020847852749228402,
+  "seconds": 0.38391604200000984
+ },
+ {
+  "preset": "loud",
+  "seed": 3,
+  "condition": "shifted",
+  "method": "D wedges by noise",
+  "low_center": 0.36861166531065254,
+  "center": 0.6986309613057828,
+  "spacing": 0.00013477092178781902,
+  "seconds": 0.04460287499998117
+ },
+ {
+  "preset": "loud",
+  "seed": 3,
+  "condition": "shifted",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.36861166531065254,
+  "center": 1.1708838184213026,
+  "spacing": -7.985613356253918e-05,
+  "seconds": 0.046611208000001625
+ },
+ {
+  "preset": "loud",
+  "seed": 3,
+  "condition": "shifted",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.36861166531065254,
+  "center": 1.095205100150011,
+  "spacing": -0.00011094428042035531,
+  "seconds": 0.07832270800000174
+ },
+ {
+  "preset": "loud",
+  "seed": 3,
+  "condition": "shifted",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.36861166531065254,
+  "center": 0.09284238976800172,
+  "spacing": 0.0001058729833371963,
+  "seconds": 0.12005454100000179
+ },
+ {
+  "preset": "loud",
+  "seed": 4,
+  "condition": "clean",
+  "method": "A wedges |Z|",
+  "low_center": 0.42261233303637546,
+  "center": 0.37520859313948124,
+  "spacing": -0.00010825210288534226,
+  "seconds": 0.034855458000009776
+ },
+ {
+  "preset": "loud",
+  "seed": 4,
+  "condition": "clean",
+  "method": "B columns",
+  "low_center": 0.42261233303637546,
+  "center": 0.37498725713042813,
+  "spacing": -0.00010613340241227842,
+  "seconds": 3.2467047089999994
+ },
+ {
+  "preset": "loud",
+  "seed": 4,
+  "condition": "clean",
+  "method": "C coherence",
+  "low_center": 0.42261233303637546,
+  "center": 0.3241548724425023,
+  "spacing": -7.578968942234532e-05,
+  "seconds": 0.21750204200000667
+ },
+ {
+  "preset": "loud",
+  "seed": 4,
+  "condition": "clean",
+  "method": "D wedges by noise",
+  "low_center": 0.42261233303637546,
+  "center": 0.39126083945270773,
+  "spacing": -4.221289075623247e-05,
+  "seconds": 0.06272733399998742
+ },
+ {
+  "preset": "loud",
+  "seed": 4,
+  "condition": "clean",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.42261233303637546,
+  "center": 0.4700506598002946,
+  "spacing": -0.000166089127836333,
+  "seconds": 0.04352675000001227
+ },
+ {
+  "preset": "loud",
+  "seed": 4,
+  "condition": "clean",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.42261233303637546,
+  "center": 0.4133982758888391,
+  "spacing": -0.0003503534279971632,
+  "seconds": 0.07099541599998815
+ },
+ {
+  "preset": "loud",
+  "seed": 4,
+  "condition": "clean",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.42261233303637546,
+  "center": 0.37520859313948124,
+  "spacing": -0.00010825210288534226,
+  "seconds": 0.12122658300000921
+ },
+ {
+  "preset": "loud",
+  "seed": 4,
+  "condition": "lost",
+  "method": "A wedges |Z|",
+  "low_center": 0.6777623476391622,
+  "center": 0.3939207936415786,
+  "spacing": -0.00021601394838310917,
+  "seconds": 0.0357525409999937
+ },
+ {
+  "preset": "loud",
+  "seed": 4,
+  "condition": "lost",
+  "method": "B columns",
+  "low_center": 0.6777623476391622,
+  "center": 0.40297460469665536,
+  "spacing": -0.00025446893705005635,
+  "seconds": 3.3747605420000184
+ },
+ {
+  "preset": "loud",
+  "seed": 4,
+  "condition": "lost",
+  "method": "C coherence",
+  "low_center": 0.6777623476391622,
+  "center": 0.35506220503457975,
+  "spacing": -0.000248961893309807,
+  "seconds": 0.3110894169999767
+ },
+ {
+  "preset": "loud",
+  "seed": 4,
+  "condition": "lost",
+  "method": "D wedges by noise",
+  "low_center": 0.6777623476391622,
+  "center": 0.4565726212240989,
+  "spacing": -0.0002756129680975272,
+  "seconds": 0.05114858299998559
+ },
+ {
+  "preset": "loud",
+  "seed": 4,
+  "condition": "lost",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.6777623476391622,
+  "center": 0.4712057361979778,
+  "spacing": -0.00019975788841419817,
+  "seconds": 0.05331337499998767
+ },
+ {
+  "preset": "loud",
+  "seed": 4,
+  "condition": "lost",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.6777623476391622,
+  "center": 0.3873815596737515,
+  "spacing": -0.0003716798287674017,
+  "seconds": 0.08793220800001222
+ },
+ {
+  "preset": "loud",
+  "seed": 4,
+  "condition": "lost",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.6777623476391622,
+  "center": 0.39034243295482857,
+  "spacing": -0.0001999867088158247,
+  "seconds": 0.12127762500000472
+ },
+ {
+  "preset": "loud",
+  "seed": 4,
+  "condition": "shifted",
+  "method": "A wedges |Z|",
+  "low_center": 0.9516329730033173,
+  "center": 0.9956792873753698,
+  "spacing": 0.0001290451045017349,
+  "seconds": 0.036448333000009825
+ },
+ {
+  "preset": "loud",
+  "seed": 4,
+  "condition": "shifted",
+  "method": "B columns",
+  "low_center": 0.9516329730033173,
+  "center": 0.9023725692115813,
+  "spacing": 0.00014873407744153688,
+  "seconds": 3.29704266600001
+ },
+ {
+  "preset": "loud",
+  "seed": 4,
+  "condition": "shifted",
+  "method": "C coherence",
+  "low_center": 0.9516329730033173,
+  "center": 0.9447988923273569,
+  "spacing": 0.0001349385803253167,
+  "seconds": 0.34681366699999217
+ },
+ {
+  "preset": "loud",
+  "seed": 4,
+  "condition": "shifted",
+  "method": "D wedges by noise",
+  "low_center": 0.9516329730033173,
+  "center": 0.7516727018281671,
+  "spacing": 0.0003132467360869029,
+  "seconds": 0.04930445799999461
+ },
+ {
+  "preset": "loud",
+  "seed": 4,
+  "condition": "shifted",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.9516329730033173,
+  "center": 0.7078972019218891,
+  "spacing": 0.00019420851943019457,
+  "seconds": 0.04401612500001306
+ },
+ {
+  "preset": "loud",
+  "seed": 4,
+  "condition": "shifted",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.9516329730033173,
+  "center": 0.5992362030111787,
+  "spacing": 0.00015405398664980474,
+  "seconds": 0.08869229100000098
+ },
+ {
+  "preset": "loud",
+  "seed": 4,
+  "condition": "shifted",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.9516329730033173,
+  "center": 0.3455218589417562,
+  "spacing": 0.00013053225680681457,
+  "seconds": 0.11841516600000546
+ },
+ {
+  "preset": "loud",
+  "seed": 5,
+  "condition": "clean",
+  "method": "A wedges |Z|",
+  "low_center": 0.24032716569511706,
+  "center": 0.1119896014502811,
+  "spacing": 0.00011344235005594783,
+  "seconds": 0.03435291600001733
+ },
+ {
+  "preset": "loud",
+  "seed": 5,
+  "condition": "clean",
+  "method": "B columns",
+  "low_center": 0.24032716569511706,
+  "center": 0.10884780511556887,
+  "spacing": 9.579554206462504e-05,
+  "seconds": 3.1798944589999962
+ },
+ {
+  "preset": "loud",
+  "seed": 5,
+  "condition": "clean",
+  "method": "C coherence",
+  "low_center": 0.24032716569511706,
+  "center": 0.08319384600248056,
+  "spacing": -3.262377297452712e-05,
+  "seconds": 0.3060913750000225
+ },
+ {
+  "preset": "loud",
+  "seed": 5,
+  "condition": "clean",
+  "method": "D wedges by noise",
+  "low_center": 0.24032716569511706,
+  "center": 0.10793744820795231,
+  "spacing": 0.0001367976678612326,
+  "seconds": 0.043084665999998606
+ },
+ {
+  "preset": "loud",
+  "seed": 5,
+  "condition": "clean",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.24032716569511706,
+  "center": 0.17109727783950585,
+  "spacing": 0.00040032017540836407,
+  "seconds": 0.04995429199999535
+ },
+ {
+  "preset": "loud",
+  "seed": 5,
+  "condition": "clean",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.24032716569511706,
+  "center": 0.21377225205757083,
+  "spacing": 0.0003025895763708597,
+  "seconds": 0.08709937499997977
+ },
+ {
+  "preset": "loud",
+  "seed": 5,
+  "condition": "clean",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.24032716569511706,
+  "center": 0.1119896014502811,
+  "spacing": 0.00011344235005594783,
+  "seconds": 0.1192433329999858
+ },
+ {
+  "preset": "loud",
+  "seed": 5,
+  "condition": "lost",
+  "method": "A wedges |Z|",
+  "low_center": 0.8880925965901962,
+  "center": 0.14817599503892762,
+  "spacing": 0.0004926399969931161,
+  "seconds": 0.03568708299999912
+ },
+ {
+  "preset": "loud",
+  "seed": 5,
+  "condition": "lost",
+  "method": "B columns",
+  "low_center": 0.8880925965901962,
+  "center": 0.12414528193831273,
+  "spacing": 0.00044659279933223495,
+  "seconds": 3.2954446249999876
+ },
+ {
+  "preset": "loud",
+  "seed": 5,
+  "condition": "lost",
+  "method": "C coherence",
+  "low_center": 0.8880925965901962,
+  "center": 0.10002925942410155,
+  "spacing": 0.0003105179625051413,
+  "seconds": 0.35337708299999804
+ },
+ {
+  "preset": "loud",
+  "seed": 5,
+  "condition": "lost",
+  "method": "D wedges by noise",
+  "low_center": 0.8880925965901962,
+  "center": 0.11802135886462857,
+  "spacing": 0.0004300111315294064,
+  "seconds": 0.05148074999999608
+ },
+ {
+  "preset": "loud",
+  "seed": 5,
+  "condition": "lost",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.8880925965901962,
+  "center": 0.18069070877036686,
+  "spacing": 0.000888736049578398,
+  "seconds": 0.044989208000004055
+ },
+ {
+  "preset": "loud",
+  "seed": 5,
+  "condition": "lost",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.8880925965901962,
+  "center": 0.14436635362164163,
+  "spacing": 0.0008173990574518175,
+  "seconds": 0.08135587499998564
+ },
+ {
+  "preset": "loud",
+  "seed": 5,
+  "condition": "lost",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.8880925965901962,
+  "center": 0.11986929425181994,
+  "spacing": 0.0005047996183755732,
+  "seconds": 0.11967645900000434
+ },
+ {
+  "preset": "loud",
+  "seed": 5,
+  "condition": "shifted",
+  "method": "A wedges |Z|",
+  "low_center": 0.99820370736203,
+  "center": 1.282933417537489,
+  "spacing": 0.00030193242980103285,
+  "seconds": 0.03527954200001204
+ },
+ {
+  "preset": "loud",
+  "seed": 5,
+  "condition": "shifted",
+  "method": "B columns",
+  "low_center": 0.99820370736203,
+  "center": 1.1965435432898537,
+  "spacing": 0.0002625148516184339,
+  "seconds": 3.246368749999988
+ },
+ {
+  "preset": "loud",
+  "seed": 5,
+  "condition": "shifted",
+  "method": "C coherence",
+  "low_center": 0.99820370736203,
+  "center": 1.2400814837553715,
+  "spacing": 7.896550307417982e-05,
+  "seconds": 0.28464312500000233
+ },
+ {
+  "preset": "loud",
+  "seed": 5,
+  "condition": "shifted",
+  "method": "D wedges by noise",
+  "low_center": 0.99820370736203,
+  "center": 0.8357951975733141,
+  "spacing": 0.00032780339163429595,
+  "seconds": 0.049331749999993235
+ },
+ {
+  "preset": "loud",
+  "seed": 5,
+  "condition": "shifted",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.99820370736203,
+  "center": 1.0609485827575968,
+  "spacing": 0.0007571569487203611,
+  "seconds": 0.0436030829999936
+ },
+ {
+  "preset": "loud",
+  "seed": 5,
+  "condition": "shifted",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.99820370736203,
+  "center": 0.9862462540562551,
+  "spacing": 0.000821875029042074,
+  "seconds": 0.08452637499999582
+ },
+ {
+  "preset": "loud",
+  "seed": 5,
+  "condition": "shifted",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.99820370736203,
+  "center": 0.12424022800345592,
+  "spacing": 0.00016025430336186197,
+  "seconds": 0.11377325000000837
+ },
+ {
+  "preset": "hard",
+  "seed": 1,
+  "condition": "clean",
+  "method": "A wedges |Z|",
+  "low_center": 0.2605424476588747,
+  "center": 0.17098224335968332,
+  "spacing": 1.0019444205422445e-06,
+  "seconds": 0.037042041999995945
+ },
+ {
+  "preset": "hard",
+  "seed": 1,
+  "condition": "clean",
+  "method": "B columns",
+  "low_center": 0.2605424476588747,
+  "center": 0.21583965293143748,
+  "spacing": 3.043836140470546e-05,
+  "seconds": 3.67880416700001
+ },
+ {
+  "preset": "hard",
+  "seed": 1,
+  "condition": "clean",
+  "method": "C coherence",
+  "low_center": 0.2605424476588747,
+  "center": 0.27447548239954994,
+  "spacing": 6.556512988309393e-06,
+  "seconds": 0.4942651249999983
+ },
+ {
+  "preset": "hard",
+  "seed": 1,
+  "condition": "clean",
+  "method": "D wedges by noise",
+  "low_center": 0.2605424476588747,
+  "center": 0.24486683342785956,
+  "spacing": 6.822388231464416e-05,
+  "seconds": 0.04582420799999909
+ },
+ {
+  "preset": "hard",
+  "seed": 1,
+  "condition": "clean",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.2605424476588747,
+  "center": 0.14822602900755902,
+  "spacing": -0.00011781662333520959,
+  "seconds": 0.05208395799999721
+ },
+ {
+  "preset": "hard",
+  "seed": 1,
+  "condition": "clean",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.2605424476588747,
+  "center": 0.20163766016291387,
+  "spacing": -4.256446459605101e-05,
+  "seconds": 0.09806975000000762
+ },
+ {
+  "preset": "hard",
+  "seed": 1,
+  "condition": "clean",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.2605424476588747,
+  "center": 0.17098224335968332,
+  "spacing": 1.0019444205422445e-06,
+  "seconds": 0.1208555409999974
+ },
+ {
+  "preset": "hard",
+  "seed": 1,
+  "condition": "lost",
+  "method": "A wedges |Z|",
+  "low_center": 0.28979664932510185,
+  "center": 0.2246959826498953,
+  "spacing": -0.00048346561519430065,
+  "seconds": 0.038528124999999136
+ },
+ {
+  "preset": "hard",
+  "seed": 1,
+  "condition": "lost",
+  "method": "B columns",
+  "low_center": 0.28979664932510185,
+  "center": 0.2829816922983686,
+  "spacing": -0.0005019915658299734,
+  "seconds": 3.7346257089999995
+ },
+ {
+  "preset": "hard",
+  "seed": 1,
+  "condition": "lost",
+  "method": "C coherence",
+  "low_center": 0.28979664932510185,
+  "center": 0.3756452005867258,
+  "spacing": -0.0005344764037288341,
+  "seconds": 0.4837574160000031
+ },
+ {
+  "preset": "hard",
+  "seed": 1,
+  "condition": "lost",
+  "method": "D wedges by noise",
+  "low_center": 0.28979664932510185,
+  "center": 0.2623792916526876,
+  "spacing": -0.00041505532843610915,
+  "seconds": 0.05299816600000895
+ },
+ {
+  "preset": "hard",
+  "seed": 1,
+  "condition": "lost",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.28979664932510185,
+  "center": 0.18102311223379164,
+  "spacing": -0.0006194728675416039,
+  "seconds": 0.0533104160000164
+ },
+ {
+  "preset": "hard",
+  "seed": 1,
+  "condition": "lost",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.28979664932510185,
+  "center": 0.1554332864508549,
+  "spacing": -0.0004913560511092818,
+  "seconds": 0.08499504200000274
+ },
+ {
+  "preset": "hard",
+  "seed": 1,
+  "condition": "lost",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.28979664932510185,
+  "center": 0.2246959826498953,
+  "spacing": -0.00048346561519430065,
+  "seconds": 0.12387633299999834
+ },
+ {
+  "preset": "hard",
+  "seed": 1,
+  "condition": "shifted",
+  "method": "A wedges |Z|",
+  "low_center": 0.3858049888745739,
+  "center": 0.771151597294832,
+  "spacing": 0.00047551459295425147,
+  "seconds": 0.037630374999992
+ },
+ {
+  "preset": "hard",
+  "seed": 1,
+  "condition": "shifted",
+  "method": "B columns",
+  "low_center": 0.3858049888745739,
+  "center": 0.6240203285310725,
+  "spacing": 0.0006175554023040153,
+  "seconds": 3.6776920419999897
+ },
+ {
+  "preset": "hard",
+  "seed": 1,
+  "condition": "shifted",
+  "method": "C coherence",
+  "low_center": 0.3858049888745739,
+  "center": 0.6125197423192277,
+  "spacing": 0.000606821385181977,
+  "seconds": 0.5347034579999956
+ },
+ {
+  "preset": "hard",
+  "seed": 1,
+  "condition": "shifted",
+  "method": "D wedges by noise",
+  "low_center": 0.3858049888745739,
+  "center": 0.49785183636943414,
+  "spacing": 0.0005057746165320065,
+  "seconds": 0.052790167000011934
+ },
+ {
+  "preset": "hard",
+  "seed": 1,
+  "condition": "shifted",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.3858049888745739,
+  "center": 0.7748591151265867,
+  "spacing": 0.00035203099871838894,
+  "seconds": 0.0507336660000135
+ },
+ {
+  "preset": "hard",
+  "seed": 1,
+  "condition": "shifted",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.3858049888745739,
+  "center": 0.5703677182912233,
+  "spacing": 0.0002688093944043235,
+  "seconds": 0.0771021669999925
+ },
+ {
+  "preset": "hard",
+  "seed": 1,
+  "condition": "shifted",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.3858049888745739,
+  "center": 0.16892557728276528,
+  "spacing": 0.0002778972767794041,
+  "seconds": 0.1341916249999997
+ },
+ {
+  "preset": "hard",
+  "seed": 2,
+  "condition": "clean",
+  "method": "A wedges |Z|",
+  "low_center": 0.19803059698067688,
+  "center": 0.2057803930345132,
+  "spacing": -0.00021694859051546445,
+  "seconds": 0.03754541700001823
+ },
+ {
+  "preset": "hard",
+  "seed": 2,
+  "condition": "clean",
+  "method": "B columns",
+  "low_center": 0.19803059698067688,
+  "center": 0.2269162458775027,
+  "spacing": -0.00016696488840617363,
+  "seconds": 3.710218249999997
+ },
+ {
+  "preset": "hard",
+  "seed": 2,
+  "condition": "clean",
+  "method": "C coherence",
+  "low_center": 0.19803059698067688,
+  "center": 0.24996466060655856,
+  "spacing": -0.00013588308551726325,
+  "seconds": 0.37423762500000635
+ },
+ {
+  "preset": "hard",
+  "seed": 2,
+  "condition": "clean",
+  "method": "D wedges by noise",
+  "low_center": 0.19803059698067688,
+  "center": 0.26614099828862503,
+  "spacing": -3.472969602780207e-05,
+  "seconds": 0.05336120799998412
+ },
+ {
+  "preset": "hard",
+  "seed": 2,
+  "condition": "clean",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.19803059698067688,
+  "center": 0.20328759149070008,
+  "spacing": -0.00027954685691522485,
+  "seconds": 0.05663462499998673
+ },
+ {
+  "preset": "hard",
+  "seed": 2,
+  "condition": "clean",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.19803059698067688,
+  "center": 0.20884231391420302,
+  "spacing": -0.0003621486557189302,
+  "seconds": 0.07997529100001088
+ },
+ {
+  "preset": "hard",
+  "seed": 2,
+  "condition": "clean",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.19803059698067688,
+  "center": 0.2057803930345132,
+  "spacing": -0.00021694859051546445,
+  "seconds": 0.13373691699999313
+ },
+ {
+  "preset": "hard",
+  "seed": 2,
+  "condition": "lost",
+  "method": "A wedges |Z|",
+  "low_center": 0.22095102380634224,
+  "center": 0.09436270382341676,
+  "spacing": 2.377523688545935e-05,
+  "seconds": 0.038593332999994345
+ },
+ {
+  "preset": "hard",
+  "seed": 2,
+  "condition": "lost",
+  "method": "B columns",
+  "low_center": 0.22095102380634224,
+  "center": 0.18458105462515084,
+  "spacing": 0.0001754475186745985,
+  "seconds": 3.81087500000001
+ },
+ {
+  "preset": "hard",
+  "seed": 2,
+  "condition": "lost",
+  "method": "C coherence",
+  "low_center": 0.22095102380634224,
+  "center": 0.20761391165622547,
+  "spacing": 0.00014073507919065698,
+  "seconds": 0.3198706250000214
+ },
+ {
+  "preset": "hard",
+  "seed": 2,
+  "condition": "lost",
+  "method": "D wedges by noise",
+  "low_center": 0.22095102380634224,
+  "center": 0.28164166511407907,
+  "spacing": 0.00022620929024697034,
+  "seconds": 0.053743958000012526
+ },
+ {
+  "preset": "hard",
+  "seed": 2,
+  "condition": "lost",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.22095102380634224,
+  "center": 0.0811440216952044,
+  "spacing": 2.8859213537124617e-05,
+  "seconds": 0.04669729199997619
+ },
+ {
+  "preset": "hard",
+  "seed": 2,
+  "condition": "lost",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.22095102380634224,
+  "center": 0.1560863695795046,
+  "spacing": -3.834587443496407e-05,
+  "seconds": 0.08286054200002013
+ },
+ {
+  "preset": "hard",
+  "seed": 2,
+  "condition": "lost",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.22095102380634224,
+  "center": 0.09436270382341676,
+  "spacing": 2.377523688545935e-05,
+  "seconds": 0.12658320799999956
+ },
+ {
+  "preset": "hard",
+  "seed": 2,
+  "condition": "shifted",
+  "method": "A wedges |Z|",
+  "low_center": 0.07490551328521775,
+  "center": 1.6322366975099922,
+  "spacing": 0.0001418026251325255,
+  "seconds": 0.03849429199999577
+ },
+ {
+  "preset": "hard",
+  "seed": 2,
+  "condition": "shifted",
+  "method": "B columns",
+  "low_center": 0.07490551328521775,
+  "center": 1.5788608682044387,
+  "spacing": 0.0002187422170156772,
+  "seconds": 3.747031416999988
+ },
+ {
+  "preset": "hard",
+  "seed": 2,
+  "condition": "shifted",
+  "method": "C coherence",
+  "low_center": 0.07490551328521775,
+  "center": 1.6508550464114047,
+  "spacing": 0.00027492762619507616,
+  "seconds": 0.5683186669999998
+ },
+ {
+  "preset": "hard",
+  "seed": 2,
+  "condition": "shifted",
+  "method": "D wedges by noise",
+  "low_center": 0.07490551328521775,
+  "center": 1.4450435435406659,
+  "spacing": 0.0003091731405058251,
+  "seconds": 0.05537558400001785
+ },
+ {
+  "preset": "hard",
+  "seed": 2,
+  "condition": "shifted",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.07490551328521775,
+  "center": 1.6907017188488116,
+  "spacing": 0.000552979729134373,
+  "seconds": 0.04790491700001098
+ },
+ {
+  "preset": "hard",
+  "seed": 2,
+  "condition": "shifted",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.07490551328521775,
+  "center": 1.472084486127694,
+  "spacing": 0.00014186244434144513,
+  "seconds": 0.07790945899998292
+ },
+ {
+  "preset": "hard",
+  "seed": 2,
+  "condition": "shifted",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.07490551328521775,
+  "center": 0.5718764641263814,
+  "spacing": 7.043655727012599e-05,
+  "seconds": 0.12360091699997611
+ },
+ {
+  "preset": "hard",
+  "seed": 3,
+  "condition": "clean",
+  "method": "A wedges |Z|",
+  "low_center": 0.2841090338832654,
+  "center": 0.20208057736288562,
+  "spacing": -0.0003596166125582334,
+  "seconds": 0.037927958000011586
+ },
+ {
+  "preset": "hard",
+  "seed": 3,
+  "condition": "clean",
+  "method": "B columns",
+  "low_center": 0.2841090338832654,
+  "center": 0.21333918021787007,
+  "spacing": -0.00032194796838325157,
+  "seconds": 3.6499007080000183
+ },
+ {
+  "preset": "hard",
+  "seed": 3,
+  "condition": "clean",
+  "method": "C coherence",
+  "low_center": 0.2841090338832654,
+  "center": 0.1994517447619348,
+  "spacing": -0.00025950494876081365,
+  "seconds": 0.45522841599998287
+ },
+ {
+  "preset": "hard",
+  "seed": 3,
+  "condition": "clean",
+  "method": "D wedges by noise",
+  "low_center": 0.2841090338832654,
+  "center": 0.15768914852713128,
+  "spacing": -0.00043000592687159056,
+  "seconds": 0.04693949999997926
+ },
+ {
+  "preset": "hard",
+  "seed": 3,
+  "condition": "clean",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.2841090338832654,
+  "center": 0.5478289904575104,
+  "spacing": -0.0008946206889909325,
+  "seconds": 0.04695041700000502
+ },
+ {
+  "preset": "hard",
+  "seed": 3,
+  "condition": "clean",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.2841090338832654,
+  "center": 0.7444515280002626,
+  "spacing": -0.0011687903400667832,
+  "seconds": 0.07974391700000183
+ },
+ {
+  "preset": "hard",
+  "seed": 3,
+  "condition": "clean",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.2841090338832654,
+  "center": 0.20208057736288562,
+  "spacing": -0.0003596166125582334,
+  "seconds": 0.13598108300001854
+ },
+ {
+  "preset": "hard",
+  "seed": 3,
+  "condition": "lost",
+  "method": "A wedges |Z|",
+  "low_center": 0.24095498042288127,
+  "center": 0.08467168993201406,
+  "spacing": -0.00024687942903400817,
+  "seconds": 0.03786354199999664
+ },
+ {
+  "preset": "hard",
+  "seed": 3,
+  "condition": "lost",
+  "method": "B columns",
+  "low_center": 0.24095498042288127,
+  "center": 0.12689553473997328,
+  "spacing": -0.0002400793587647998,
+  "seconds": 3.7853669579999973
+ },
+ {
+  "preset": "hard",
+  "seed": 3,
+  "condition": "lost",
+  "method": "C coherence",
+  "low_center": 0.24095498042288127,
+  "center": 0.15495339458735896,
+  "spacing": -0.00013325494779314884,
+  "seconds": 0.38802666700001964
+ },
+ {
+  "preset": "hard",
+  "seed": 3,
+  "condition": "lost",
+  "method": "D wedges by noise",
+  "low_center": 0.24095498042288127,
+  "center": 0.033682258976634134,
+  "spacing": -0.0004500967660254762,
+  "seconds": 0.059993207999980314
+ },
+ {
+  "preset": "hard",
+  "seed": 3,
+  "condition": "lost",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.24095498042288127,
+  "center": 0.4505687319072644,
+  "spacing": -0.0006796116876017777,
+  "seconds": 0.04703616599999805
+ },
+ {
+  "preset": "hard",
+  "seed": 3,
+  "condition": "lost",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.24095498042288127,
+  "center": 0.6263074198989796,
+  "spacing": -0.0009793768289259042,
+  "seconds": 0.07744645799999716
+ },
+ {
+  "preset": "hard",
+  "seed": 3,
+  "condition": "lost",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.24095498042288127,
+  "center": 0.08609288886620373,
+  "spacing": -0.00023127686440960193,
+  "seconds": 0.1300602089999927
+ },
+ {
+  "preset": "hard",
+  "seed": 3,
+  "condition": "shifted",
+  "method": "A wedges |Z|",
+  "low_center": 0.9149428984791799,
+  "center": 1.3708522132901688,
+  "spacing": -3.7618437447872743e-05,
+  "seconds": 0.03934474999999793
+ },
+ {
+  "preset": "hard",
+  "seed": 3,
+  "condition": "shifted",
+  "method": "B columns",
+  "low_center": 0.9149428984791799,
+  "center": 1.3253845527935209,
+  "spacing": -6.18430527842273e-05,
+  "seconds": 3.783198375000012
+ },
+ {
+  "preset": "hard",
+  "seed": 3,
+  "condition": "shifted",
+  "method": "C coherence",
+  "low_center": 0.9149428984791799,
+  "center": 1.2845002233421707,
+  "spacing": 1.7833446253057161e-06,
+  "seconds": 0.5807704999999999
+ },
+ {
+  "preset": "hard",
+  "seed": 3,
+  "condition": "shifted",
+  "method": "D wedges by noise",
+  "low_center": 0.9149428984791799,
+  "center": 1.1816917805157083,
+  "spacing": -0.00012503534672869687,
+  "seconds": 0.05262904200000662
+ },
+ {
+  "preset": "hard",
+  "seed": 3,
+  "condition": "shifted",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.9149428984791799,
+  "center": 2.0363022457430957,
+  "spacing": -0.00033044145785221524,
+  "seconds": 0.046550542000005635
+ },
+ {
+  "preset": "hard",
+  "seed": 3,
+  "condition": "shifted",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.9149428984791799,
+  "center": 1.887157832418781,
+  "spacing": -0.00043197656554982977,
+  "seconds": 0.07848566699999537
+ },
+ {
+  "preset": "hard",
+  "seed": 3,
+  "condition": "shifted",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.9149428984791799,
+  "center": 0.26039171975178615,
+  "spacing": -0.00020199542315768593,
+  "seconds": 0.12687766700000225
+ },
+ {
+  "preset": "hard",
+  "seed": 4,
+  "condition": "clean",
+  "method": "A wedges |Z|",
+  "low_center": 0.7223176957451758,
+  "center": 0.5031277325054874,
+  "spacing": 1.3556717397333884e-05,
+  "seconds": 0.03618187499998271
+ },
+ {
+  "preset": "hard",
+  "seed": 4,
+  "condition": "clean",
+  "method": "B columns",
+  "low_center": 0.7223176957451758,
+  "center": 0.466885447274598,
+  "spacing": -7.003119240889255e-05,
+  "seconds": 3.4736647499999833
+ },
+ {
+  "preset": "hard",
+  "seed": 4,
+  "condition": "clean",
+  "method": "C coherence",
+  "low_center": 0.7223176957451758,
+  "center": 0.3912889972740539,
+  "spacing": -0.00010073088954742904,
+  "seconds": 0.3176200000000051
+ },
+ {
+  "preset": "hard",
+  "seed": 4,
+  "condition": "clean",
+  "method": "D wedges by noise",
+  "low_center": 0.7223176957451758,
+  "center": 0.5014142827374113,
+  "spacing": 0.00012877990217430302,
+  "seconds": 0.051278374999981224
+ },
+ {
+  "preset": "hard",
+  "seed": 4,
+  "condition": "clean",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.7223176957451758,
+  "center": 0.7036379788489141,
+  "spacing": -2.8454227849139535e-05,
+  "seconds": 0.04437737500001049
+ },
+ {
+  "preset": "hard",
+  "seed": 4,
+  "condition": "clean",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.7223176957451758,
+  "center": 0.6413056097603934,
+  "spacing": 5.944189730122673e-05,
+  "seconds": 0.07974445899998273
+ },
+ {
+  "preset": "hard",
+  "seed": 4,
+  "condition": "clean",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.7223176957451758,
+  "center": 0.5031277325054874,
+  "spacing": 1.3556717397333884e-05,
+  "seconds": 0.1240403330000106
+ },
+ {
+  "preset": "hard",
+  "seed": 4,
+  "condition": "lost",
+  "method": "A wedges |Z|",
+  "low_center": 0.9559904393598174,
+  "center": 0.5380266348967624,
+  "spacing": -0.00021244473424331112,
+  "seconds": 0.0365927910000039
+ },
+ {
+  "preset": "hard",
+  "seed": 4,
+  "condition": "lost",
+  "method": "B columns",
+  "low_center": 0.9559904393598174,
+  "center": 0.500793266939287,
+  "spacing": -0.0002666027262852033,
+  "seconds": 3.559159582999996
+ },
+ {
+  "preset": "hard",
+  "seed": 4,
+  "condition": "lost",
+  "method": "C coherence",
+  "low_center": 0.9559904393598174,
+  "center": 0.41197260514335676,
+  "spacing": -0.0003187252759820902,
+  "seconds": 0.4119676250000168
+ },
+ {
+  "preset": "hard",
+  "seed": 4,
+  "condition": "lost",
+  "method": "D wedges by noise",
+  "low_center": 0.9559904393598174,
+  "center": 0.5524917579697348,
+  "spacing": -0.00018612363369330254,
+  "seconds": 0.04296512499999494
+ },
+ {
+  "preset": "hard",
+  "seed": 4,
+  "condition": "lost",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.9559904393598174,
+  "center": 0.7077737332651381,
+  "spacing": -7.894677254982607e-05,
+  "seconds": 0.0425872080000147
+ },
+ {
+  "preset": "hard",
+  "seed": 4,
+  "condition": "lost",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.9559904393598174,
+  "center": 0.623124750360076,
+  "spacing": -2.065171297460644e-05,
+  "seconds": 0.0758640420000063
+ },
+ {
+  "preset": "hard",
+  "seed": 4,
+  "condition": "lost",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.9559904393598174,
+  "center": 0.5438153179855939,
+  "spacing": -0.00020289623966418535,
+  "seconds": 0.130623374999999
+ },
+ {
+  "preset": "hard",
+  "seed": 4,
+  "condition": "shifted",
+  "method": "A wedges |Z|",
+  "low_center": 1.123378518126806,
+  "center": 0.9494491969902155,
+  "spacing": 0.0001390904730174114,
+  "seconds": 0.03677537499999062
+ },
+ {
+  "preset": "hard",
+  "seed": 4,
+  "condition": "shifted",
+  "method": "B columns",
+  "low_center": 1.123378518126806,
+  "center": 0.9143125101463192,
+  "spacing": 0.00020224211243391466,
+  "seconds": 3.477436124999997
+ },
+ {
+  "preset": "hard",
+  "seed": 4,
+  "condition": "shifted",
+  "method": "C coherence",
+  "low_center": 1.123378518126806,
+  "center": 0.9239705583759892,
+  "spacing": 0.00016473219269408368,
+  "seconds": 0.507946000000004
+ },
+ {
+  "preset": "hard",
+  "seed": 4,
+  "condition": "shifted",
+  "method": "D wedges by noise",
+  "low_center": 1.123378518126806,
+  "center": 0.9062157106458046,
+  "spacing": 0.0003534752745737446,
+  "seconds": 0.0520869169999969
+ },
+ {
+  "preset": "hard",
+  "seed": 4,
+  "condition": "shifted",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 1.123378518126806,
+  "center": 0.9224705217585462,
+  "spacing": 0.00043695757821282655,
+  "seconds": 0.04601254199999971
+ },
+ {
+  "preset": "hard",
+  "seed": 4,
+  "condition": "shifted",
+  "method": "F wedges, trim and refit",
+  "low_center": 1.123378518126806,
+  "center": 0.8468037186990744,
+  "spacing": 0.0002452534086276881,
+  "seconds": 0.07722954199999776
+ },
+ {
+  "preset": "hard",
+  "seed": 4,
+  "condition": "shifted",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 1.123378518126806,
+  "center": 0.4634830512828379,
+  "spacing": 0.0003202170395273374,
+  "seconds": 0.11737658399999873
+ },
+ {
+  "preset": "hard",
+  "seed": 5,
+  "condition": "clean",
+  "method": "A wedges |Z|",
+  "low_center": 0.27229611116052344,
+  "center": 0.22462678556908436,
+  "spacing": 0.0006830066229617238,
+  "seconds": 0.03400325000001203
+ },
+ {
+  "preset": "hard",
+  "seed": 5,
+  "condition": "clean",
+  "method": "B columns",
+  "low_center": 0.27229611116052344,
+  "center": 0.2559295172911193,
+  "spacing": 0.0006314526911619378,
+  "seconds": 3.236782667
+ },
+ {
+  "preset": "hard",
+  "seed": 5,
+  "condition": "clean",
+  "method": "C coherence",
+  "low_center": 0.27229611116052344,
+  "center": 0.25531196798568445,
+  "spacing": 0.00047037186758824845,
+  "seconds": 0.3574885829999914
+ },
+ {
+  "preset": "hard",
+  "seed": 5,
+  "condition": "clean",
+  "method": "D wedges by noise",
+  "low_center": 0.27229611116052344,
+  "center": 0.2507822259239541,
+  "spacing": 0.0007916907315892452,
+  "seconds": 0.04658979100000238
+ },
+ {
+  "preset": "hard",
+  "seed": 5,
+  "condition": "clean",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.27229611116052344,
+  "center": 0.18132834120464392,
+  "spacing": 0.0013765622286947554,
+  "seconds": 0.05248170800001617
+ },
+ {
+  "preset": "hard",
+  "seed": 5,
+  "condition": "clean",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.27229611116052344,
+  "center": 0.2612783470197382,
+  "spacing": 0.0015758457268510995,
+  "seconds": 0.08166312500000572
+ },
+ {
+  "preset": "hard",
+  "seed": 5,
+  "condition": "clean",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.27229611116052344,
+  "center": 0.22462678556908436,
+  "spacing": 0.0006830066229617238,
+  "seconds": 0.11957704099998523
+ },
+ {
+  "preset": "hard",
+  "seed": 5,
+  "condition": "lost",
+  "method": "A wedges |Z|",
+  "low_center": 1.0250591765308128,
+  "center": 0.27607105636845497,
+  "spacing": 0.0008359099775894219,
+  "seconds": 0.035039208999990024
+ },
+ {
+  "preset": "hard",
+  "seed": 5,
+  "condition": "lost",
+  "method": "B columns",
+  "low_center": 1.0250591765308128,
+  "center": 0.2791973020942017,
+  "spacing": 0.0008067231373130035,
+  "seconds": 3.342572749999988
+ },
+ {
+  "preset": "hard",
+  "seed": 5,
+  "condition": "lost",
+  "method": "C coherence",
+  "low_center": 1.0250591765308128,
+  "center": 0.2979710417561565,
+  "spacing": 0.0006740423448201582,
+  "seconds": 0.45057170799998403
+ },
+ {
+  "preset": "hard",
+  "seed": 5,
+  "condition": "lost",
+  "method": "D wedges by noise",
+  "low_center": 1.0250591765308128,
+  "center": 0.30523081473037883,
+  "spacing": 0.0009285753613856862,
+  "seconds": 0.04282862499997009
+ },
+ {
+  "preset": "hard",
+  "seed": 5,
+  "condition": "lost",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 1.0250591765308128,
+  "center": 0.3371807198852743,
+  "spacing": 0.0015505684171921441,
+  "seconds": 0.044165667000015674
+ },
+ {
+  "preset": "hard",
+  "seed": 5,
+  "condition": "lost",
+  "method": "F wedges, trim and refit",
+  "low_center": 1.0250591765308128,
+  "center": 0.3724896904743367,
+  "spacing": 0.0018621874556583595,
+  "seconds": 0.08132433299999775
+ },
+ {
+  "preset": "hard",
+  "seed": 5,
+  "condition": "lost",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 1.0250591765308128,
+  "center": 0.27607105636845497,
+  "spacing": 0.0008359099775894219,
+  "seconds": 0.1268497500000194
+ },
+ {
+  "preset": "hard",
+  "seed": 5,
+  "condition": "shifted",
+  "method": "A wedges |Z|",
+  "low_center": 1.2362617729799084,
+  "center": 1.3928352545395681,
+  "spacing": 0.0011224847465607368,
+  "seconds": 0.03383737500001871
+ },
+ {
+  "preset": "hard",
+  "seed": 5,
+  "condition": "shifted",
+  "method": "B columns",
+  "low_center": 1.2362617729799084,
+  "center": 1.333486331879638,
+  "spacing": 0.0010707565865999413,
+  "seconds": 3.3014223749999587
+ },
+ {
+  "preset": "hard",
+  "seed": 5,
+  "condition": "shifted",
+  "method": "C coherence",
+  "low_center": 1.2362617729799084,
+  "center": 1.3379919606030068,
+  "spacing": 0.0009341898336441279,
+  "seconds": 0.27598891699994965
+ },
+ {
+  "preset": "hard",
+  "seed": 5,
+  "condition": "shifted",
+  "method": "D wedges by noise",
+  "low_center": 1.2362617729799084,
+  "center": 1.1598067193681265,
+  "spacing": 0.0013058133387620074,
+  "seconds": 0.043148500000029344
+ },
+ {
+  "preset": "hard",
+  "seed": 5,
+  "condition": "shifted",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 1.2362617729799084,
+  "center": 1.4350845353748674,
+  "spacing": 0.0023177629554105295,
+  "seconds": 0.042946916999994755
+ },
+ {
+  "preset": "hard",
+  "seed": 5,
+  "condition": "shifted",
+  "method": "F wedges, trim and refit",
+  "low_center": 1.2362617729799084,
+  "center": 1.3322838218567634,
+  "spacing": 0.0025614808384926135,
+  "seconds": 0.0713682499999777
+ },
+ {
+  "preset": "hard",
+  "seed": 5,
+  "condition": "shifted",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 1.2362617729799084,
+  "center": 0.1572203336953928,
+  "spacing": 0.0009815781399848955,
+  "seconds": 0.11498441599997022
+ },
+ {
+  "preset": "clean",
+  "seed": 1,
+  "condition": "clean",
+  "method": "A wedges |Z|",
+  "low_center": 0.21762573511496874,
+  "center": 0.04744912313945497,
+  "spacing": 4.872661009169832e-05,
+  "seconds": 0.03637200000002849
+ },
+ {
+  "preset": "clean",
+  "seed": 1,
+  "condition": "clean",
+  "method": "B columns",
+  "low_center": 0.21762573511496874,
+  "center": 0.04678845103056027,
+  "spacing": 4.558141303911967e-05,
+  "seconds": 2.8030813749999766
+ },
+ {
+  "preset": "clean",
+  "seed": 1,
+  "condition": "clean",
+  "method": "C coherence",
+  "low_center": 0.21762573511496874,
+  "center": 0.04488929934890943,
+  "spacing": 7.812700222986635e-06,
+  "seconds": 0.2643287500000042
+ },
+ {
+  "preset": "clean",
+  "seed": 1,
+  "condition": "clean",
+  "method": "D wedges by noise",
+  "low_center": 0.21762573511496874,
+  "center": 0.0832195273839412,
+  "spacing": 0.0004449463098916695,
+  "seconds": 0.04494662500002278
+ },
+ {
+  "preset": "clean",
+  "seed": 1,
+  "condition": "clean",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.21762573511496874,
+  "center": 0.06735123942175601,
+  "spacing": 9.253781093443436e-05,
+  "seconds": 0.045408750000035525
+ },
+ {
+  "preset": "clean",
+  "seed": 1,
+  "condition": "clean",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.21762573511496874,
+  "center": 0.18354973218598392,
+  "spacing": 0.00016121328193641205,
+  "seconds": 0.0821295840000289
+ },
+ {
+  "preset": "clean",
+  "seed": 1,
+  "condition": "clean",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.21762573511496874,
+  "center": 0.04744912313945497,
+  "spacing": 4.872661009169832e-05,
+  "seconds": 0.1345242090000056
+ },
+ {
+  "preset": "clean",
+  "seed": 1,
+  "condition": "lost",
+  "method": "A wedges |Z|",
+  "low_center": 0.2781311003156716,
+  "center": 0.06497151883878864,
+  "spacing": -0.00021835522948676633,
+  "seconds": 0.036925208000013754
+ },
+ {
+  "preset": "clean",
+  "seed": 1,
+  "condition": "lost",
+  "method": "B columns",
+  "low_center": 0.2781311003156716,
+  "center": 0.08797773397788364,
+  "spacing": -0.00023979135156204645,
+  "seconds": 3.0091550839999854
+ },
+ {
+  "preset": "clean",
+  "seed": 1,
+  "condition": "lost",
+  "method": "C coherence",
+  "low_center": 0.2781311003156716,
+  "center": 0.06689175111641447,
+  "spacing": -0.0002449350781691395,
+  "seconds": 0.2933473749999962
+ },
+ {
+  "preset": "clean",
+  "seed": 1,
+  "condition": "lost",
+  "method": "D wedges by noise",
+  "low_center": 0.2781311003156716,
+  "center": 0.09227354152064786,
+  "spacing": 0.00025003017598312915,
+  "seconds": 0.041601791999994475
+ },
+ {
+  "preset": "clean",
+  "seed": 1,
+  "condition": "lost",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.2781311003156716,
+  "center": 0.08537367840602493,
+  "spacing": -0.00023064074535406043,
+  "seconds": 0.04865183399999751
+ },
+ {
+  "preset": "clean",
+  "seed": 1,
+  "condition": "lost",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.2781311003156716,
+  "center": 0.24531908411889844,
+  "spacing": -0.00022681674420921283,
+  "seconds": 0.07614524999996775
+ },
+ {
+  "preset": "clean",
+  "seed": 1,
+  "condition": "lost",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.2781311003156716,
+  "center": 0.06497151883878864,
+  "spacing": -0.00021835522948676633,
+  "seconds": 0.12759429099997988
+ },
+ {
+  "preset": "clean",
+  "seed": 1,
+  "condition": "shifted",
+  "method": "A wedges |Z|",
+  "low_center": 0.3975166642911037,
+  "center": 0.9451944105774827,
+  "spacing": 0.00022483484247448615,
+  "seconds": 0.03679241700001512
+ },
+ {
+  "preset": "clean",
+  "seed": 1,
+  "condition": "shifted",
+  "method": "B columns",
+  "low_center": 0.3975166642911037,
+  "center": 0.8812123199099595,
+  "spacing": 0.00025506620217607967,
+  "seconds": 2.825180791999969
+ },
+ {
+  "preset": "clean",
+  "seed": 1,
+  "condition": "shifted",
+  "method": "C coherence",
+  "low_center": 0.3975166642911037,
+  "center": 0.8772755282933673,
+  "spacing": 0.0003027992689934589,
+  "seconds": 0.32781933299997945
+ },
+ {
+  "preset": "clean",
+  "seed": 1,
+  "condition": "shifted",
+  "method": "D wedges by noise",
+  "low_center": 0.3975166642911037,
+  "center": 0.07728598650691745,
+  "spacing": 0.0005223897416148926,
+  "seconds": 0.0522653749999904
+ },
+ {
+  "preset": "clean",
+  "seed": 1,
+  "condition": "shifted",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.3975166642911037,
+  "center": 0.6477141882334855,
+  "spacing": 0.00023652190972778264,
+  "seconds": 0.044672416000025805
+ },
+ {
+  "preset": "clean",
+  "seed": 1,
+  "condition": "shifted",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.3975166642911037,
+  "center": 0.48848090378809267,
+  "spacing": 0.00034749230509967255,
+  "seconds": 0.08871620799999391
+ },
+ {
+  "preset": "clean",
+  "seed": 1,
+  "condition": "shifted",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.3975166642911037,
+  "center": 0.027170664464478682,
+  "spacing": 0.00021675877960247725,
+  "seconds": 0.11093166599999904
+ },
+ {
+  "preset": "clean",
+  "seed": 2,
+  "condition": "clean",
+  "method": "A wedges |Z|",
+  "low_center": 0.2097870901732096,
+  "center": 0.2006526630829958,
+  "spacing": -8.0946954807537e-05,
+  "seconds": 0.035885582999981125
+ },
+ {
+  "preset": "clean",
+  "seed": 2,
+  "condition": "clean",
+  "method": "B columns",
+  "low_center": 0.2097870901732096,
+  "center": 0.19845446961504204,
+  "spacing": -8.498264114487064e-05,
+  "seconds": 2.846416332999979
+ },
+ {
+  "preset": "clean",
+  "seed": 2,
+  "condition": "clean",
+  "method": "C coherence",
+  "low_center": 0.2097870901732096,
+  "center": 0.1820691382981799,
+  "spacing": -9.8474968587281e-05,
+  "seconds": 0.24453533299998753
+ },
+ {
+  "preset": "clean",
+  "seed": 2,
+  "condition": "clean",
+  "method": "D wedges by noise",
+  "low_center": 0.2097870901732096,
+  "center": 0.21451118862063256,
+  "spacing": -0.00013518211198915164,
+  "seconds": 0.04621745800000099
+ },
+ {
+  "preset": "clean",
+  "seed": 2,
+  "condition": "clean",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.2097870901732096,
+  "center": 0.22415618065695952,
+  "spacing": -9.246489464853624e-05,
+  "seconds": 0.03823133299999881
+ },
+ {
+  "preset": "clean",
+  "seed": 2,
+  "condition": "clean",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.2097870901732096,
+  "center": 0.2826430618438404,
+  "spacing": -2.8585976472039754e-05,
+  "seconds": 0.08185920800002577
+ },
+ {
+  "preset": "clean",
+  "seed": 2,
+  "condition": "clean",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.2097870901732096,
+  "center": 0.2006526630829958,
+  "spacing": -8.0946954807537e-05,
+  "seconds": 0.13669237499999554
+ },
+ {
+  "preset": "clean",
+  "seed": 2,
+  "condition": "lost",
+  "method": "A wedges |Z|",
+  "low_center": 0.0753701820326456,
+  "center": 0.11442894657979692,
+  "spacing": 7.580480590152483e-05,
+  "seconds": 0.03706470800000261
+ },
+ {
+  "preset": "clean",
+  "seed": 2,
+  "condition": "lost",
+  "method": "B columns",
+  "low_center": 0.0753701820326456,
+  "center": 0.10730970780341072,
+  "spacing": 0.0001411881011201821,
+  "seconds": 3.0150386660000095
+ },
+ {
+  "preset": "clean",
+  "seed": 2,
+  "condition": "lost",
+  "method": "C coherence",
+  "low_center": 0.0753701820326456,
+  "center": 0.07074452659345122,
+  "spacing": 0.00011443034096725313,
+  "seconds": 0.20839441699996542
+ },
+ {
+  "preset": "clean",
+  "seed": 2,
+  "condition": "lost",
+  "method": "D wedges by noise",
+  "low_center": 0.0753701820326456,
+  "center": 0.3758207424835961,
+  "spacing": 0.0002681270524869106,
+  "seconds": 0.058501416000012796
+ },
+ {
+  "preset": "clean",
+  "seed": 2,
+  "condition": "lost",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.0753701820326456,
+  "center": 0.20522982402748036,
+  "spacing": 7.303728557306322e-05,
+  "seconds": 0.03919316600001821
+ },
+ {
+  "preset": "clean",
+  "seed": 2,
+  "condition": "lost",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.0753701820326456,
+  "center": 0.29281908444406046,
+  "spacing": 0.0002672871706308477,
+  "seconds": 0.089064374999964
+ },
+ {
+  "preset": "clean",
+  "seed": 2,
+  "condition": "lost",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.0753701820326456,
+  "center": 0.11442894657979692,
+  "spacing": 7.580480590152483e-05,
+  "seconds": 0.1274578340000403
+ },
+ {
+  "preset": "clean",
+  "seed": 2,
+  "condition": "shifted",
+  "method": "A wedges |Z|",
+  "low_center": 0.17582232588398258,
+  "center": 1.4046527897898302,
+  "spacing": 0.0001739008404679776,
+  "seconds": 0.03721475000003238
+ },
+ {
+  "preset": "clean",
+  "seed": 2,
+  "condition": "shifted",
+  "method": "B columns",
+  "low_center": 0.17582232588398258,
+  "center": 1.3774713571199988,
+  "spacing": 0.00017443185707977094,
+  "seconds": 2.9384556249999605
+ },
+ {
+  "preset": "clean",
+  "seed": 2,
+  "condition": "shifted",
+  "method": "C coherence",
+  "low_center": 0.17582232588398258,
+  "center": 1.3734902702146854,
+  "spacing": 7.447930434145711e-05,
+  "seconds": 0.376611333000028
+ },
+ {
+  "preset": "clean",
+  "seed": 2,
+  "condition": "shifted",
+  "method": "D wedges by noise",
+  "low_center": 0.17582232588398258,
+  "center": 0.430751440466961,
+  "spacing": 1.662258460854993e-05,
+  "seconds": 0.06543320800000174
+ },
+ {
+  "preset": "clean",
+  "seed": 2,
+  "condition": "shifted",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.17582232588398258,
+  "center": 1.2021179398225859,
+  "spacing": 0.0003749172623010999,
+  "seconds": 0.04460216699999364
+ },
+ {
+  "preset": "clean",
+  "seed": 2,
+  "condition": "shifted",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.17582232588398258,
+  "center": 1.069340952800018,
+  "spacing": 0.0005825055749508756,
+  "seconds": 0.08114466600000014
+ },
+ {
+  "preset": "clean",
+  "seed": 2,
+  "condition": "shifted",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.17582232588398258,
+  "center": 0.32754186837635507,
+  "spacing": 4.7380753249726126e-05,
+  "seconds": 0.11938670799997908
+ },
+ {
+  "preset": "clean",
+  "seed": 3,
+  "condition": "clean",
+  "method": "A wedges |Z|",
+  "low_center": 0.27027402404787565,
+  "center": 0.06102967110947642,
+  "spacing": -8.812207087482982e-06,
+  "seconds": 0.03579608399996914
+ },
+ {
+  "preset": "clean",
+  "seed": 3,
+  "condition": "clean",
+  "method": "B columns",
+  "low_center": 0.27027402404787565,
+  "center": 0.06304160990086038,
+  "spacing": -1.3001790552968906e-05,
+  "seconds": 2.804640667000001
+ },
+ {
+  "preset": "clean",
+  "seed": 3,
+  "condition": "clean",
+  "method": "C coherence",
+  "low_center": 0.27027402404787565,
+  "center": 0.03857113486212041,
+  "spacing": 4.0264056293093375e-05,
+  "seconds": 0.31236525000002757
+ },
+ {
+  "preset": "clean",
+  "seed": 3,
+  "condition": "clean",
+  "method": "D wedges by noise",
+  "low_center": 0.27027402404787565,
+  "center": 0.2862739667081201,
+  "spacing": -0.0003349694225396327,
+  "seconds": 0.05036537499995575
+ },
+ {
+  "preset": "clean",
+  "seed": 3,
+  "condition": "clean",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.27027402404787565,
+  "center": 0.246492484514834,
+  "spacing": -0.00014336670256642758,
+  "seconds": 0.04007895899997038
+ },
+ {
+  "preset": "clean",
+  "seed": 3,
+  "condition": "clean",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.27027402404787565,
+  "center": 0.31208107968467597,
+  "spacing": -0.00019850227654605312,
+  "seconds": 0.08541774999997642
+ },
+ {
+  "preset": "clean",
+  "seed": 3,
+  "condition": "clean",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.27027402404787565,
+  "center": 0.06102967110947642,
+  "spacing": -8.812207087482982e-06,
+  "seconds": 0.1271476670000311
+ },
+ {
+  "preset": "clean",
+  "seed": 3,
+  "condition": "lost",
+  "method": "A wedges |Z|",
+  "low_center": 0.014753039836061441,
+  "center": 0.05405966879906858,
+  "spacing": 0.00015648356490305382,
+  "seconds": 0.03630554099999017
+ },
+ {
+  "preset": "clean",
+  "seed": 3,
+  "condition": "lost",
+  "method": "B columns",
+  "low_center": 0.014753039836061441,
+  "center": 0.05965141245686066,
+  "spacing": 0.0001220958467476052,
+  "seconds": 2.9925402500000473
+ },
+ {
+  "preset": "clean",
+  "seed": 3,
+  "condition": "lost",
+  "method": "C coherence",
+  "low_center": 0.014753039836061441,
+  "center": 0.1561732863456512,
+  "spacing": 0.0001687685549425222,
+  "seconds": 0.23163304100000914
+ },
+ {
+  "preset": "clean",
+  "seed": 3,
+  "condition": "lost",
+  "method": "D wedges by noise",
+  "low_center": 0.014753039836061441,
+  "center": 0.11848335063561273,
+  "spacing": -0.000569871226375751,
+  "seconds": 0.044266540999956305
+ },
+ {
+  "preset": "clean",
+  "seed": 3,
+  "condition": "lost",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.014753039836061441,
+  "center": 0.20425539655834493,
+  "spacing": 3.295744096276643e-05,
+  "seconds": 0.04499700000002349
+ },
+ {
+  "preset": "clean",
+  "seed": 3,
+  "condition": "lost",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.014753039836061441,
+  "center": 0.28900677527449486,
+  "spacing": -1.835218620860335e-05,
+  "seconds": 0.08250941700003978
+ },
+ {
+  "preset": "clean",
+  "seed": 3,
+  "condition": "lost",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.014753039836061441,
+  "center": 0.05912778986803139,
+  "spacing": 0.00014947954160282606,
+  "seconds": 0.13849729099996466
+ },
+ {
+  "preset": "clean",
+  "seed": 3,
+  "condition": "shifted",
+  "method": "A wedges |Z|",
+  "low_center": 0.3639071985759003,
+  "center": 1.184583237935542,
+  "spacing": 5.1942361637857815e-05,
+  "seconds": 0.0366363750000005
+ },
+ {
+  "preset": "clean",
+  "seed": 3,
+  "condition": "shifted",
+  "method": "B columns",
+  "low_center": 0.3639071985759003,
+  "center": 1.1360399160889347,
+  "spacing": 7.769519326017438e-05,
+  "seconds": 2.8213601250000124
+ },
+ {
+  "preset": "clean",
+  "seed": 3,
+  "condition": "shifted",
+  "method": "C coherence",
+  "low_center": 0.3639071985759003,
+  "center": 1.0012819599172993,
+  "spacing": 0.00019590108955669372,
+  "seconds": 0.36084499999998343
+ },
+ {
+  "preset": "clean",
+  "seed": 3,
+  "condition": "shifted",
+  "method": "D wedges by noise",
+  "low_center": 0.3639071985759003,
+  "center": 0.47543566933978837,
+  "spacing": -0.0003187137779752103,
+  "seconds": 0.0443322910000461
+ },
+ {
+  "preset": "clean",
+  "seed": 3,
+  "condition": "shifted",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.3639071985759003,
+  "center": 1.158550662235932,
+  "spacing": -0.00010112165949782703,
+  "seconds": 0.04527641700002505
+ },
+ {
+  "preset": "clean",
+  "seed": 3,
+  "condition": "shifted",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.3639071985759003,
+  "center": 1.064662672715674,
+  "spacing": -0.0001829799113132191,
+  "seconds": 0.08219358299999158
+ },
+ {
+  "preset": "clean",
+  "seed": 3,
+  "condition": "shifted",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.3639071985759003,
+  "center": 0.08767533676259845,
+  "spacing": 9.307467029895378e-05,
+  "seconds": 0.11839433299996927
+ },
+ {
+  "preset": "clean",
+  "seed": 4,
+  "condition": "clean",
+  "method": "A wedges |Z|",
+  "low_center": 0.411931370291427,
+  "center": 0.37023480103817913,
+  "spacing": -0.00010790829142937053,
+  "seconds": 0.03458495800003902
+ },
+ {
+  "preset": "clean",
+  "seed": 4,
+  "condition": "clean",
+  "method": "B columns",
+  "low_center": 0.411931370291427,
+  "center": 0.3739614674079086,
+  "spacing": -0.00011205901859390188,
+  "seconds": 2.7577450830000316
+ },
+ {
+  "preset": "clean",
+  "seed": 4,
+  "condition": "clean",
+  "method": "C coherence",
+  "low_center": 0.411931370291427,
+  "center": 0.3184015786830095,
+  "spacing": -6.937165446396776e-05,
+  "seconds": 0.1845274590000372
+ },
+ {
+  "preset": "clean",
+  "seed": 4,
+  "condition": "clean",
+  "method": "D wedges by noise",
+  "low_center": 0.411931370291427,
+  "center": 0.4813961306995055,
+  "spacing": -0.00016891215412984106,
+  "seconds": 0.042628665999984605
+ },
+ {
+  "preset": "clean",
+  "seed": 4,
+  "condition": "clean",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.411931370291427,
+  "center": 0.4627570954690754,
+  "spacing": -0.00017755559641452479,
+  "seconds": 0.04281691699998191
+ },
+ {
+  "preset": "clean",
+  "seed": 4,
+  "condition": "clean",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.411931370291427,
+  "center": 0.4212248539138665,
+  "spacing": -0.00037250440335490076,
+  "seconds": 0.08855958399999508
+ },
+ {
+  "preset": "clean",
+  "seed": 4,
+  "condition": "clean",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.411931370291427,
+  "center": 0.37023480103817913,
+  "spacing": -0.00010790829142937053,
+  "seconds": 0.1212983750000376
+ },
+ {
+  "preset": "clean",
+  "seed": 4,
+  "condition": "lost",
+  "method": "A wedges |Z|",
+  "low_center": 0.6750710303993622,
+  "center": 0.3862791476490421,
+  "spacing": -0.00028144588124223713,
+  "seconds": 0.0361838329999955
+ },
+ {
+  "preset": "clean",
+  "seed": 4,
+  "condition": "lost",
+  "method": "B columns",
+  "low_center": 0.6750710303993622,
+  "center": 0.3929777314350471,
+  "spacing": -0.0002576829854575857,
+  "seconds": 2.9212367910000125
+ },
+ {
+  "preset": "clean",
+  "seed": 4,
+  "condition": "lost",
+  "method": "C coherence",
+  "low_center": 0.6750710303993622,
+  "center": 0.3445253689813451,
+  "spacing": -0.0002392547485176033,
+  "seconds": 0.24296062500002336
+ },
+ {
+  "preset": "clean",
+  "seed": 4,
+  "condition": "lost",
+  "method": "D wedges by noise",
+  "low_center": 0.6750710303993622,
+  "center": 0.6524304212034941,
+  "spacing": -0.00029550468735950464,
+  "seconds": 0.048392874999990454
+ },
+ {
+  "preset": "clean",
+  "seed": 4,
+  "condition": "lost",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.6750710303993622,
+  "center": 0.4727303145621991,
+  "spacing": -0.0003060545537142412,
+  "seconds": 0.04941074999999273
+ },
+ {
+  "preset": "clean",
+  "seed": 4,
+  "condition": "lost",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.6750710303993622,
+  "center": 0.40586192851690456,
+  "spacing": -0.0003868759256915322,
+  "seconds": 0.08035216599995465
+ },
+ {
+  "preset": "clean",
+  "seed": 4,
+  "condition": "lost",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.6750710303993622,
+  "center": 0.3830433767650775,
+  "spacing": -0.00022987407005781169,
+  "seconds": 0.1301496659999657
+ },
+ {
+  "preset": "clean",
+  "seed": 4,
+  "condition": "shifted",
+  "method": "A wedges |Z|",
+  "low_center": 0.9439081113926914,
+  "center": 0.994740585708486,
+  "spacing": 0.00012059031682531973,
+  "seconds": 0.03601800000001276
+ },
+ {
+  "preset": "clean",
+  "seed": 4,
+  "condition": "shifted",
+  "method": "B columns",
+  "low_center": 0.9439081113926914,
+  "center": 0.9611361008368463,
+  "spacing": 0.00011104180632393046,
+  "seconds": 2.784429624999973
+ },
+ {
+  "preset": "clean",
+  "seed": 4,
+  "condition": "shifted",
+  "method": "C coherence",
+  "low_center": 0.9439081113926914,
+  "center": 0.9438027672247031,
+  "spacing": 0.00013373043551956343,
+  "seconds": 0.3123863330000063
+ },
+ {
+  "preset": "clean",
+  "seed": 4,
+  "condition": "shifted",
+  "method": "D wedges by noise",
+  "low_center": 0.9439081113926914,
+  "center": 0.45705475808994234,
+  "spacing": 0.00020215585769278732,
+  "seconds": 0.04297929199998407
+ },
+ {
+  "preset": "clean",
+  "seed": 4,
+  "condition": "shifted",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.9439081113926914,
+  "center": 0.7089337085595051,
+  "spacing": 0.00017628337406772054,
+  "seconds": 0.04505699999998569
+ },
+ {
+  "preset": "clean",
+  "seed": 4,
+  "condition": "shifted",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.9439081113926914,
+  "center": 0.5613089100196514,
+  "spacing": 0.00013801178978933848,
+  "seconds": 0.08223441699999512
+ },
+ {
+  "preset": "clean",
+  "seed": 4,
+  "condition": "shifted",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.9439081113926914,
+  "center": 0.3432109063727268,
+  "spacing": 0.0001254435119217856,
+  "seconds": 0.123114084000008
+ },
+ {
+  "preset": "clean",
+  "seed": 5,
+  "condition": "clean",
+  "method": "A wedges |Z|",
+  "low_center": 0.25115901310848004,
+  "center": 0.11179822871687195,
+  "spacing": 0.00011516711055925555,
+  "seconds": 0.034724374999996144
+ },
+ {
+  "preset": "clean",
+  "seed": 5,
+  "condition": "clean",
+  "method": "B columns",
+  "low_center": 0.25115901310848004,
+  "center": 0.11259053865584855,
+  "spacing": 0.00012311244726026516,
+  "seconds": 2.6741899579999995
+ },
+ {
+  "preset": "clean",
+  "seed": 5,
+  "condition": "clean",
+  "method": "C coherence",
+  "low_center": 0.25115901310848004,
+  "center": 0.08455410431661474,
+  "spacing": -2.6510872439766686e-05,
+  "seconds": 0.20444983299995556
+ },
+ {
+  "preset": "clean",
+  "seed": 5,
+  "condition": "clean",
+  "method": "D wedges by noise",
+  "low_center": 0.25115901310848004,
+  "center": 0.27186684265037986,
+  "spacing": 0.00038989705187764123,
+  "seconds": 0.04235787499999333
+ },
+ {
+  "preset": "clean",
+  "seed": 5,
+  "condition": "clean",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.25115901310848004,
+  "center": 0.1697734504577891,
+  "spacing": 0.00039279936348490807,
+  "seconds": 0.04237212499998577
+ },
+ {
+  "preset": "clean",
+  "seed": 5,
+  "condition": "clean",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.25115901310848004,
+  "center": 0.22964996052349274,
+  "spacing": 0.0003346847900709271,
+  "seconds": 0.07993975000005094
+ },
+ {
+  "preset": "clean",
+  "seed": 5,
+  "condition": "clean",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.25115901310848004,
+  "center": 0.11179822871687195,
+  "spacing": 0.00011516711055925555,
+  "seconds": 0.11939616600000136
+ },
+ {
+  "preset": "clean",
+  "seed": 5,
+  "condition": "lost",
+  "method": "A wedges |Z|",
+  "low_center": 0.8885372082564366,
+  "center": 0.11898931800392792,
+  "spacing": 0.00047544754481698703,
+  "seconds": 0.035920625000017026
+ },
+ {
+  "preset": "clean",
+  "seed": 5,
+  "condition": "lost",
+  "method": "B columns",
+  "low_center": 0.8885372082564366,
+  "center": 0.10758842320376859,
+  "spacing": 0.00045694972165111203,
+  "seconds": 2.8747200829999997
+ },
+ {
+  "preset": "clean",
+  "seed": 5,
+  "condition": "lost",
+  "method": "C coherence",
+  "low_center": 0.8885372082564366,
+  "center": 0.08751032879543989,
+  "spacing": 0.0002840534732166944,
+  "seconds": 0.3048145000000204
+ },
+ {
+  "preset": "clean",
+  "seed": 5,
+  "condition": "lost",
+  "method": "D wedges by noise",
+  "low_center": 0.8885372082564366,
+  "center": 0.29589496294809653,
+  "spacing": 0.0008022977808841425,
+  "seconds": 0.04398120799999106
+ },
+ {
+  "preset": "clean",
+  "seed": 5,
+  "condition": "lost",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 0.8885372082564366,
+  "center": 0.14817954392623142,
+  "spacing": 0.0008763149874555509,
+  "seconds": 0.04990466699996432
+ },
+ {
+  "preset": "clean",
+  "seed": 5,
+  "condition": "lost",
+  "method": "F wedges, trim and refit",
+  "low_center": 0.8885372082564366,
+  "center": 0.14947107859153277,
+  "spacing": 0.000839852885871073,
+  "seconds": 0.08042399999999361
+ },
+ {
+  "preset": "clean",
+  "seed": 5,
+  "condition": "lost",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 0.8885372082564366,
+  "center": 0.10520093989965307,
+  "spacing": 0.0004693803556159448,
+  "seconds": 0.12081329200003665
+ },
+ {
+  "preset": "clean",
+  "seed": 5,
+  "condition": "shifted",
+  "method": "A wedges |Z|",
+  "low_center": 1.0004733448048035,
+  "center": 1.283193588921649,
+  "spacing": 0.0002870997984147916,
+  "seconds": 0.034780208000029234
+ },
+ {
+  "preset": "clean",
+  "seed": 5,
+  "condition": "shifted",
+  "method": "B columns",
+  "low_center": 1.0004733448048035,
+  "center": 1.238975167762526,
+  "spacing": 0.00029221179358618343,
+  "seconds": 2.6646270000000527
+ },
+ {
+  "preset": "clean",
+  "seed": 5,
+  "condition": "shifted",
+  "method": "C coherence",
+  "low_center": 1.0004733448048035,
+  "center": 1.2391383509831106,
+  "spacing": 8.28606173790547e-05,
+  "seconds": 0.2532258329999877
+ },
+ {
+  "preset": "clean",
+  "seed": 5,
+  "condition": "shifted",
+  "method": "D wedges by noise",
+  "low_center": 1.0004733448048035,
+  "center": 0.5258027093047839,
+  "spacing": 0.0005411991924977322,
+  "seconds": 0.0358557079999855
+ },
+ {
+  "preset": "clean",
+  "seed": 5,
+  "condition": "shifted",
+  "method": "E wedges, Cauchy loss",
+  "low_center": 1.0004733448048035,
+  "center": 1.074094042553642,
+  "spacing": 0.0007270294918491071,
+  "seconds": 0.04853224999999384
+ },
+ {
+  "preset": "clean",
+  "seed": 5,
+  "condition": "shifted",
+  "method": "F wedges, trim and refit",
+  "low_center": 1.0004733448048035,
+  "center": 0.9330281255713913,
+  "spacing": 0.0007655433546620571,
+  "seconds": 0.07952304200000526
+ },
+ {
+  "preset": "clean",
+  "seed": 5,
+  "condition": "shifted",
+  "method": "G wedges, drop bad sectors",
+  "low_center": 1.0004733448048035,
+  "center": 0.12391034895085447,
+  "spacing": 0.00017015041583534618,
+  "seconds": 0.11370825000000195
+ }
+]

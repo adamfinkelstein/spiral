@@ -39,6 +39,8 @@ class WedgeSettings:
     sectors: int = 40         # wedges per turn
     column_step: float = 1.0  # px of groove between columns on the outermost turn (equal steps in theta)
     pass1_step: float = 4.0   # the same for pass 1 (the geometry refit only)
+    check_sectors: int = 40   # angular sectors of the card for the consistency check of the refit
+    check_mads: float = 3.0   # a sector is dropped if its median residual is this many MADs out
 
 
 @dataclass
@@ -50,6 +52,7 @@ class WedgeRun:
     model: np.ndarray       # the refitted spiral's offset from the low-res one at the columns, px
     window: np.ndarray      # pass 2's row centers at the columns, px from the low-res spiral
     path: np.ndarray        # the groove's offset from the low-res spiral at the columns, px
+    dropped: np.ndarray     # angular sectors (of check_sectors) the refit left out as inconsistent
 
 
 def theta_columns(spiral, mark, outer_step):
@@ -127,6 +130,37 @@ def refit_wedges(cells, search=1.5):
     return spiral, model
 
 
+def refit_checked(cells, sectors=40, mads=3.0, rounds=2):
+    # refit_wedges, then a consistency check by angle on the card: the
+    # wedges' residuals grouped into `sectors` angular sectors over all turns.
+    # The groove's drift is random from turn to turn and averages out over
+    # the ~40 turns; a damaged patch (warped, lifted: clean-looking but
+    # displaced grooves) stays at the same angle on every turn. Sectors whose
+    # median residual is more than `mads` MADs from the sectors' median are
+    # dropped and the fit repeated (experiments/fit_columns_vs_wedges.py: a
+    # 30-degree patch shifted by S/3 pulled the center ~1.2 px, with the check
+    # 0.12 px; on undamaged cards it drops nothing).
+    spacing = cells.spiral.spacing
+    sector = np.floor((cells.theta % TAU) / TAU * sectors).astype(int)
+    bad = np.zeros(sectors, bool)
+    for _ in range(rounds):
+        keep = ~bad[sector]
+        spiral, model = refit_wedges(replace(cells, theta=cells.theta[keep], demod=cells.demod[keep],
+                                             offsets=cells.offsets[keep], confidence=cells.confidence[keep]))
+        residual = wrap(cells.offsets - model(cells.theta), spacing)
+        medians = np.array([np.median(residual[sector == k]) for k in range(sectors)])
+        center = np.median(medians)
+        spread = 1.4826 * np.median(np.abs(medians - center))
+        now_bad = np.abs(medians - center) > mads * max(spread, 0.02 * spacing)
+        if np.array_equal(now_bad, bad):
+            break
+        bad = now_bad
+    keep = ~bad[sector]
+    spiral, model = refit_wedges(replace(cells, theta=cells.theta[keep], demod=cells.demod[keep],
+                                         offsets=cells.offsets[keep], confidence=cells.confidence[keep]))
+    return spiral, model, np.flatnonzero(bad)
+
+
 def neighbours_mean(theta, offsets):
     # the mean offset of the turns either side (2 pi along), each from its own
     # turn; where one is off the end, the other alone (0 if neither)
@@ -144,11 +178,11 @@ def run_wedges(image, low_spiral, mark, settings=WedgeSettings()):
     unrolled = Unrolled(image, low_spiral, mark, settings.column_step, settings.sectors)
     spacing, theta = unrolled.spacing, unrolled.theta
     near = lambda reference, cells: reference + wrap(drift_at(cells, theta) - reference, spacing)
-    spiral, model = refit_wedges(first)
+    spiral, model, dropped = refit_checked(first, settings.check_sectors, settings.check_mads)
     path = near(model(theta), first)
     window = (path + neighbours_mean(theta, path)) / 2
     final = wedges(unrolled, unrolled.column_phasors(window))
-    return WedgeRun(unrolled, first, final, spiral, model(theta), window, near(path, final))
+    return WedgeRun(unrolled, first, final, spiral, model(theta), window, near(path, final), dropped)
 
 
 def offsets_about(spiral, x, y):

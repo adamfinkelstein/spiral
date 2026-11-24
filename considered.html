@@ -757,7 +757,16 @@ length instead of equal &theta;, every 1 or 3 px (the same paths; &theta; chosen
 it is time). <code>cell_coherence_results.md</code>, <code>cell_error_breakdown_results.md</code>,
 <code>unrolled_wedges_results.md</code>.</p>
 <p><b>Step 4 on every column</b> (until Nov 2026): the same center and path as
-every 4th column, 3&times; slower (<code>coarse_pass1_results.md</code>; card.html step 4e).</p>
+every 4th column, 3&times; slower (<code>coarse_pass1_results.md</code>; card.html step 4f).</p>
+<p id="fit-alternatives"><b>Step 4's fit, other ways</b> (<code>fit_columns_vs_wedges_results.md</code>;
+center error, typical / hard cards): every column's angle instead of the
+wedges, 0.10 / 0.23 px vs. 0.11 / 0.21, 80&times; slower; every column's phasor by
+coherence, 0.08 / 0.26, 7&times; slower; wedges weighted by their measured noise
+(within-wedge coherence), 0.12 / 0.25 and 0.27 on grain-free cards (the
+spread there is the drift's curvature, not noise); a Cauchy loss, 0.20 / 0.20;
+dropping single wedges more than S/6 from the model, 0.27 / 0.26. None helps
+with a displaced patch (1.0&ndash;1.4 px); the consistency check by angular
+sector (now in the procedure) does (0.12 px).</p>
 <p id="second-pass"><b>A second geometry fit</b> (tried with the strip): sample again
 along the corrected spiral and fit again, reading off any one-turn wave and
 slope still left. The fitted wave dropped from ~0.14 to ~0.01 px, but the center

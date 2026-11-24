@@ -15,7 +15,8 @@ from .wedges import offsets_about
 # (hand mark, nominal); cyan = low-res estimates; yellow = the refit (estimated
 # geometry); orange = the final estimates along the groove (trace, read-out
 # sound); green = truth along the groove (true groove, true sound); pale green
-# = true geometry (center, spacing, ideal spiral); magenta = wrong groove;
+# = true geometry (center, spacing, ideal spiral); magenta = wrong groove
+# (in step 4, the angular sectors the consistency check drops);
 # grey = raw measurements; violet = annotations (cartoon labels, detail-spot
 # boxes, the rectangle's rows and wedge edges).
 COLORS = {"mark": "white", "low": "#4cf", "refit": "#fd3", "trace": "#f93", "true": "#3e6", "geometry": "#a8f0b4",
@@ -231,54 +232,63 @@ def detail(run, path, size, spot):
 
 
 def offsets_explainer(path):
-    # a cartoon of pane f: a toy card (4 turns; the rectangle's spiral has its
-    # center 0.45 spacing off and its spacing 4% off), the groove's offset from
-    # that spiral as the rectangle unrolls it, and the same offsets modulo the spacing
-    true_spacing, center_error = 1.04, np.array([0.4, -0.2])
+    # a cartoon of the offsets the geometry fit reads (step 4): a toy card
+    # (6 turns; the initial estimate, which the rectangle follows, has its
+    # center 0.2 spacing off, its spacing 8% off and its spiral phase 0.6 rad off), the groove's offset from
+    # that spiral as the rectangle unrolls it, with each error's own part
+    # (a one-turn wave, a slope, a constant), and the same offsets modulo the
+    # spacing. Canonical angles: counterclockwise from 3 o'clock, y up.
+    true_spacing, center_error, true_phase = 1.08, np.array([0.17, -0.11]), 0.6
     strip_pitch, true_pitch = 1 / TAU, true_spacing / TAU
-    theta = np.linspace(3 * TAU, 7 * TAU, 4000)
+    theta = np.linspace(3 * TAU, 9 * TAU, 6000)
     strip_x, strip_y = strip_pitch * theta * np.cos(theta), strip_pitch * theta * np.sin(theta)
-    true_x, true_y = center_error[0] + true_pitch * theta * np.cos(theta), center_error[1] + true_pitch * theta * np.sin(theta)
+    true_r = true_pitch * (theta - true_phase)
+    true_x, true_y = center_error[0] + true_r * np.cos(theta), center_error[1] + true_r * np.sin(theta)
     radius = np.hypot(strip_x - center_error[0], strip_y - center_error[1])
-    angle = np.unwrap(np.arctan2(strip_y - center_error[1], strip_x - center_error[0]))
-    folded = -wrap(radius - true_pitch * angle, true_spacing)  # radial offset from the strip's spiral to the nearest groove
+    angle = theta + wrap(np.arctan2(strip_y - center_error[1], strip_x - center_error[0]) - theta, TAU)
+    folded = -wrap(radius - true_pitch * (angle - true_phase), true_spacing)  # strip's spiral to the nearest groove
     unwrapped = np.unwrap(folded * TAU / true_spacing) * true_spacing / TAU
     unwrapped -= true_spacing * np.round(np.mean(unwrapped) / true_spacing)  # follow the groove nearest the strip's spiral
     turns = (theta - theta[0]) / TAU
-    marks = {"A": 600, "B": 1450, "C": 3100}
+    # the three parts (to first order): center -> a one-turn wave, spacing -> a slope, spiral phase -> a constant
+    wave = center_error[0] * np.cos(theta) + center_error[1] * np.sin(theta)
+    slope = (true_pitch - strip_pitch) * (theta - theta[0])
+    constant = np.mean(unwrapped - wave - slope)
+    marks = {"A": 900, "B": 2600, "C": 4700}
     groove, strip, mark_color = COLORS["true"], COLORS["low"], COLORS["label"]
 
-    figure = new_figure(900, 1300)
-    top = figure.add_axes([0.0, 0.56, 0.56, 0.43])
+    figure = new_figure(900, 1650)
+    top = figure.add_axes([0.0, 0.64, 0.56, 0.35])
     top.set_aspect("equal")
     top.set_axis_off()
-    top.plot(true_x, true_y, color=groove, lw=2.5)
-    top.plot(strip_x, strip_y, "--", color=strip, lw=1.5)
+    top.plot(true_x, true_y, color=groove, lw=2)
+    top.plot(strip_x, strip_y, "--", color=strip, lw=1.3)
     top.plot(*center_error, "+", color=groove, ms=14, mew=2.5)
     top.plot(0, 0, "+", color=strip, ms=14, mew=2.5)
     for name, k in marks.items():
         direction = np.array([np.cos(theta[k]), np.sin(theta[k])])
         on_strip = np.array([strip_x[k], strip_y[k]])
-        start, end = on_strip - 0.5 * direction, on_strip + 0.5 * direction
-        top.plot([start[0], end[0]], [start[1], end[1]], color="#999", lw=5, alpha=0.5, solid_capstyle="butt")
+        start_point, end_point = on_strip - 0.5 * direction, on_strip + 0.5 * direction
+        top.plot([start_point[0], end_point[0]], [start_point[1], end_point[1]], color="#999", lw=5, alpha=0.5, solid_capstyle="butt")
         top.plot(*on_strip, "o", color=strip, ms=6)
         top.plot(*(on_strip + folded[k] * direction), "o", color=mark_color, ms=8)
-        top.text(*(end + 0.4 * direction), name, color=mark_color, fontsize=16, weight="bold", ha="center", va="center")
-    top.set_xlim(-7.9, 7.9)
-    top.set_ylim(7.9, -7.9)
+        top.text(*(end_point + 0.45 * direction), name, color=mark_color, fontsize=16, weight="bold", ha="center", va="center")
+    top.set_xlim(-9.9, 9.9)
+    top.set_ylim(-9.9, 9.9)  # y up: the canonical angles
     notes = [
-        ("A toy card, 4 turns", "#ddd"),
+        ("A toy card, 6 turns", "#ddd"),
         ("", None),
         ("green: the real groove", groove),
-        ("cyan, dashed: the spiral the", strip),
-        ("  rectangle follows (low-res stage;", strip),
-        ("  here its center is 0.45 spacing", strip),
-        ("  off and its spacing 4% off)", strip),
+        ("cyan, dashed: the initial estimate", strip),
+        ("  (steps 1\u20133), which the rectangle", strip),
+        ("  follows; here off in all three", strip),
+        ("  ways: center by 0.2 spacing,", strip),
+        ("  spacing by 8%, spiral phase 0.6 rad", strip),
         ("+: each spiral's center", "#ddd"),
         ("", None),
         ("grey bars: columns, each a radial", "#aaa"),
         ("  line \u00b1S/2 (one spacing) about", "#aaa"),
-        ("  the cyan spiral (cyan dot)", "#aaa"),
+        ("  the initial estimate (cyan dot)", "#aaa"),
         ("violet dot: the nearest groove", mark_color),
         ("  on that line; its distance from", mark_color),
         ("  the cyan dot (outward +) is the", mark_color),
@@ -289,17 +299,17 @@ def offsets_explainer(path):
     ]
     for row, (text, color) in enumerate(notes):
         if text:
-            figure.text(0.585, 0.975 - row * 0.0215, text, color=color, fontsize=12.5, va="top")
+            figure.text(0.585, 0.98 - row * 0.0168, text, color=color, fontsize=12.5, va="top")
 
     def offsets_axes(rect, title):
         axes = figure.add_axes(rect)
         axes.axhline(0, color=strip, ls="--", lw=1.5)
-        axes.set_xlim(0, 4)
+        axes.set_xlim(0, 6)
         axes.set_xlabel("column: turns along the rectangle (inner turns left)")
         axes.set_title(title, color="#ddd", fontsize=13, loc="left")
         return axes
 
-    middle = offsets_axes([0.09, 0.285, 0.88, 0.225], "Unrolled: the grooves' offsets from the cyan spiral (outward up)")
+    middle = offsets_axes([0.09, 0.405, 0.88, 0.19], "Unrolled: the grooves' offsets from the initial estimate (outward up)")
     middle.axhspan(-0.5, 0.5, color="#555", alpha=0.35, lw=0)
     for copy in (-2, -1, 1, 2):
         middle.plot(turns, unwrapped + copy * true_spacing, color=groove, lw=1.2, alpha=0.4)
@@ -308,23 +318,35 @@ def offsets_explainer(path):
     middle.set_yticks([-2, -1, 0, 1, 2], ["\u22122S", "\u2212S", "0", "S", "2S"])
     middle.text(0.04, 2.2, "every turn of the groove, one spacing apart; grey: the \u00b1S/2 each column sums",
                 color="#ccc", fontsize=11, va="center")
-    middle.text(0.04, -2.2, "one wave per turn: the center error;  the slow rise: the spacing error",
+    middle.text(0.04, -2.2, "the bold curve: the groove nearest the initial estimate; it is the sum of the three parts below",
                 color="#ccc", fontsize=11, va="center")
+    # each error's own part (violet), which add up to the bold green curve
+    parts = offsets_axes([0.09, 0.225, 0.88, 0.12], "Its three parts: center \u2192 a one-turn wave, spacing \u2192 a slope, spiral phase \u2192 a constant")
+    parts.plot(turns, wave, color=mark_color, lw=1.6, ls="-")
+    parts.plot(turns, slope, color=mark_color, lw=1.6, ls="--")
+    parts.axhline(constant, color=mark_color, lw=1.6, ls=":")
+    parts.text(0.06, 0.47, "center error: one wave per turn (solid)", color=mark_color, fontsize=10.5, va="top")
+    parts.text(5.95, 0.33, "spacing error: a slope (dashed)", color=mark_color, fontsize=10.5, va="top", ha="right")
+    parts.text(3.0, -0.47, "spiral-phase error: a constant (dotted)", color=mark_color, fontsize=10.5, va="bottom", ha="center")
+    parts.set_ylim(-0.55, 0.55)
+    parts.set_yticks([-0.5, 0, 0.5], ["\u2212S/2", "0", "S/2"])
 
-    bottom = offsets_axes([0.09, 0.05, 0.88, 0.165], "Modulo S (pane f): nearest groove only; past \u00b1S/2 the next is nearer (arrow)")
+    bottom = offsets_axes([0.09, 0.04, 0.88, 0.125], "Modulo S (as measured): nearest groove only; past \u00b1S/2 the next is nearer (arrow)")
     breaks = np.concatenate([[False], np.abs(np.diff(folded)) > true_spacing / 2])
     bottom.plot(turns, np.where(breaks, np.nan, folded), color=groove, lw=2.5)
     for edge in (-0.5, 0.5):
         bottom.axhline(edge * true_spacing, color="#888", ls=":", lw=1)
-    jump = np.flatnonzero(breaks & (turns > 2.2))[0]
-    bottom.annotate("", xy=(turns[jump], folded[jump]), xytext=(turns[jump - 1], folded[jump - 1]),
-                    arrowprops=dict(arrowstyle="->", color="#fff", lw=1.5, connectionstyle="arc3,rad=0.5"))
+    if breaks.any():
+        jump = np.flatnonzero(breaks)[len(np.flatnonzero(breaks)) // 2]
+        bottom.annotate("", xy=(turns[jump], folded[jump]), xytext=(turns[jump - 1], folded[jump - 1]),
+                        arrowprops=dict(arrowstyle="->", color="#fff", lw=1.5, connectionstyle="arc3,rad=0.5"))
     bottom.set_ylim(-0.66, 0.66)
     bottom.set_yticks([-0.5, 0, 0.5], ["\u2212S/2", "0", "S/2"])
     for axes in (middle, bottom):
         for name, k in marks.items():
-            axes.plot(turns[k], folded[k], "o", color=mark_color, ms=8, zorder=5)
-            axes.text(turns[k] - 0.07, folded[k], name, color=mark_color, fontsize=14, weight="bold", ha="right", va="center")
+            axes.plot(turns[k], folded[k] if axes is bottom else unwrapped[k], "o", color=mark_color, ms=8, zorder=5)
+            axes.text(turns[k] - 0.08, folded[k] if axes is bottom else unwrapped[k], name, color=mark_color,
+                      fontsize=14, weight="bold", ha="right", va="center")
     save(figure, path)
 
 
@@ -340,28 +362,149 @@ def wedge_dots(run, cells, every_wedge=1):
     return columns[::every_wedge], cells.offsets[::every_wedge], np.stack([brightness[::every_wedge]] * 3, axis=1)
 
 
-def offsets_mod_spacing(run, path):
-    # pass 1's wedges (grey, brighter = higher |Z|) as offsets from the low-res
-    # spiral, mod S; green the true groove, pale green the true spiral, yellow
-    # the refit (the geometry model)
-    strip, spacing = run.strip, run.strip.spiral.spacing
-    true_offset = run.card.nearest_groove(*spiral_points(strip.spiral, strip.theta))[0]
-    columns = turns_along(run, strip.theta)
-    figure = new_figure(900, 900)
-    axes = figure.add_axes([0.08, 0.06, 0.9, 0.92])
-    x, offsets, grey = wedge_dots(run, run.wedges.first)
-    axes.plot(columns[::120], wrap(true_offset[::120], spacing), ".", color=COLORS["true"], ms=1.5)
-    axes.plot(columns[::15], wrap(ideal_offset(run.card, strip)[::15], spacing), ".", color=COLORS["geometry"], ms=1)
-    axes.plot(columns[::15], wrap(run.model[::15], spacing), ".", color=COLORS["refit"], ms=1)
-    axes.scatter(x, wrap(offsets, spacing), s=9, c=grey, zorder=3)
+def shifted_patch(image, card, start_degrees=60, width_degrees=30, shift=1 / 3):
+    # a damaged patch for figure 4d: a sector of the card whose grooves look
+    # clean but sit `shift` spacings further out (warped or lifted), as in
+    # experiments/fit_columns_vs_wedges.py ("shifted")
+    import cv2
+    size = image.shape[0]
+    rows, cols = np.mgrid[0:size, 0:size] + 0.5
+    r, angle = polar(cols, rows, card.spiral.x, card.spiral.y)
+    patch = wrap(angle - np.radians(start_degrees), TAU) % TAU < np.radians(width_degrees)
+    scale = np.where(r > 0, (r - shift * card.spacing) / np.maximum(r, 1), 1)
+    map_x = (card.spiral.x + (cols - card.spiral.x) * scale - 0.5).astype(np.float32)
+    map_y = (card.spiral.y + (rows - card.spiral.y) * scale - 0.5).astype(np.float32)
+    out = image.copy()
+    out[patch] = cv2.remap(image, map_x, map_y, cv2.INTER_LINEAR)[patch]
+    return out
+
+
+def sector_medians(cells, model, sectors=40):
+    # the consistency check's numbers: each angular sector's median residual
+    # (wedge offset minus model, wrapped), over all turns
+    spacing = cells.spiral.spacing
+    residual = wrap(cells.offsets - model(cells.theta), spacing)
+    sector = np.floor((cells.theta % TAU) / TAU * sectors).astype(int)
+    return residual, np.array([np.median(residual[sector == k]) for k in range(sectors)])
+
+
+def residual_panel(axes, run, cells, residual, spacing, label, dropped=(), sectors=40):
+    x, _, grey = wedge_dots(run, cells)
+    if len(dropped):
+        out = np.isin(np.floor((cells.theta % TAU) / TAU * sectors).astype(int), dropped)
+        grey = grey.copy()
+        grey[out] = matplotlib.colors.to_rgb(COLORS["wrong"])
+    axes.axhline(0, color=COLORS["refit"], lw=1.2)
+    axes.scatter(x, residual, s=6, c=grey, zorder=3)
     axes.set_ylim(-spacing / 2, spacing / 2)
-    axes.set_xlabel("turns along the groove (inner turns left)")
-    axes.set_ylabel("offset from the low-res spiral, px (mod spacing)")
+    rms = np.sqrt(np.average(residual ** 2, weights=cells.confidence))
+    axes.text(0.01, 0.95, f"{label}   (rms {rms:.1f} px, weighted by |Z|)", transform=axes.transAxes, va="top",
+              color="#ddd", fontsize=11, bbox=dict(fc="black", ec="none", alpha=0.7))
+
+
+def sector_panel(axes, medians, dropped, spacing, mads=3.0, sectors=40):
+    centers = (np.arange(sectors) + 0.5) * 360 / sectors
+    middle = np.median(medians)
+    limit = mads * max(1.4826 * np.median(np.abs(medians - middle)), 0.02 * spacing)
+    axes.axhspan(middle - limit, middle + limit, color=COLORS["label"], alpha=0.18, lw=0)
+    for bound in (middle - limit, middle + limit):
+        axes.axhline(bound, color=COLORS["label"], lw=1, ls="--")
+    bad = np.isin(np.arange(sectors), dropped)
+    axes.bar(centers[~bad], medians[~bad], width=360 / sectors * 0.8, color=COLORS["measured"])
+    axes.bar(centers[bad], medians[bad], width=360 / sectors * 0.8, color=COLORS["wrong"])
+    reach = max(np.abs(medians).max() * 1.15, 2 * limit)
+    axes.set_ylim(-reach, reach)
+    axes.set_xlim(0, 360)
+    axes.set_xticks(range(0, 361, 45))
+    axes.set_xlabel("angle on the card, degrees (counterclockwise from 3 o'clock)")
+    axes.set_ylabel("sector median\nresidual, px")
+    axes.text(0.01, 0.95, f"consistency check: {bad.sum()} of {sectors} sectors outside the band (median ± {mads:g} MADs)",
+              transform=axes.transAxes, va="top", color="#ddd", fontsize=11)
+
+
+def fit_residuals(run, path, start_error=(5.0, -3.0, 0.0025, 0.3)):
+    # step 4c: the geometry fit on the coarse wedges. Step 3 is already close
+    # on the simulated cards (the fit moves the center ~0.1-0.3 px, invisible
+    # under the groove's few-px drift), so to show what the fit does this
+    # starts from a deliberately worse initial estimate: center off by
+    # (dx, dy) px (y up), spacing by a fraction, spiral phase by rad. Top: the
+    # wedges' offsets from that estimate (= residuals before the fit, mod S)
+    # with the fitted model (yellow), the true geometry (pale green) and the
+    # true grooves (green); middle: residuals after the fit (offset - model,
+    # wrapped), same scale; bottom: the consistency check, residuals by angle.
+    # Returns the numbers for the text.
+    from dataclasses import replace
+    from .scoring import center_error, spacing_error
+    from .strip import Strip
+    from .wedges import Unrolled, WedgeSettings, refit_checked, wedges
+    dx, dy, spacing_change, phase_change = start_error
+    low = run.low.spiral
+    start = replace(low, x=low.x + dx, y=low.y - dy, pitch=low.pitch * (1 + spacing_change), phase=low.phase + phase_change)
+    settings = WedgeSettings()
+    unrolled = Unrolled(run.image, start, run.card.mark, settings.pass1_step, settings.sectors)
+    cells = wedges(unrolled, unrolled.column_phasors(np.zeros(len(unrolled.theta))))
+    spacing = start.spacing
+    fitted, model, dropped = refit_checked(cells)
+    strip = Strip(start, unrolled.theta, unrolled.step, None, None, None)
+    columns = turns_along(run, strip.theta)
+    true_offset = run.card.nearest_groove(*spiral_points(start, strip.theta))[0]
+    figure = new_figure(900, 1000)
+    top = figure.add_axes([0.1, 0.56, 0.88, 0.42])
+    after = figure.add_axes([0.1, 0.30, 0.88, 0.22], sharex=top)
+    check = figure.add_axes([0.1, 0.06, 0.88, 0.17])
+    top.plot(columns[::30], wrap(true_offset[::30], spacing), ".", color=COLORS["true"], ms=1.5)
+    top.plot(columns[::4], wrap(ideal_offset(run.card, strip)[::4], spacing), ".", color=COLORS["geometry"], ms=1)
+    top.plot(columns[::4], wrap(model(strip.theta[::4]), spacing), ".", color=COLORS["refit"], ms=1.5)
+    residual_panel(top, run, cells, wrap(cells.offsets, spacing), spacing, "before: offsets from the initial estimate")
+    top.lines[-1].set_visible(False)  # no zero line before the fit
+    top.set_ylabel("offset, px (mod spacing)")
+    top.tick_params(labelbottom=False)
+    residual, medians = sector_medians(cells, model)
+    residual_panel(after, run, cells, residual, spacing, "after: offsets minus the fitted model", dropped)
+    after.set_ylabel("residual, px")
+    after.set_xlabel("turns along the groove (inner turns left)")
+    sector_panel(check, medians, dropped, spacing)
     save(figure, path)
+    return {"start_center": center_error(run.card, start), "start_spacing": spacing_error(run.card, start),
+            "center": center_error(run.card, fitted), "spacing": spacing_error(run.card, fitted),
+            "pipeline_center": center_error(run.card, run.refit), "dropped": len(dropped),
+            "before_rms": float(np.sqrt(np.average(wrap(cells.offsets, spacing) ** 2, weights=cells.confidence))),
+            "after_rms": float(np.sqrt(np.average(residual ** 2, weights=cells.confidence)))}
+
+
+def check_on_damage(run, path):
+    # step 4d: the same card with a damaged patch (30 degrees, grooves shifted
+    # out by S/3). Top: residuals after the plain fit (the patch pulls the
+    # model); middle: the sector medians against the final model (the check
+    # iterates, so this is the band it ended with), dropped sectors magenta;
+    # bottom: residuals after the refit without them. Returns the numbers for the text.
+    from .scoring import center_error
+    from .wedges import refit_checked, refit_wedges, run_wedges
+    damaged = shifted_patch(run.image, run.card)
+    wedge_run = run_wedges(damaged, run.low.spiral, run.card.mark)
+    cells, spacing = wedge_run.first, run.strip.spiral.spacing
+    plain, plain_model = refit_wedges(cells)
+    checked, checked_model, dropped = refit_checked(cells)
+    plain_residual, _ = sector_medians(cells, plain_model)
+    checked_residual, checked_medians = sector_medians(cells, checked_model)
+    figure = new_figure(900, 860)
+    first = figure.add_axes([0.1, 0.70, 0.88, 0.28])
+    check = figure.add_axes([0.1, 0.42, 0.88, 0.2])
+    last = figure.add_axes([0.1, 0.07, 0.88, 0.28], sharex=first)
+    residual_panel(first, run, cells, plain_residual, spacing, "plain fit: residuals", dropped)
+    first.set_ylabel("residual, px")
+    first.tick_params(labelbottom=False)
+    sector_panel(check, checked_medians, dropped, spacing)
+    residual_panel(last, run, cells, checked_residual, spacing, "after dropping those sectors and fitting again", dropped)
+    last.set_ylabel("residual, px")
+    last.set_xlabel("turns along the groove (inner turns left)")
+    save(figure, path)
+    return {"plain": center_error(run.card, plain), "checked": center_error(run.card, checked),
+            "dropped": len(dropped), "pipeline": center_error(run.card, wedge_run.spiral)}
 
 
 def offsets_vs_truth(run, path):
-    # step 4c again, relative to the true spiral (pale green = 0, possible only
+    # step 4e: the wedges relative to the true spiral (pale green = 0, possible only
     # on a simulated card): yellow = the refit's remaining error, green = the
     # groove's drift, grey = the wedges; below, yellow alone at +-1 px
     strip, spacing, card = run.strip, run.strip.spiral.spacing, run.card
@@ -585,7 +728,7 @@ def turns_rows(run, path, row_height=48, y_range=12, errors=False):
 
 def pass1_compare(run):
     # the full-res stage again with pass 1 on 1 px columns (before Nov 2026)
-    # and on the default 4 px (now), timed; for step 4e
+    # and on the default 4 px (now), timed; for step 4f
     from time import perf_counter
     from dataclasses import replace
     from .scoring import center_error, rms, score_trace, spacing_error
@@ -604,7 +747,7 @@ def pass1_compare(run):
 
 
 def pass1_before_after(run, compare, path):
-    # step 4e: step 4 on every column (before) vs every 4th (now). Top: each
+    # step 4f: step 4 on every column (before) vs every 4th (now). Top: each
     # wedge's offset, 4 px minus 1 px (grey); middle: the refit's error against
     # the true spiral, before (wide, faint) and now (thin), yellow; bottom: the
     # path, now minus before (orange)

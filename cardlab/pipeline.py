@@ -61,6 +61,7 @@ def summarize(run):
         "coherence": run.low.coherence,
         "columns": len(run.strip.theta),
         "wedges": len(run.wedges.final.theta),
+        "dropped_sectors": int(len(run.wedges.dropped)),
         "turns": float((run.strip.theta[-1] - run.strip.theta[0]) / (2 * np.pi)),
         "trace_rms": rms(score.distance),
         "off_quarter": float(np.mean(np.abs(score.distance) > card.spacing / 4)),

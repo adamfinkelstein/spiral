@@ -359,7 +359,7 @@ drift independently they would pull the estimate toward the spiral.</p>
 not the path, so it reads one column in 4 (every 4 px of groove on the outer
 turn, ~164 000 columns, ~1500 wedges); across the groove it still reads every
 full-res row.</p>
-<figure><img class="wide" src="card/img/f_explain.png" alt=""><figcaption>How to read the offsets, a cartoon. Top: a toy card; the rectangle follows the <span class="c">cyan</span> spiral (center 0.45 S and spacing 4% off), each column a radial line &plusmn;S/2 about it (grey); a column's offset is the distance to the nearest groove (<span class="v">violet</span> dot). Middle: the offsets unrolled: one wave per turn from the center error, a slow rise from the spacing error, every turn one spacing apart. Bottom: modulo S, as measured: only the nearest groove, wrapping at &plusmn;S/2. A, B, C: the same three columns in all three panels.</figcaption></figure>
+<figure><img class="wide" src="card/img/f_explain.png" alt=""><figcaption>How to read the offsets, a cartoon. Top: a toy card with 6 turns; the rectangle follows the initial estimate from steps 1&ndash;3 (<span class="c">cyan</span>, dashed), here off in all three ways: center by 0.2 S, spacing by 8%, spiral phase by 0.6 rad. Each column is a radial line &plusmn;S/2 about it (grey); a column's offset is the distance to the nearest groove (<span class="v">violet</span> dot). Second: the offsets unrolled, every turn one spacing apart; the bold curve is the groove nearest the initial estimate. Third: that curve's three parts (<span class="v">violet</span>), one per error: the center error gives a one-turn wave, the spacing error a slope, the spiral-phase error a constant; they add up to the bold curve, and this is the model the fit below uses. Bottom: modulo S, as measured: only the nearest groove, wrapping at &plusmn;S/2. A, B, C: the same three columns throughout.</figcaption></figure>
 <p><b>The fit.</b> Relative to the low-res spiral, a center error (e<sub>x</sub>, e<sub>y</sub>), a
 spacing error and a spiral-phase error put the same pattern into every wedge's
 offset:</p>
@@ -373,19 +373,53 @@ sees the neighbouring turn costs little. The result moves the spiral's
 center by (e<sub>x</sub>, e<sub>y</sub>) and corrects its spacing and spiral phase: the
 <span class="y">corrected spiral</span>. The model, unwrapped, is also each column's
 reference for naming its groove in step 5.</p>
-<figure><img class="wide" src="card/img/f_offsets.png" alt=""><figcaption>The coarse wedges (grey, brighter = higher |Z|) as offsets from the low-res spiral, mod S, along all turns. <span class="y">Yellow</span>: the fitted model; <span class="p">pale green</span>: the same curve for the true geometry; <span class="g">green</span>: the true grooves, which drift a few px from turn to turn.</figcaption></figure>
+<figure><img class="wide" src="card/img/f_fit.png" alt=""><figcaption>The fit on the simulated card (<a href="card.html#step4">card.html 4c</a>), started from a deliberately worse initial estimate (center 5.8 px off, spacing +0.36%, spiral phase 0.3 rad) so that what it removes is visible; step 3's own estimate is only 0.2 px off. Top, before: each coarse wedge's offset from that estimate, mod S (grey, brighter = higher |Z|), with the fitted model (<span class="y">yellow</span>; under it, <span class="p">pale green</span>, the same curve for the true geometry) and the true grooves (<span class="g">green</span>). Middle, after: offset minus model, wrapped, same scale: the one-turn wave and the slope are gone, 6.5 &rarr; 3.3 px rms, and what is left is the groove's drift from turn to turn; the center ends 0.11 px from the truth. Bottom: the consistency check below, sector by sector; none is outside the band.</figcaption></figure>
+<p><b>Consistency check by angle.</b> A damaged patch of the card (warped,
+lifted, a stain that still shows grooves) can look clean but put its grooves
+in the wrong place, and since it sits at the same angle on every turn it
+pulls the one-turn wave, i.e. the center. So after the fit, the wedges'
+residuals (offset minus model, wrapped) are grouped by angle on the card into
+40 sectors of 9&deg;, over all turns together. The groove's drift is random
+from turn to turn and averages out over the ~40 turns; a damaged patch does
+not. A sector whose median residual is more than 3 MADs (median absolute
+deviations, scaled to a standard deviation) from the median of all sectors is
+dropped, and the fit repeated, at most twice. On an undamaged card nothing is
+dropped.</p>
+<figure><img class="wide" src="card/img/f_check.png" alt=""><figcaption>The check at work (<a href="card.html#step4">card.html 4d</a>): the same card with a 30&deg; patch (60&ndash;90&deg;) whose grooves look clean but sit S/3 further out. Top: residuals after the plain fit; the patch's wedges (<span class="m">magenta</span>) are off at the same angle on every turn, and they pull the center 1.06 px. Middle: each sector's median residual against the final model; the band (<span class="v">violet</span>) is the median &plusmn; 3 MADs. The first round drops the three sectors inside the patch, the second the one it overlaps (54&ndash;63&deg;). Bottom: the final fit without them: the rest is flat, the center 0.05 px from the truth.</figcaption></figure>
 <div class="test"><p><b class="tag">Tested</b>
 On 20 cards the corrected center is 0.08&ndash;0.34 px from the truth (hard cards
 0.13&ndash;0.50 px), from 0.14&ndash;0.39 px after step 3, and the spacing within 0.04%.</p>
-<p>What limits it is the groove's own drift: its random one-turn component
-over ~38 turns can't be told from a center error. Relative to the true spiral
-(possible only on a simulated card) what is left is a ~0.1 px one-turn wave;
-fitting again on rows re-sampled about the corrected spiral didn't reduce it
-(<a href="considered.html#second-pass">considered</a>).</p>
+<p>What is left is a random estimate error that the data can't remove: a
+one-turn wave or slope that is really in the measured offsets can't be told
+from a center or spacing error. Relative to the true spiral (possible only on
+a simulated card) it is a ~0.05&ndash;0.1 px one-turn wave plus a slope of
+similar size over the whole card. On the showcase card two sources put it
+there about equally: the wedges' measurement noise from the grain (each
+wedge's offset is 0.24 px rms from the true groove at its angle; fitting the
+model to that noise alone correlates +0.9 with the error) and the groove's
+drift (3.5 px rms from turn to turn, but its own one-turn wave over 38 turns
+is only 0.045 px). The soft-L1 loss weights the wedges by their residual, so
+the error is not simply either part's least-squares fit; refitting with the
+same loss reproduces it exactly. Fitting again on rows re-sampled about the
+corrected spiral didn't reduce it
+(<a href="considered.html#second-pass">considered</a>). It is tiny next to one
+turn's rise in radius (S &asymp; 29 px): plotted as radius against &theta; it
+would not show at all. And step 5's path follows the groove itself, so it
+hardly matters downstream.</p>
 <p>Every 4th column vs. every column (<code>experiments/coarse_pass1.py</code>, 20 cards):
 the same center (within 0.001 px) and spacing, the path within 0.008 px and the
-same sound, ~3&times; less time for this step (0.56 &rarr; 0.18 s).</p></div>
-<figure><img class="wide" src="card/img/f_truth.png" alt=""><figcaption>The same, relative to the true spiral (<span class="p">pale green</span>, now zero). <span class="y">Yellow</span>: the fit's remaining error; below, alone at &plusmn;1 px: a small one-turn wave. <span class="g">Green</span>: the groove's drift.</figcaption></figure>
+same sound, ~3&times; less time for this step (0.56 &rarr; 0.18 s).</p>
+<p>Damage and alternatives (<code>experiments/fit_columns_vs_wedges.py</code>, 20
+cards, center error median, typical cards): clean 0.11 px; with a ruined 40&deg;
+sector and 8 deep scratches (data lost) 0.12 px, already harmless since such
+wedges have small |Z|; with a 30&deg; sector of grooves shifted by S/3, 1.19 px
+without the check and 0.12 px with it. Fitting every column's angle instead of
+the wedges gave the same accuracy 80&times; slower; fitting every column's phasor
+by coherence 0.08 px on low-grain cards but worse on hard ones, 7&times; slower;
+weighting wedges by their measured noise, or dropping single wedges that sit
+far from the model, made things worse (the drift, &plusmn;3.4 px per turn, can't be
+told from a damaged wedge one at a time).</p></div>
+<figure><img class="wide" src="card/img/f_truth.png" alt=""><figcaption>The same, relative to the true spiral (<span class="p">pale green</span>, now zero). <span class="y">Yellow</span>: the fit's remaining error; below, alone at &plusmn;1 px: a small one-turn wave (center) and slope (spacing), from the wedges' measurement noise and the groove's drift (above). <span class="g">Green</span>: the groove's drift.</figcaption></figure>
 
 <!-- ===================================================================== -->
 <h2 id="step5">5. The groove's path at full resolution <span class="xref"><a href="card.html#step5">results &rarr;</a></span></h2>
