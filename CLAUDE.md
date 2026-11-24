@@ -696,16 +696,51 @@ adding controls. To see a page, take a headless Chrome screenshot:
   --screenshot=/path/to/shot.png "file://$PWD/center.html"
 ```
 
-## Handoff (Nov 2026, from a Cowork session)
+## Handoff (24 Nov 2026)
 
-State: check `git status -sb` for commits not yet pushed to GitHub.
+Where to start in a fresh session: this file, `procedure.html` (the method,
+steps 0–6, with "Tested" boxes), `card.html` (the same steps on a simulated
+card, built by `build_card.py`), `considered.html` (what was dropped and
+why), `notes/context.md`. Check `git status -sb` for unpushed commits.
 
-Closed: the "gradient tilt" center experiment (JS work in progress, gitignored,
-in `Claude outputs/cardpipe_tilt_wip.js` and `tilt_test_harness.js`) and the
-gradient-line method are dropped in favor of the spiral coherence map; see
-"Gradient-based centers dropped" above for the findings.
+State (last commit 34a0e07 and after):
+- The pipeline (cardlab/) is steps 0–6: low-res 1024² copy → FFT spacing
+  (1/√r weights, log(|F|+ε), Gaussian σ = 1 bin, parabola) → spiral
+  coherence map (center of point symmetry, spiral phase = arg Z) → step 4
+  geometry fit on coarse wedges (every 4th column; grid + soft-L1 least
+  squares on wrapped residuals; then `refit_checked`, the consistency check
+  by 40 angular sectors) → step 5 full-res path → step 6 sound.
+- Conventions: r = b(θ − φ), θ counterclockwise from 3 o'clock as displayed
+  (y up); φ is the "spiral phase"; "turns", not arms/rings. The real cards
+  wind outward counterclockwise as displayed (checked on Tomaz's
+  sonorine_001 and Ezra's card).
+- 20 simulated cards (typical / loud / hard / clean × 5 seeds): corrected
+  center 0.08–0.34 px (hard 0.13–0.50), no sectors dropped on any.
+  `python build_card.py --rerun` recomputes all (several minutes);
+  without `--rerun` it uses card/results.json and only redraws the showcase.
+- The step-4 leftover error (~0.05–0.1 px, 4e) is wedge noise plus the
+  groove's drift; nothing in the data can remove it, and the path follows
+  the groove anyway.
+- The JS pages (spacing.html, center.html, card_js.html) are older: they
+  share the winding flip (`SPIRAL_SENSE`) but not the new FFT weighting
+  (Adam: "Leave the JS").
 
-Done since: the card pipeline is ported to Python (cardlab/, card.html is
-the generated report; the JS page lives on as card_js.html); the center
-search is the FFT coherence map + its center of point symmetry (both the
-spacing page and cardlab).
+Open ideas (not started; ask Adam before starting any):
+- Make the synthetic card more like Ezra's card (experiments/ezra_card/
+  README): sound rms ~0.3, a tonal component, a slow depth trend, its
+  geometry range.
+- Readout fixes: sample the land midway to the neighbouring grooves; gain
+  correction.
+- Port the FFT weighting (1/√r, weights summing to 1, log(|F|+ε)) to the JS
+  pages.
+- Run the pipeline on the real cards (Tomaz's aligned depth maps, Ezra's
+  photo) end to end.
+
+Closed earlier: the "gradient tilt" center experiment (JS work in progress,
+gitignored, in `Claude outputs/`) and the gradient-line method were dropped
+in favor of the spiral coherence map; see "Gradient-based centers dropped"
+above.
+
+Setup on a new machine: `python3 -m venv .venv && .venv/bin/pip install -r
+requirements.txt`; view pages with `.venv/bin/python -m http.server` in this
+folder (the pages load images, so file:// may not show everything).
