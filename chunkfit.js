@@ -1,7 +1,7 @@
 // Connected components of the chunk image and per-component spiral fits, for
 // center.html. Pure functions (no DOM); depends only on N from render.js.
 //
-// Spiral model (matches render.js): arm n passes radius r = b (α − φ + 2πn),
+// Spiral model (matches render.js): turn n passes radius r = b (α − φ + 2πn),
 // b = spacing / 2π, where α is the angle about the center and φ the phase.
 // θ = α − φ + 2πn = r / b is the spiral parameter along the curve.
 // Image values may be noisy (outside 0..1); weights are clamped to 0..1.
@@ -222,8 +222,8 @@ function fitChunk(img, comp, p, opts) {
   let tx = 0, ty = 0, tw = 0;
   for (let k = 0; k < m; k++) {
     if (!core[k]) continue;
-    const a = Math.atan2(Y[k] - circ.p[1], X[k] - circ.p[0]);
-    tx -= W[k] * Math.sin(a); ty += W[k] * Math.cos(a); tw += W[k];
+    const a = spiralAngle(X[k] - circ.p[0], Y[k] - circ.p[1]);
+    tx -= W[k] * Math.sin(a); ty -= SENSE * W[k] * Math.cos(a); tw += W[k]; // (−sin α, cos α) with y down
   }
   out.circleRaw = { x: circ.p[0], y: circ.p[1], R: circ.p[2] };
   out.circle = tw > 0
@@ -231,12 +231,12 @@ function fitChunk(img, comp, p, opts) {
     : out.circleRaw;
   // Angles are measured relative to a fixed reference direction (towards the
   // chunk from the circle centre), so a chunk never straddles the ±π cut.
-  const ref = Math.atan2(my - out.circle.y, mx - out.circle.x);
-  const angle = (k, cx, cy) => ref + wrapPi(Math.atan2(Y[k] - cy, X[k] - cx) - ref);
+  const ref = spiralAngle(mx - out.circle.x, my - out.circle.y);
+  const angle = (k, cx, cy) => ref + wrapPi(spiralAngle(X[k] - cx, Y[k] - cy) - ref);
   const phaseAt = (cx, cy) => { // weighted circular mean of α − r/b
     let s = 0, c = 0;
     for (let k = 0; k < m; k++) {
-      const a = Math.atan2(Y[k] - cy, X[k] - cx) - Math.hypot(X[k] - cx, Y[k] - cy) / b;
+      const a = spiralAngle(X[k] - cx, Y[k] - cy) - Math.hypot(X[k] - cx, Y[k] - cy) / b;
       s += W[k] * Math.sin(a); c += W[k] * Math.cos(a);
     }
     return Math.atan2(s, c);
@@ -253,14 +253,14 @@ function fitChunk(img, comp, p, opts) {
   };
 
   // Robust loss: Tukey cutoff (px) and per-pixel IRLS weights U (1 = plain
-  // least squares). Inliers are pixels within half the cutoff of their arm.
+  // least squares). Inliers are pixels within half the cutoff of their turn.
   const cut = Math.max(opts.cutoff * S, 1e-6);
   const U = new Float64Array(m).fill(1);
   const perpResid = (k, q) => {
     const r = Math.hypot(X[k] - q[0], Y[k] - q[1]);
     return (r - b * (angle(k, q[0], q[1]) - q[2] + TAU * armIndex[k])) * r / Math.sqrt(r * r + b * b);
   };
-  const resid = q => { // q = [cx, cy, φ]; weighted perpendicular distance to the pixel's arm
+  const resid = q => { // q = [cx, cy, φ]; weighted perpendicular distance to the pixel's turn
     const e = new Float64Array(m);
     for (let k = 0; k < m; k++) e[k] = SW[k] * Math.sqrt(U[k]) * perpResid(k, q);
     return e;
@@ -275,7 +275,7 @@ function fitChunk(img, comp, p, opts) {
   setArms(cx, cy, ph);
   if (opts.refine) {
     // 3. Refine the spiral model by iteratively reweighted least squares: each
-    //    round assigns every pixel to its nearest arm, sets its Tukey weight,
+    //    round assigns every pixel to its nearest turn, sets its Tukey weight,
     //    and runs LM with those held fixed, until the center stops moving.
     for (let round = 0; round < 12; round++) {
       setWeights([cx, cy, ph]);
@@ -290,7 +290,7 @@ function fitChunk(img, comp, p, opts) {
   fit = { e: resid([cx, cy, ph]) };
   fit.A = normalEq(jacobian(resid, [cx, cy, ph], fit.e), fit.e).A;
 
-  // Robust loss (0 = every pixel on its arm, 1 = all outliers), weighted
+  // Robust loss (0 = every pixel on its turn, 1 = all outliers), weighted
   // inlier fraction, and inlier mask.
   const inl = new Uint8Array(m);
   let loss = 0, inW = 0, swu = 0;
@@ -328,11 +328,11 @@ function fitChunk(img, comp, p, opts) {
   // phase and spacing.
   out.truth = (tx, ty, tph, tS) => {
     const b = tS / TAU;
-    const tref = Math.atan2(my - ty, mx - tx);
+    const tref = spiralAngle(mx - tx, my - ty);
     let a0 = Infinity, a1 = -Infinity;
     for (let k = 0; k < m; k++) {
       if (!core[k] || !inl[k]) continue;
-      const a = tref + wrapPi(Math.atan2(Y[k] - ty, X[k] - tx) - tref);
+      const a = tref + wrapPi(spiralAngle(X[k] - tx, Y[k] - ty) - tref);
       const r = Math.hypot(X[k] - tx, Y[k] - ty);
       const t = a - tph + TAU * Math.round((r / b - (a - tph)) / TAU);
       if (t < a0) a0 = t;
@@ -394,13 +394,13 @@ function chunkData(img, comp, maxPix) {
 }
 
 // Normalized Tukey loss (0..1) of a chunk's pixels for a fixed spiral (center,
-// phase), each pixel on its nearest arm.
+// phase), each pixel on its nearest turn.
 function evalLoss(d, cx, cy, ph, S, cut) {
   const b = S / TAU;
   let acc = 0;
   for (let k = 0; k < d.m; k++) {
     const r = Math.hypot(d.X[k] - cx, d.Y[k] - cy);
-    let e = r - b * (Math.atan2(d.Y[k] - cy, d.X[k] - cx) - ph);
+    let e = r - b * (spiralAngle(d.X[k] - cx, d.Y[k] - cy) - ph);
     e = (e - S * Math.round(e / S)) * r / Math.sqrt(r * r + b * b);
     acc += d.W[k] * lossNorm(e, cut);
   }
@@ -412,7 +412,7 @@ function evalLoss(d, cx, cy, ph, S, cut) {
 function phaseFor(ds, cx, cy, b) {
   let s = 0, c = 0;
   for (const d of ds) for (let k = 0; k < d.m; k++) {
-    const a = Math.atan2(d.Y[k] - cy, d.X[k] - cx) - Math.hypot(d.X[k] - cx, d.Y[k] - cy) / b;
+    const a = spiralAngle(d.X[k] - cx, d.Y[k] - cy) - Math.hypot(d.X[k] - cx, d.Y[k] - cy) / b;
     s += d.W[k] * Math.sin(a); c += d.W[k] * Math.cos(a);
   }
   return Math.atan2(s, c);
@@ -420,7 +420,7 @@ function phaseFor(ds, cx, cy, b) {
 
 // One spiral (center + phase, spacing S) fitted to the pixels of several
 // chunks at once, by the same IRLS as fitChunk: each round assigns every pixel
-// to its nearest arm and sets its Tukey weight, then LM. Angles are measured
+// to its nearest turn and sets its Tukey weight, then LM. Angles are measured
 // relative to a per-chunk reference direction, so no chunk straddles ±π.
 function fitJoint(ds, start, S, cut, rounds = 8, iters = 20) {
   const b = S / TAU;
@@ -430,12 +430,12 @@ function fitJoint(ds, start, S, cut, rounds = 8, iters = 20) {
   const REF = new Float64Array(m), ARM = new Float64Array(m), U = new Float64Array(m).fill(1);
   let o = 0, sw = 0;
   for (const d of ds) {
-    const ref = Math.atan2(d.my - start.y, d.mx - start.x);
+    const ref = spiralAngle(d.mx - start.x, d.my - start.y);
     for (let k = 0; k < d.m; k++, o++) {
       X[o] = d.X[k]; Y[o] = d.Y[k]; W[o] = d.W[k]; SW[o] = Math.sqrt(d.W[k]); REF[o] = ref; sw += d.W[k];
     }
   }
-  const ang = (k, cx, cy) => REF[k] + wrapPi(Math.atan2(Y[k] - cy, X[k] - cx) - REF[k]);
+  const ang = (k, cx, cy) => REF[k] + wrapPi(spiralAngle(X[k] - cx, Y[k] - cy) - REF[k]);
   const perp = (k, q) => {
     const r = Math.hypot(X[k] - q[0], Y[k] - q[1]);
     return (r - b * (ang(k, q[0], q[1]) - q[2] + TAU * ARM[k])) * r / Math.sqrt(r * r + b * b);
@@ -471,20 +471,20 @@ function fitJoint(ds, start, S, cut, rounds = 8, iters = 20) {
 
 // A chunk's own local spiral about a fixed center (cx, cy): r = b (u − φ),
 // u = α + 2πn the unwrapped angle (α measured about a reference direction
-// towards the chunk, n the pixel's arm). With the arms assigned this is
+// towards the chunk, n the pixel's turn). With the turns assigned this is
 // linear in (b, c = −bφ): r = b·u + c, a weighted linear regression. Tukey
-// weights (cutoff `cut`) and arms are refreshed for `iters` rounds.
+// weights (cutoff `cut`) and turns are refreshed for `iters` rounds.
 // tol > 0 (model B): b is free but held near b0 by a penalty (b − b0)²/(tol·b0)²
 // (residuals in px, unit noise), so long chunks set their own spacing and
 // short ones stay near the nominal one. tol = 0 (model A): b = b0, only φ.
 // Returns { b, ph, loss, ref, arm } (loss: normalized Tukey, nearest arm).
 function fitLocal(d, cx, cy, b0, tol, cut, iters = 3) {
   const m = d.m, R = new Float64Array(m), A = new Float64Array(m), arm = new Int32Array(m);
-  const ref = Math.atan2(d.my - cy, d.mx - cx);
+  const ref = spiralAngle(d.mx - cx, d.my - cy);
   let s = 0, cc = 0;
   for (let k = 0; k < m; k++) {
     R[k] = Math.hypot(d.X[k] - cx, d.Y[k] - cy);
-    A[k] = ref + wrapPi(Math.atan2(d.Y[k] - cy, d.X[k] - cx) - ref);
+    A[k] = ref + wrapPi(spiralAngle(d.X[k] - cx, d.Y[k] - cy) - ref);
     const a = A[k] - R[k] / b0; s += d.W[k] * Math.sin(a); cc += d.W[k] * Math.cos(a);
   }
   let b = b0, ph = Math.atan2(s, cc);
@@ -534,7 +534,7 @@ function fitJointLocal(ds, start, b0, tol, cut, rounds = 12) {
         const L = locs[i];
         for (let k = 0; k < d.m; k++, o++) {
           const dx = d.X[k] - q[0], dy = d.Y[k] - q[1], r = Math.hypot(dx, dy);
-          const a = L.ref + wrapPi(Math.atan2(dy, dx) - L.ref);
+          const a = L.ref + wrapPi(spiralAngle(dx, dy) - L.ref);
           const ee = r - L.b * (a + TAU * L.arm[k] - L.ph);
           e[o] = Math.sqrt(d.W[k] * tukeyW(ee, cut)) * ee * r / Math.sqrt(r * r + L.b * L.b);
         }
@@ -685,7 +685,7 @@ function combineChunksLocal(img, comps, fits, p, opts) {
 
 // For each candidate centre on a G×G grid covering the image: the fit's loss
 // for this component if the center were there, with each pixel on its
-// nearest arm and the phase solved (weighted circular mean, then once more
+// nearest turn and the phase solved (weighted circular mean, then once more
 // with Tukey weights). opts: { robust, cutoff }. With robust, the value is the
 // normalized Tukey loss (0..1); otherwise the RMS distance (px). Writes into
 // out (Float32Array G*G), returns { min, max, at }.
@@ -714,7 +714,7 @@ function costMap(img, comp, p, G, out, opts) {
       let s = 0, c = 0;
       for (let k = 0; k < m; k++) {
         R[k] = Math.hypot(X[k] - cx, Y[k] - cy);
-        Al[k] = Math.atan2(Y[k] - cy, X[k] - cx);
+        Al[k] = spiralAngle(X[k] - cx, Y[k] - cy);
         const a = Al[k] - R[k] / b; s += W[k] * Math.sin(a); c += W[k] * Math.cos(a);
       }
       let ph = Math.atan2(s, c);

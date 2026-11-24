@@ -21,7 +21,7 @@
 <body>
 
 <h1>Spiral FFT: controls</h1>
-<p class="src">What each control does. For the method itself, step by step with its parameters and test results, see <a href="procedure.html">Procedure</a>. Source code: <a href="https://github.com/adamfinkelstein/spiral">github.com/adamfinkelstein/spiral</a></p>
+<p class="src">What each control does. For the method itself, step by step with its parameters and test results, see <a href="considered.html#part1">Procedure</a> (Part 1). Source code: <a href="https://github.com/adamfinkelstein/spiral">github.com/adamfinkelstein/spiral</a></p>
 
 <p>The left panel shows a white spiral (or set of concentric rings) on black,
 computed on a 512&times;512 grid. The right panel shows the 2D Fourier
@@ -112,7 +112,7 @@ a fraction of a pixel, and the spiral is drawn exactly there.</p>
   center is skipped, as the card pipeline stops there.</dd>
   <dt>Coherence center</dt>
   <dd>The center and phase from the spiral coherence map, the method of the
-  card pipeline (<a href="procedure.html#p1coh">Procedure</a>, step 8; spiral
+  card pipeline (<a href="considered.html#p1coh">Procedure</a>, step 8; spiral
   only). For every candidate center c, Z(c) adds up the image times
   e<sup>&minus;i(|p &minus; c|/b &minus; angle(p &minus; c))</sup> over all pixels p (b = spacing/2&pi;):
   at the true center every turn adds in step. One FFT correlation gives Z at
@@ -131,7 +131,7 @@ a fraction of a pixel, and the spiral is drawn exactly there.</p>
   so outer turns dominate ("by length"). "1/r" multiplies the image by 1/r
   around the marked center before the transform, so every turn counts
   equally; "1/&radic;r" (the default) is halfway between, and was the best
-  compromise in tests (<a href="procedure.html">Procedure</a>, step 2).</dd>
+  compromise in tests (<a href="considered.html#part1">Procedure</a>, step 2).</dd>
   <dt>Rings/spiral</dt>
   <dd>Checked: a spiral. Unchecked: concentric circles at radii that are
   multiples of the ring spacing, kept only if they fall between the start and
@@ -176,7 +176,7 @@ curved arcs coming in from the edges and corners of the right panel
 <p>The plot below the two panels is drawn against radius &rho; in the
 Fourier transform (FFT bins): rings spaced <i>s</i> px apart put peaks at
 &rho; = 512&nbsp;/&nbsp;<i>s</i> and its multiples. See
-<a href="procedure.html">Procedure</a> (steps 3&ndash;4) for how the estimate
+<a href="considered.html#part1">Procedure</a> (steps 3&ndash;4) for how the estimate
 is computed.</p>
 <dl>
 <dt>White curve</dt>

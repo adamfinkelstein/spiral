@@ -59,7 +59,7 @@ calibrated from those images.
    cards). cardlab also dropped its 3%-from-nominal fallback, which broke
    cards cut on other machines (25.9 / 32.2 px vs. 29 nominal).
 
-## Current pipeline (cardlab, see procedure.html Part 3)
+## Current pipeline (cardlab, see procedure.html steps 0–6)
 
 Low res (1024²): mask to the hand-marked annulus → FFT spacing (peak within
 ±10% of nominal) → coherence map → its center of point symmetry (center),
@@ -74,7 +74,7 @@ land minus groove bottom, relative to its slow average. Typical cards:
 center ~0.1–0.3 px, path ~0.15 px, no wrong groove, sound correlation ~0.9
 (limited by the readout and the measured grain level, not the path).
 Alternatives tried (strip with ±S or one-period windows, per-pixel sectors,
-re-centering on the groove, per-wedge tilt): procedure.html P3.6b.
+re-centering on the groove, per-wedge tilt): considered.html Part 3.
 
 ## Adam's preferences
 
@@ -89,13 +89,31 @@ re-centering on the groove, per-wedge tilt): procedure.html P3.6b.
   hand marks) before adopting; drop features that don't help rather than
   keep options.
 - Prefers RANSAC-style robust methods where they fit.
-- Keep docs current: procedure.html (method step by step), CLAUDE.md,
+- Keep docs current: procedure.html (method step by step), considered.html
+  (alternatives dropped), CLAUDE.md,
   README, index.html.
 - Commit locally when asked ("check it in"); push when asked (works only
   from a session running on the Mac, e.g. remote-control; the Cowork sandbox
   can't push).
 - Asks probing "why" questions; explain math concretely (e.g. the coherence
   score Z, its J0 ring pattern, why spacing errors matter).
+
+## Real cards (data/cards/, Nov 2026)
+
+- Ezra's card (`data/cards/ezra_card.jpg`, a 2000² grey rendering; results
+  and lessons in `experiments/ezra_card/README.md`): cardlab runs on it as
+  it is (spacing 9.9 px, 52.5 turns, coherence 0.75, path 0.064 S rms from a
+  perfect spiral). Winding: outward counterclockwise as displayed, like
+  Tomaz's sonorine_001 (coherence map with both senses: 89.7 vs 11.1, and
+  40.2 vs 25.3 on Tomaz's groove mask). So since Nov 2026 cardlab and the
+  JS pages measure angles counterclockwise from 3 o'clock as displayed (y
+  up), and the simulated cards wind the same way.
+- Suggested for the simulated cards (not done yet): sound rms ~0.3 (the
+  card's relative depth modulation reads 0.29 vs ~0.46 for our typical
+  card); a tonal component (~195 cycles/turn peak); maybe slow surface
+  height variation (power below 50 cycles/turn) and an ~11% depth trend
+  from inner to outer turns; presets spanning inner/outer radius 0.42–0.58
+  and 40–52 turns. Drift: this card 0.064 S, sonorine_001 0.10–0.12 S.
 
 ## Open questions and ideas
 
@@ -118,8 +136,8 @@ re-centering on the groove, per-wedge tilt): procedure.html P3.6b.
   is slower still. Wobble was removed. A second strip pass along the
   refitted spiral flattened step f but didn't improve the center
   (drift-limited), so it was dropped (Nov 2026).
-- Groove identity: every method names a groove's turn by the nearest arm of
-  the geometry model, so a groove drifting more than S/2 from it lands on the
+- Groove identity: every method names a groove's turn by the nearest turn of
+  the geometry model's spiral, so a groove drifting more than S/2 from it lands on the
   wrong turn. Idea: grooves can't cross, so check their order across turns
   at each angle (easy in the rectangle).
 - Put card imperfections back one at a time (warp, slow height drift, dust,

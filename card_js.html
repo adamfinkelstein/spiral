@@ -39,7 +39,7 @@
 <body>
 <div class="top">
   <div class="ctl">
-    <a class="button" href="index.html">&larr; Experiments</a><a class="button" href="procedure.html#part3" target="_blank">Procedure</a><button class="button" id="newCard" type="button">New card</button><button class="button" id="run" type="button">Run again</button>
+    <a class="button" href="index.html">&larr; Experiments</a><a class="button" href="procedure.html" target="_blank">Procedure</a><button class="button" id="newCard" type="button">New card</button><button class="button" id="run" type="button">Run again</button>
     <div class="grid">
       <label for="preset">Card preset</label><select id="preset"></select>
       <label for="seed">Seed</label><input id="seed" type="number" min="1" step="1" value="1">
@@ -211,7 +211,7 @@
 <p style="color:#888;font-size:12px">Full-resolution pixels; heights in units of the nominal groove depth.</p>
 </div>
 
-<script>var SPIRAL_N = 1024;</script>
+<script>var SPIRAL_N = 1024; var SPIRAL_SENSE = -1; // its card model winds the old way</script>
 <script src="render.js"></script>
 <script src="fftspacing.js"></script>
 <script src="gradcenter.js"></script>

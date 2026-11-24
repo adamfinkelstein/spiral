@@ -30,7 +30,7 @@ Estimate the ring spacing from the 2D Fourier transform.
   mask as its only window.
 - Earlier versions scored spacings by a harmonic sum and found a rough
   center from gradient lines (RANSAC); both were dropped in Nov 2026 to
-  match the card pipeline (see the procedure, Part 1).
+  match the card pipeline (see considered.html, Part 1).
 - Coherence center (default on, spiral only): the card pipeline's center
   search ported to JS (`coherence.js`): the spiral coherence map |Z| by one
   FFT correlation; the center is the map's center of point symmetry near its

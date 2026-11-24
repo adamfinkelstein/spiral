@@ -17,9 +17,13 @@ from cardlab.scoring import center_error, correlation, rms, score_trace, spacing
 from cardlab.strip import (Strip, StripSettings, build_strip, lock_trace, refit_basis, refit_geometry, refit_start,
                            strip_columns)
 
+# NOTE (Nov 2026): written for the old spiral convention r = pitch * theta,
+# theta = angle - phase + 2 pi n. cardlab now uses r = pitch * (theta - phase),
+# theta = the card's angle unwrapped; this script was not updated (results
+# files record what it gave then).
 # Offline experiment (Nov 2026): local spiral coherence in cells instead of the
 # full-res strip. With the low-res spiral (center, pitch, phase) known, every
-# annulus pixel belongs to the arm nearest it (turn n) and to an angular sector
+# annulus pixel belongs to the turn nearest it (turn n) and to an angular sector
 # k (K per turn); per cell Z = sum v e^{-iu}, u = r/pitch - (angle - phase)
 # (mod 2 pi), whose angle gives the groove's offset from the spiral in that
 # cell (mod S) and |Z| its strength. Then: the same geometry refit as the
@@ -34,10 +38,10 @@ STEP = 3.0  # px of groove between readout columns, as the strip
 
 def cell_sums(image, spiral, scale, r_lo, r_hi, sectors, taper=False, remove_mean=True, path=None, rows_per_chunk=256):
     # image px = full-res px / scale; returns per cell (turn n, sector k): theta, Z, count.
-    # Plain: each pixel goes to its nearest arm's band (+-S/2), all weights 1.
-    # Taper (as the strip's columns): each pixel goes to both arms it lies
+    # Plain: each pixel goes to its nearest turn's band (+-S/2), all weights 1.
+    # Taper (as the strip's columns): each pixel goes to both turns it lies
     # between, weighted cos^2(pi d / 2S) by its distance d from each (so a
-    # cell's weights fall to 0 at +-S, centred on its arm), which keeps the
+    # cell's weights fall to 0 at +-S, centred on its turn), which keeps the
     # neighbouring grooves' edges out. Either way the cell's weighted mean is
     # removed: Z = sum w (v - mean) e^{-iu}.
     pitch, cx, cy, phase = spiral.pitch / scale, spiral.x / scale, spiral.y / scale, spiral.phase
@@ -57,17 +61,17 @@ def cell_sums(image, spiral, scale, r_lo, r_hi, sectors, taper=False, remove_mea
         u = r / pitch - around
         sector = np.minimum((around / TAU * sectors).astype(int), sectors - 1)
         carrier = np.exp(-1j * u)
-        # band position: about the spiral's arm, or (path) about the groove itself,
+        # band position: about the spiral's turn, or (path) about the groove itself,
         # i.e. shifted by the current drift estimate at this pixel's spiral angle
         shift = 0.0 if path is None else TAU * path(np.rint(u / TAU) * TAU + around) / (pitch * TAU * scale)
         v = u - shift
         if taper == "full":
             inner = np.floor(v / TAU).astype(int)
-            d = (v / TAU - inner)  # 0..1 spacings outward from the inner arm
+            d = (v / TAU - inner)  # 0..1 spacings outward from the inner turn
             parts = [(inner, np.cos(np.pi * d / 2) ** 2), (inner + 1, np.cos(np.pi * (1 - d) / 2) ** 2)]
         elif taper == "half":
             turn = np.rint(v / TAU).astype(int)
-            parts = [(turn, np.cos(np.pi * (v / TAU - turn)) ** 2)]  # 1 at the arm, 0 at +-S/2
+            parts = [(turn, np.cos(np.pi * (v / TAU - turn)) ** 2)]  # 1 at the turn, 0 at +-S/2
         else:
             parts = [(np.rint(v / TAU).astype(int), np.ones_like(u))]
         for turn, weight in parts:
@@ -167,7 +171,7 @@ def run_cells(card, image, low, use_low_res, sectors, taper=False, min_confidenc
 
 # earlier runs: 20 sectors and smoothing over 1 cell worse than 40; 80 no
 # better; low res worse on hard cards; a radial taper (cos^2 over +-S/2 or
-# +-S, about the arm or the groove) and removing each cell's mean worse than
+# +-S, about the turn or the groove) and removing each cell's mean worse than
 # the plain one-period band (Nov 2026, see cell_coherence_results.md). Now:
 # full res, 40 per turn, plain band, with and without re-centering the bands
 # on the groove, and interpolating over weak cells (confidence < 0.3 / 0.5).

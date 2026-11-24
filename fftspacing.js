@@ -3,7 +3,7 @@
 // weighting, and the spacing as the peak of the smoothed profile (all as
 // cardlab/lowres.py). No DOM; uses N from render.js (the image size, a power
 // of two). Load after render.js. (The harmonic-sum score with its
-// coarse-to-fine search, used until Nov 2026, is described in procedure.html.)
+// coarse-to-fine search, used until Nov 2026, is described in considered.html.)
 
 // ---------- FFT ----------
 

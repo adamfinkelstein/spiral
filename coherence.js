@@ -2,7 +2,7 @@
 // cardlab/lowres.py find_center). No DOM; uses N from render.js.
 //
 // About the true center the image has a component cos(r/b - angle + phase)
-// (bright arms; b = spacing / 2π), so
+// (bright turns; b = spacing / 2π), so
 //   Z(c) = Σ_p v(p) exp(-i (|p - c|/b - angle(p - c)))
 // is ≈ (n/2) e^{i phase} at c = center and small elsewhere: every turn adds in
 // step there. Z is a correlation of the image with a "spiral wave" kernel, so
@@ -83,7 +83,7 @@ function spiralWaveKernel(b, reach) {
   for (let qy = -reach; qy <= reach; qy++) for (let qx = -reach; qx <= reach; qx++) {
     const r = Math.hypot(qx, qy);
     if (r > reach) continue;
-    const arg = -(r / b - Math.atan2(-qy, -qx)); // K at -q
+    const arg = -(r / b - spiralAngle(-qx, -qy)); // K at -q (render.js's angle convention)
     const i = ((qy + N) % N) * N + ((qx + N) % N);
     kRe[i] = Math.cos(arg); kIm[i] = Math.sin(arg);
   }

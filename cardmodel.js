@@ -110,7 +110,7 @@ function makeCard(presetName, seed) {
   const wobble = bandTable(P.wobble, P.wobbleWave), audio = bandTable(P.audio, P.audioWave);
   const wobbleAt = th => lookS(wobble, th), audioAt = th => lookS(audio, th);
 
-  // depth of the cut along arm θ: D0·(1 + sound), faded in/out at the ends of
+  // depth of the cut along turn θ: D0·(1 + sound), faded in/out at the ends of
   // the recording; ≤ 0 means the stylus is above the card there
   const smooth01 = t => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
   const depthAt = th => { const r = b * th; return smooth01((r - P.rIn) / P.edgeFade) * smooth01((P.rOut - r) / P.edgeFade) * (1 + audioAt(th)); };
@@ -135,7 +135,7 @@ function makeCard(presetName, seed) {
   { let a = 0; for (let k = 0; k < 20000; k++) { const g = vnoise(rnd() * 4000, rnd() * 4000, 1, seedG); a += g * g; } nG = 1 / Math.sqrt(a / 20000); }
   const grainAmp = P.grain * grooveRms * nG; // grain rms = P.grain × the groove's rms
 
-  // nearest arm and position across it for point (x, y)
+  // nearest turn and position across it for point (x, y)
   const psiAt = (x, y) => {
     const dx = x - C.x, dy = y - C.y, r = Math.hypot(dx, dy), al = Math.atan2(dy, dx) - phi;
     const n = Math.round((r / b - al) / CARD_TAU), th = al + CARD_TAU * n;
@@ -144,7 +144,7 @@ function makeCard(presetName, seed) {
   };
   const toIdeal = (x, y) => [x, y]; // no distortion in this model
 
-  // height of the cut surface: min(0, stylus) over the nearest arms
+  // height of the cut surface: min(0, stylus) over the nearest turns
   const k2 = 4 / (W0 * W0);
   const sample = (x, y, box = 0, gss = 0) => {
     const dx = x - C.x, dy = y - C.y, r = Math.hypot(dx, dy), al = Math.atan2(dy, dx) - phi;
@@ -152,7 +152,7 @@ function makeCard(presetName, seed) {
     let v = 0;
     for (let n = n0 - 1; n <= n0 + 1; n++) {
       const th = al + CARD_TAU * n;
-      const u = r - b * th - driftAt(th) - wobbleAt(th); // radial distance to arm n
+      const u = r - b * th - driftAt(th) - wobbleAt(th); // radial distance to turn n
       if (u * u * k2 > 3) continue; // stylus far above the card here
       const z = -depthAt(th) + k2 * u * u;
       if (z < v) v = z;

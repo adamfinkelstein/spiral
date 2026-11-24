@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from .geometry import TAU, spiral_points, wrap
+from .geometry import TAU, polar, spiral_points, wrap
 
 # Scores against the card's truth (only possible on simulated cards).
 
@@ -24,10 +24,10 @@ def spacing_error(card, spiral):
 
 
 def ideal_offset(card, strip):
-    # the true spiral (center, spacing, phase; no drift) as an offset from the strip's spiral
+    # the true spiral (center, spacing, spiral phase; no drift) as an offset from the strip's spiral
     x, y = spiral_points(strip.spiral, strip.theta)
     r = np.hypot(x - card.spiral.x, y - card.spiral.y)
-    along = r - card.spiral.pitch * (np.arctan2(y - card.spiral.y, x - card.spiral.x) - card.spiral.phase)
+    along = r - card.spiral.radius(polar(x, y, card.spiral.x, card.spiral.y)[1])
     return -wrap(along, card.spacing)
 
 

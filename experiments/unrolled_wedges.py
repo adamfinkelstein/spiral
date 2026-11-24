@@ -21,6 +21,10 @@ from cardlab.strip import (Strip, StripSettings, build_strip, lock_trace, refit_
 from cell_coherence import run_cells
 from strip_window import make_demodulate
 
+# NOTE (Nov 2026): written for the old spiral convention r = pitch * theta,
+# theta = angle - phase + 2 pi n. cardlab now uses r = pitch * (theta - phase),
+# theta = the card's angle unwrapped; this script was not updated (results
+# files record what it gave then).
 # Offline experiment (Nov 2026, Adam's idea): the whole annulus unrolled into a
 # rectangle along the ONE spiral from the low-res coherence map: columns at
 # equal arc length along it, rows = radial offset d from it. Rows -S/2..S/2
@@ -97,7 +101,7 @@ def geometry_model(cells):
 
 def neighbours_mean(theta, offsets):
     # the mean offset of the turns either side (one turn = 2 pi along the
-    # rectangle), each from its own arm; 0 where a neighbour is off the end
+    # rectangle), each from its own turn; 0 where a neighbour is off the end
     total, count = np.zeros_like(offsets), np.zeros_like(offsets)
     for side in (TAU, -TAU):
         inside = (theta + side >= theta[0]) & (theta + side <= theta[-1])

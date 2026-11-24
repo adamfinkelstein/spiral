@@ -35,17 +35,29 @@ Adam's preferences and open questions.
   M×M crop, M = power of two ≥ 6σ, at most N; max at twice the center),
   `coherenceCenter(src, spacing, mark, windowFraction = 1 / 8, search = 1.5)`
   (σ = mark.rOuter / 8, center within 1.5σ of the peak; phase = arg Z at
-  the center). No DOM. Bright arms, so Z has no minus sign (Python's
+  the center). No DOM. Bright turns, so Z has no minus sign (Python's
   grooves do). Same rules as cardlab's find_center.
 - `explain.html` — help page for `spacing.html` controls ("Explain"
   button). Keep it in sync when its controls change.
-- `procedure.html` + `procedure/*.png` — both methods step by step, in three
-  parts: Part 1 (spacing page: spacing and rough center), Part 2 (center
-  page: center and phase from chunks, incl. options under evaluation) and
-  Part 3 (card page: realistic card, whole pipeline, results, next steps). Inputs, each step with parameters, what was
-  tried, result tables, limits ("Procedure" buttons on both pages; linked
-  from explain.html and index.html). Figures were rendered from the app in headless Chromium
-  (canvas data → PNG, 384 px). Update it when the method or defaults change.
+- Three documentation pages (Nov 2026 split, Adam's request):
+  `procedure.html` — a clean description of the card pipeline as steps
+  0–6 (input; FFT; spacing; center and phase; geometry correction on every
+  4th column; full-res path; sound), each with a figure from card/img (so
+  colors match card.html) and the experiments in separate grey "Tested"
+  boxes, never mixed into the description. Each step links to
+  card.html#stepN. `card.html` — the same steps run on simulated cards
+  (figures 0a, 1a, 2a, 3a, 4a–4e, 5a–5g, 6a; sections `id="step0"`…`step6`
+  link back to procedure.html#stepN). `considered.html` — everything
+  tried and dropped: Part 1 (the spacing page's method and experiments,
+  ids part1 / p1coh), Part 2 (the center page's chunk method, part2),
+  Part 3 (per pipeline step, the alternatives with numbers; id
+  second-pass for the second geometry fit). `procedure/*.png` (rendered
+  from the spacing/center apps, 384 px) are used only in considered.html,
+  except `procedure/fft_examples.png` (procedure step 1: the spacing page's
+  default spiral at 7.5 / 15 px, its FFT and profile; made by
+  `procedure/make_fft_examples.py`, which runs render.js in node).
+  The spacing / center / explain pages' "Procedure" links go to
+  considered.html. Update these when the method or defaults change.
 - `center.html` / `center.js` — center/phase experiment (spiral only, no
   rings mode: `params()` sets `spiral: true` for render.js). One left column:
   true spiral (drag to move center; chunks highlighted) → connected
@@ -133,8 +145,7 @@ Pages serves them (nothing is built on GitHub).
   the strip's 0.59 / 0.68 / 1.32 / 0.56, sound the same; 0.37 s vs 0.54 s.
   Why the strip was worse: its ±S cos² window takes in the neighbouring
   turns, which drift differently, and pulled the path ~10% toward the
-  spiral. card.html shows only the wedges; its section 4 and procedure
-  P3.6b list the alternatives tried with numbers (strip, strip with ±S/2
+  spiral. card.html shows only the wedges; considered.html Part 3 lists the alternatives tried with numbers (strip, strip with ±S/2
   or two-period windows, per-pixel sectors, re-centering on the groove,
   per-wedge tilt). Experiments: unrolled_wedges.py, strip_window.py,
   cell_coherence*.py, cell_error_breakdown.py. `Run.strip` is now just the
@@ -152,24 +163,36 @@ Pages serves them (nothing is built on GitHub).
   refit: grid start + scipy least_squares with soft_l1 on wrapped
   residuals, lock_trace), `readout.py` (sound), `scoring.py` (truth),
   `pipeline.py` (run_pipeline, summarize), `figures.py` (matplotlib, one
-  function per step figure), `report.py` (HTML): step e is 16 pre-built
-  256-px details (`figures.detail_columns`: evenly spaced turns at golden-
-  angle steps, up to 4 replaced by the longest wrong-groove runs;
-  `e_detail_00..15.png`, crops clamped to the frame). Step a draws their
-  boxes; clicking one (HTML boxes over the image, small script) swaps step
-  e. The detail draws trace and truth as polylines over the whole spiral,
-  clipped by the axes (consecutive columns are neighbours along the
-  groove), wrong-groove columns in magenta. Before step f, a cartoon
-  (`figures.offsets_explainer`, `f_explain.png`, also in procedure P3.4):
-  toy card with the rectangle's spiral off center, the offsets unrolled, and
-  modulo S, with three columns A, B, C followed through all three.
-  Steps f0 (`rectangle_turns`: 4 wedges of 5 consecutive turns, stacked so
-  they tile) and f0b (`wedges_on_card`) show the rectangle. Step f is two
-  panes: f1 pass 1's wedges about the low-res spiral (what the refit sees: the
-  low-res center / spacing errors as a one-turn wave and a slope), f2
-  (`figures.offsets_vs_truth`, `f_truth.png`) everything minus the true
-  spiral: yellow = the refit's remaining error (with a ±1 px zoom below),
-  green = the drift; numbers: refit error and drift rms.
+  function per step figure), `report.py` (HTML), sections steps 0–6 as in procedure.html: step 5a
+  is 16 pre-built 256-px details (`figures.detail_columns`: evenly spaced
+  turns at golden-angle steps, up to 4 replaced by the longest
+  wrong-groove runs; `e_detail_00..15.png`, crops clamped to the frame).
+  Step 0a draws their boxes; clicking one (HTML boxes over the image,
+  small script) swaps 5a. The detail draws path and truth as polylines
+  over the whole spiral, clipped by the axes, wrong-groove columns in
+  magenta. Step 4: 4a the cartoon (`figures.offsets_explainer`,
+  `f_explain.png`: toy card with the rectangle's spiral off center, the
+  offsets unrolled, and modulo S, columns A, B, C), 4b the rectangle
+  (`rectangle_turns`: 4 wedges of 5 consecutive turns, stacked so they
+  tile), 4c the coarse wedges about the low-res spiral with the fit
+  (`f_offsets.png`), 4d the same minus the true spiral (`f_truth.png`,
+  yellow = the fit's remaining error with a ±1 px zoom, green = drift),
+  4e every 4th vs every column (`figures.pass1_compare` reruns the
+  full-res stage both ways at build time, ~2 s; `f_pass1.png`) plus the
+  20-card 1/2/4/8 px table. Step 5: 5b `wedges_on_card`, 5c rectangle
+  around the spot, 5d path, 5e/5f one row per turn (offsets / errors),
+  5g error per turn. Step 6: 6a sound. File names keep the old letters
+  (a_…j_). `d_explain.png` (`figures.coherence_explainer`: the toy spiral
+  with c, p, q = p − c, |q|, α_q, S, φ; the kernel; |J0|) and
+  `d_coordinate.png` (`figures.spiral_coordinate_plot`: the spiral
+  coordinate u along a ray (ramp) / the groove for four turns (staircase,
+  α_q in [0, 2π) from 3 o'clock, plus θ = u + α_q as a pale-green ramp) / a
+  circle (sawtooth)) and `d_coordinate_map.png`
+  (`figures.spiral_coordinate_map`: u at every pixel, rainbow, cut at 3
+  o'clock, and u mod 2π, cyclic) and `d_lobes.png` (`figures.stretch_lobes`: |Z| near the true
+  center, unstretched and stretched 1/2/3%, brightest pixel vs symmetry
+  center) are built with the rest
+  but used only in procedure.html step 3.
 - Sanity check against the JS version (covers the low-res stage and the
   former strip, not the wedges): `checks/compare_with_js.sh [preset]
   [seed]` (needs node — on the Mac via nvm in Terminal; ~2 min) dumps the
@@ -214,6 +237,42 @@ Pages serves them (nothing is built on GitHub).
   fallback to the nominal (now not even for an edge peak, which fails): the old
   rule (nominal if > 3% off) turned cards cut at 25.9 / 32.2 px searched
   with the 29-px nominal into 9.5–12.9% errors (peak itself right to 0.08%).
+- Name (Nov 2026, Adam): φ is the "spiral phase" everywhere in the docs,
+  figures and comments (never bare "phase", which is kept for angles of
+  complex numbers; "rotation" read as moving along the spiral). The code
+  field stays `Spiral.phase`. considered.html (older pages' text) still says
+  "phase".
+- Spiral convention (Nov 2026, Adam): r = pitch·(θ − phase), θ = the angle
+  about the center from 3 o'clock, unwrapped (θ ≡ angle mod 2π); `Spiral.radius(θ)`
+  and `Spiral.theta_at(r)`. Was r = pitch·θ with θ = angle − phase + 2πn
+  (same spirals; every θ shifted by the phase, so the simulated cards' sound
+  and drift, drawn as functions of θ, changed; 20-card ranges unchanged).
+  Wedges and turns now start at 3 o'clock. experiments/cell_coherence*.py and
+  unrolled_wedges.py still use the old convention (noted in each).
+- Angles and winding (Nov 2026, Adam): canonical angles are counterclockwise
+  from 3 o'clock as displayed (y up), although image rows run down:
+  `geometry.polar` returns atan2(−dy, dx), `spiral_points` puts y = cy −
+  r sin θ, the coherence kernel uses atan2(−qy, qx), the geometry refits
+  move the center by (ex, −ey). The real cards wind outward
+  counterclockwise as displayed (Tomaz's sonorine_001 and Ezra's card:
+  experiments/ezra_card/), and so do the simulated cards now (before, they
+  wound the other way). JS: render.js defines `SENSE` (from `SPIRAL_SENSE`,
+  default 1) and `spiralAngle(dx, dy)`; render.js, coherence.js,
+  chunkfit.js (angles and the circle fit's sideways correction) and
+  gradcenter.js (`shiftAbout`) use it; card_js.html sets `SPIRAL_SENSE =
+  -1` because its frozen card model winds the old way. Checked: spacing
+  page center 0.003–0.013 px, spiral phase within 1.2° (8° at spacing 15
+  from the FFT spacing); center page combined 0.01 px; card_js unchanged.
+- Real cards: `data/cards/` (README lists each). `ezra_card.jpg` and
+  `experiments/ezra_card/` (scripts + README with results and lessons).
+- FFT scale (Nov 2026, Adam): the 1/√r weights (0 for r < 2 nominal
+  spacings; was capped at max(r, 2S), same result since the card mask is 0
+  there) sum to 1 and the spectrum
+  is log(|F| + ε), ε = `LOG_FLOOR` 1e-12 (scale-free; |F| ≥ ~1e-7 on cards).
+  Was weights at mean 1 and log(1 + |F|), which only worked because |F| ≫ 1
+  (sum-1 weights with log1p: prominence 0.003, the card fails). Same
+  spacing to 1e-5 px, prominence within 0.002. The JS (fftspacing.js, shared
+  with the frozen card_js) still uses mean 1 and log1p.
 - FFT window (tested Nov 2026, 4 presets × 10 seeds): the soft annulus mask
   is the only window — no Hann on top (it starved the outer turns: spacing
   rms error 0.071 → 0.046 % on typical/loud/clean, peak 11 → 8 bins wide;
@@ -303,7 +362,7 @@ Pages serves them (nothing is built on GitHub).
   drift, dust, scratches, banding or damage (all removed; add back one at a
   time later). Groove centerline r = bθ + drift(θ) + wobble(arc length).
   Hill-and-dale sound: cut depth D = D0·(1 + a(s)), round stylus (parabola,
-  width W0 = 0.6 S at D0), surface = min(0, stylus) over the 3 nearest arms,
+  width W0 = 0.6 S at D0), surface = min(0, stylus) over the 3 nearest turns,
   so where a < −1 nothing is cut (the groove disappears) and deep cuts are
   wider. Heights in units of D0; grain rms = P.grain × the groove's rms.
   `audioAt(θ)` is the sound; `depthAt(θ)` the cut depth incl. the end fade.
@@ -358,7 +417,7 @@ Pages serves them (nothing is built on GitHub).
 r(θ) = bθ + δ(θ), δ piecewise linear in θ with knots at 20/40/60/80% of the
 way from start to end radius (0 at both ends): continuous, kinks in slope —
 a model of a real, imperfect spiral. `makeOffset` in render.js; renderSpiral
-searches two arms each side when offsets are on, and uses the arm's local
+searches two turns each side when offsets are on, and uses the turn's local
 slope for the perpendicular distance. Chunks and end caps stay on the ideal θ
 (`weight` and caps get the ideal radius). With all offsets 0 the image is
 bit-identical to before. "Truth" on the center page is still the ideal
@@ -435,9 +494,9 @@ Robustness (8 random offset sets, uniform in ±amp at each knot):
   400×400 and cropped (`.crop`) to their right 2/3; the full image is still
   drawn and transformed.
 - The spiral is not stroked with canvas paths. `renderSpiral(p, center, out,
-  weight?)` computes each pixel from its distance to the nearest arms
+  weight?)` computes each pixel from its distance to the nearest turns
   (r = bθ, b = spacing / 2π), writing 0..1 floats into `out`. `p.phase` is in
-  radians. The optional `weight(n, ra, ang)` scales each arm's contribution;
+  radians. The optional `weight(n, ra, ang)` scales each turn's contribution;
   the center page uses it to keep only chunks.
 - Smooth edges use a Gaussian CDF (erf) profile; "Edge transition" is the
   10–90% width. Deliberate: hard or sigmoid edges have harmonics above Nyquist
@@ -497,7 +556,7 @@ Robustness (8 random offset sets, uniform in ±amp at each knot):
    grow 2 px into soft-edge pixels (only those ≤ the threshold).
 4. **Per-chunk fit** (`fitChunk`): weighted Kåsa circle → geometric circle →
    circle-center correction (below) → IRLS: each round assigns every pixel to
-   its nearest arm (pixels of one component may sit on different arms) and
+   its nearest turn (pixels of one component may sit on different turns) and
    sets its Tukey weight (cutoff 0.5 × spacing), then Levenberg–Marquardt
    over center + phase with the spacing known (the assumed spacing: true ×
    (1 + Spacing error %); truth uses the true spacing). Outputs center,
@@ -563,8 +622,8 @@ Robustness (8 random offset sets, uniform in ±amp at each knot):
 - Per-chunk failures that remain have the same inlier fraction and loss as
   good fits (they slide along the flat valley), so per-chunk outlier tests
   can't catch them.
-- Components spanning two arms fit *better* than single-arm ones (median 0.11
-  vs 0.25 px): the nearest-arm assignment handles them.
+- Components spanning two turns fit *better* than single-turn ones (median 0.11
+  vs 0.25 px): the nearest-turn assignment handles them.
 - Circle-fit correction: a circle fitted to a spiral arc has its center ≈ b
   sideways, along (−sin α, cos α) for a pixel at angle α (exactly
   b(r²+b²)/(r²+2b²); radially only ≈ b²/r). Subtracting b × the weighted mean
@@ -584,7 +643,7 @@ Robustness (8 random offset sets, uniform in ±amp at each knot):
   fragments whose fit collapsed onto the speck itself — hence the
   center-at-least-one-spacing-away rule.
 - Keep line width + noise fringe well under spacing/2: pixels farther than
-  that from their centerline are assigned to the neighbouring arm.
+  that from their centerline are assigned to the neighbouring turn.
 
 ## Gotchas
 
@@ -595,7 +654,7 @@ Robustness (8 random offset sets, uniform in ±amp at each knot):
   `id="spiral"`, so its rings/spiral checkbox is `isSpiral`.
 - `labelComponents` grows only into pixels at or below the low threshold;
   growing into above-threshold pixels picked up dropped noise specks between
-  arms, which broke θ ranges and fits.
+  turns, which broke θ ranges and fits.
 - The center page recomputes everything each frame (renders, components,
   three fit passes, combination); the cost map is drawn just after, and
   skipped while another render is queued (e.g. dragging).

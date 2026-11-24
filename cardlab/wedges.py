@@ -31,7 +31,7 @@ from .strip import Strip, refit_basis, refit_start, sample_at
 #     of the groove, at (groove + mean of the neighbouring turns' offsets) / 2,
 #     so the window's ends fall in the land (centered on the groove itself was
 #     worse); path = pass 1's path + the new offsets from it within +-S/2.
-# Offsets between wedges: phasors |Z| e^{i phase} interpolated (drift_at).
+# Offsets between wedges: phasors |Z| e^{i angle} interpolated (drift_at).
 
 
 @dataclass
@@ -55,9 +55,9 @@ class WedgeRun:
 def theta_columns(spiral, mark, outer_step):
     # equal steps in theta from 1.5 spacings inside the marked inner edge to 1.5
     # inside the outer one, `outer_step` px of groove apart on the outermost turn
-    first = (mark.r_inner + 1.5 * spiral.spacing) / spiral.pitch
-    last = (mark.r_outer - 1.5 * spiral.spacing) / spiral.pitch
-    return np.arange(first, last, outer_step / (spiral.pitch * last))
+    first = spiral.theta_at(mark.r_inner + 1.5 * spiral.spacing)
+    last = spiral.theta_at(mark.r_outer - 1.5 * spiral.spacing)
+    return np.arange(first, last, outer_step / spiral.radius(last))
 
 
 class Unrolled:
@@ -65,7 +65,7 @@ class Unrolled:
         self.image, self.spiral, self.spacing = image, spiral, spiral.spacing
         self.theta = theta_columns(spiral, mark, column_step)
         # px of groove per column at the middle turn (readout lengths are in px there)
-        self.step = spiral.pitch * np.median(self.theta) * (self.theta[1] - self.theta[0])
+        self.step = spiral.radius(np.median(self.theta)) * (self.theta[1] - self.theta[0])
         self.per_turn = TAU / (self.theta[1] - self.theta[0])
         reach = int(np.ceil(self.spacing / 2))
         self.rows = np.arange(-reach, reach + 1, dtype=float)
@@ -111,7 +111,7 @@ def drift_at(cells, theta):
 def refit_wedges(cells, search=1.5):
     # the strip's geometry refit on the wedge offsets: relative to the low-res
     # spiral a center error is a one-turn wave, a spacing error a slope, a
-    # phase error an offset (mod S). Returns the refitted spiral and the
+    # spiral-phase error an offset (mod S). Returns the refitted spiral and the
     # (unwrapped) model of its offset from the low-res spiral at any theta.
     spacing, low = cells.spiral.spacing, cells.spiral
     basis = refit_basis(cells)
@@ -120,15 +120,16 @@ def refit_wedges(cells, search=1.5):
     a, beta, ex, ey = least_squares(residuals, refit_start(cells, search, every=1), loss="soft_l1",
                                     f_scale=0.1 * spacing).x
     pitch = low.pitch + beta
-    spiral = replace(low, x=low.x + ex, y=low.y + ey, pitch=pitch, phase=low.phase - (a - beta * cells.theta[0]) / pitch)
-    model = lambda theta: (a + beta * (theta - cells.theta[0]) + ex * np.cos(theta + low.phase)
-                           + ey * np.sin(theta + low.phase))
+    # radius at theta: low.radius(theta) + a + beta (theta - theta_0) = pitch (theta - phase)
+    spiral = replace(low, x=low.x + ex, y=low.y - ey, pitch=pitch,  # ey is up, rows run down
+                     phase=(low.pitch * low.phase - a + beta * cells.theta[0]) / pitch)
+    model = lambda theta: a + beta * (theta - cells.theta[0]) + ex * np.cos(theta) + ey * np.sin(theta)
     return spiral, model
 
 
 def neighbours_mean(theta, offsets):
     # the mean offset of the turns either side (2 pi along), each from its own
-    # arm; where one is off the end, the other alone (0 if neither)
+    # turn; where one is off the end, the other alone (0 if neither)
     total, count = np.zeros_like(offsets), np.zeros_like(offsets)
     for side in (TAU, -TAU):
         inside = (theta + side >= theta[0]) & (theta + side <= theta[-1])
@@ -151,7 +152,7 @@ def run_wedges(image, low_spiral, mark, settings=WedgeSettings()):
 
 
 def offsets_about(spiral, x, y):
-    # points as (theta, offset px) about `spiral`: each one's nearest arm
+    # points as (theta, offset px) about `spiral`: each one's nearest turn
     theta = nearest_turn_theta(spiral, x, y)
     radius, _ = polar(x, y, spiral.x, spiral.y)
-    return theta, radius - spiral.pitch * theta
+    return theta, radius - spiral.radius(theta)

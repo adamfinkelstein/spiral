@@ -96,10 +96,11 @@ function gradientLines(src, perBin, floorQ) {
 
 // Signed distance from point c to line k after the spiral correction about c.
 // Spiral correction of a line through (px, py), about center c: shift by
-// b·(sin α, −cos α) with (cos α, sin α) = (p − c)/|p − c| (no trig needed).
+// b·(sin α, −cos α) with (cos α, sin α) = (p − c)/|p − c| (no trig needed), in
+// the y-down convention; the other winding (SENSE, render.js) mirrors it.
 function shiftAbout(px, py, c, b) {
   const dx = px - c.x, dy = py - c.y, r = Math.hypot(dx, dy) || 1;
-  return [px + (b * dy) / r, py - (b * dx) / r];
+  return [px - (SENSE * b * dy) / r, py + (SENSE * b * dx) / r];
 }
 
 function lineDist(L, k, c, b) {

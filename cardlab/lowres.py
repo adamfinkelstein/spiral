@@ -63,13 +63,19 @@ def normalize_in_mask(image, mask):
     return masked / np.sqrt(np.sum(masked**2) / np.sum(mask))
 
 
+LOG_FLOOR = 1e-12  # epsilon in log(|F| + epsilon): only guards against exact zeros (|F| >= ~1e-7 here)
+
+
 def log_spectrum(image, mask):
     # the soft annulus mask is the window (no Hann on top: it starved the outer
     # turns; 10 seeds each of typical, loud and clean: spacing rms error
     # 0.071 -> 0.046 %, peak 11 -> 8 bins wide; hard cards about the same).
     # Subtract the mean inside the mask only, so the frame outside stays 0.
+    # log(|F| + epsilon), not log(1 + |F|): scale-free, so a constant factor on
+    # the image only shifts the profile (Nov 2026; was log1p with the weights
+    # at mean 1, which kept |F| >> 1: same spacing to 1e-5 px).
     centered = image - (np.sum(image * mask) / np.sum(mask)) * mask
-    return np.log1p(np.abs(np.fft.fftshift(np.fft.fft2(centered))))
+    return np.log(np.abs(np.fft.fftshift(np.fft.fft2(centered))) + LOG_FLOOR)
 
 
 def radial_profile(spectrum, smoothing):
@@ -109,8 +115,10 @@ def peak_without_slope(profile, index):
 def fft_spacing(image, mask, mark, scale, nominal, settings):
     size = image.shape[0]
     radius = pixel_radius(size, mark.x / scale, mark.y / scale)
-    weight = np.maximum(radius, 2 * nominal) ** -settings.turn_weight_power
-    spectrum = log_spectrum(image * weight / weight.mean(), mask)
+    # 1/sqrt(r), 0 within 2 spacings of the mark (no turns there; on a card the
+    # mask's inner circle is far outside it anyway)
+    weight = np.where(radius >= 2 * nominal, np.maximum(radius, 2 * nominal) ** -settings.turn_weight_power, 0.0)
+    spectrum = log_spectrum(image * weight / weight.sum(), mask)  # weights sum to 1
     profile = radial_profile(spectrum, settings.profile_smoothing)
     # window in frequency, about the expected peak radius size / nominal: from
     # halfway to zero frequency to halfway to the second harmonic (window 0.5),
@@ -129,8 +137,8 @@ def fft_spacing(image, mask, mark, scale, nominal, settings):
     return spectrum, profile, (low, high), peak, spacing, ok
 
 
-# ---------- Center, spacing and phase: the spiral coherence map ----------
-# About the true center the height has a component -cos(r/pitch - angle + phase),
+# ---------- Center, spacing and spiral phase: the spiral coherence map ----------
+# About the true center the height has a component -cos(r/pitch - angle + phase), phase = the spiral phase,
 # so Z(c) = -sum_p v(p) exp(-i (|p - c|/pitch - angle(p - c))) is ~ (n/2) e^{i phase}
 # at c = center and small elsewhere: every turn adds in step there. It is a
 # correlation of the image with a "spiral wave" kernel, so one FFT gives it at
@@ -139,7 +147,7 @@ def fft_spacing(image, mask, mark, scale, nominal, settings):
 # longer add in step, the spot splits into lobes and the brightest pixel is 2+
 # spacings off. The map stays symmetric under a 180-degree turn about the
 # center, so the center is the map's center of point symmetry near its peak,
-# and the phase is the angle of Z there.
+# and the spiral phase is the angle of Z there.
 
 
 def spiral_wave_kernel(pitch, reach):
@@ -147,7 +155,7 @@ def spiral_wave_kernel(pitch, reach):
     q = np.arange(-reach, reach + 1, dtype=float)
     qx, qy = np.meshgrid(-q, -q)
     radius = np.hypot(qx, qy)
-    return np.where(radius <= reach, np.exp(-1j * (radius / pitch - np.arctan2(qy, qx))), 0)
+    return np.where(radius <= reach, np.exp(-1j * (radius / pitch - np.arctan2(-qy, qx))), 0)  # angle with y up (geometry.polar)
 
 
 def coherence_map(image, pitch, reach):

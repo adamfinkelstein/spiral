@@ -4,9 +4,17 @@
 // canvas / image size in pixels (a page may set SPIRAL_N before loading this)
 const N = typeof SPIRAL_N !== 'undefined' ? SPIRAL_N : 512;
 
+// Winding / angle convention (Nov 2026): angles are measured counterclockwise
+// from 3 o'clock as displayed (y up), although rows run down, so spirals wind
+// outward counterclockwise on screen, like the real cards. A page may set
+// SPIRAL_SENSE = -1 first for the old convention (angles with y down;
+// card_js.html does, since its card model predates this).
+const SENSE = typeof SPIRAL_SENSE !== 'undefined' ? SPIRAL_SENSE : 1;
+const spiralAngle = (dx, dy) => Math.atan2(-SENSE * dy, dx); // angle of (dx, dy) in pixel offsets
+
 // Archimedean spiral r = b * theta, with b = spacing / (2π) so that
 // successive rings are `spacing` pixels apart, for r in [rStart, rEnd].
-// Rendered per pixel from the distance to the nearest arms.
+// Rendered per pixel from the distance to the nearest turns.
 // In rings mode, draws concentric circles at radii n * spacing within
 // [rStart, rEnd] instead (phase has no effect).
 // Aspect scales the whole drawing about the center by `aspect` in x and
@@ -66,10 +74,10 @@ function makeOffset(p) {
 
 // Writes 0..1 values into `out` (Float32Array N*N), then applies p.blur.
 // `center` is {x, y} in pixels (fractional allowed). p.phase is in radians.
-// Optional `weight(n, ra, ang)` multiplies each arm's contribution: n is the
-// arm (or ring) index, ra the arm's ideal radius bθ at this pixel's angle
+// Optional `weight(n, ra, ang)` multiplies each turn's contribution: n is the
+// turn (or ring) index, ra the turn's ideal radius bθ at this pixel's angle
 // (without the radius offset, so chunks stay put in θ), ang the
-// pixel's angle atan2(dy, dx) in unscaled coordinates. Used by center.html to
+// pixel's angle spiralAngle(dx, dy) in unscaled coordinates. Used by center.html to
 // keep only chunks of the curve.
 function renderSpiral(p, center, out, weight) {
   const S = p.spacing;
@@ -79,27 +87,27 @@ function renderSpiral(p, center, out, weight) {
   const halfW = p.lineWidth / 2;
   const sig = edgeStep(p);
   const ofs = makeOffset(p);
-  const reach = ofs ? 2 : 1; // offsets up to ±1 spacing: check two arms each side
+  const reach = ofs ? 2 : 1; // offsets up to ±1 spacing: check two turns each side
 
   for (let y = 0; y < N; y++) {
     const dy = (y + 0.5 - center.y) * p.aspect;
     for (let x = 0; x < N; x++) {
       const dx = (x + 0.5 - center.x) / p.aspect;
       const r = Math.hypot(dx, dy);
-      // u is fractional arm index; spiral arm n passes radius b * (phi + 2πn),
+      // u is fractional turn index; spiral turn n passes radius b * (phi + 2πn),
       // ring n has radius n * spacing.
-      const ang = Math.atan2(dy, dx);
+      const ang = spiralAngle(dx, dy);
       const phi = p.spiral ? ang - p.phase : 0;
       const u = (r / b - phi) / (2 * Math.PI);
       const n0 = Math.round(u);
       const perp = p.spiral ? r / Math.sqrt(r * r + b * b) : 1; // radial → perpendicular distance
       let v = 0;
       for (let n = n0 - reach; n <= n0 + reach; n++) {
-        let d = S * (u - n); // signed radial distance to arm n
-        const ra = r - d;    // ideal radius of arm n at this angle
+        let d = S * (u - n); // signed radial distance to turn n
+        const ra = r - d;    // ideal radius of turn n at this angle
         if (ra < 0 || (!p.spiral && n <= 0)) continue; // no zero-radius ring
         let dp;
-        if (ofs) { // offset arm: shift it, and use its local slope for the perpendicular
+        if (ofs) { // offset turn: shift it, and use its local slope for the perpendicular
           const th = ra / b;
           d -= ofs.off(th);
           const sl = b + ofs.slope(th);

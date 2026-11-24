@@ -5,7 +5,7 @@ Both start from the same low-res spiral. **Strip** (cardlab now): columns
 every 3 px along the spiral, each a radial line ±1 spacing demodulated; refit
 of center, spacing and phase modulo S; trace locked to the refit plus a
 slowly varying residual. **Cells**: every annulus pixel goes to its nearest
-arm (turn) and an angular sector (K per turn); per cell Z = Σ v e^{-iu},
+turn and an angular sector (K per turn); per cell Z = Σ v e^{-iu},
 u = r/pitch − (angle − phase); the angle of Z is the groove's offset in the
 cell (mod S), |Z| its strength. The same refit on the cells (~40 K numbers),
 then the cells again about the refitted spiral; the path = the refitted
@@ -62,7 +62,7 @@ Radial taper (a few cards, path rms px, clean / typical / hard, 2 seeds):
 plain band 0.26 0.19 / 0.28 0.22 / 1.09 1.44; cos² taper over ±S (as the
 strip's columns) 0.53 0.51 / 0.54 0.53 / 1.13 1.49; cos² over ±S/2 1.25 /
 1.26 / 1.5–1.8; removing each cell's mean 0.31 0.26 / 0.33 0.30 / 1.05 1.41.
-Centering the tapers on the groove instead of the arm didn't rescue them
+Centering the tapers on the groove instead of the turn didn't rescue them
 (±S 0.48–0.53, ±S/2 0.57–0.73 on clean cards). Reason: the plain band is
 exactly one groove period wide, and over exactly one period an untapered
 window gives the groove's first Fourier component exactly, whatever its

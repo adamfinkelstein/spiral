@@ -15,8 +15,12 @@ from cardlab.model import make_card, render
 from cardlab.params import PRESETS
 from cell_coherence import cell_strip, refit_cells
 
+# NOTE (Nov 2026): written for the old spiral convention r = pitch * theta,
+# theta = angle - phase + 2 pi n. cardlab now uses r = pitch * (theta - phase),
+# theta = the card's angle unwrapped; this script was not updated (results
+# files record what it gave then).
 # The cells of experiments/cell_coherence.py, drawn: (a) a toy spiral with 12
-# sectors per turn, each cell one turn's band (+-S/2 about its arm) times one
+# sectors per turn, each cell one turn's band (+-S/2 about its turn) times one
 # sector; (b) the cells on a real (simulated) card at low resolution, 40 per
 # turn; (c) what the cells measure: each cell's groove offset from the
 # refitted spiral, as a map of turn x angle.
@@ -35,7 +39,7 @@ def cell_ids(x, y, cx, cy, pitch, phase, sectors):
 
 def toy(axes, sectors=12, spacing=1.0, turns=(2, 6)):
     # one color per turn (alternating), thin lines for the sector edges and for
-    # the band edges (the spirals halfway between arms); arms in white
+    # the band edges (the spirals halfway between turns); turns in white
     pitch = spacing / TAU
     grid = np.linspace(-6.6, 6.6, 1000)
     x, y = np.meshgrid(grid, grid)

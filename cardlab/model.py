@@ -8,7 +8,7 @@ from .geometry import TAU, Mark, Spiral, pitch_of, polar, smoothstep
 # An idealized card: flat at height 0 plus grain. A round stylus (a parabola)
 # follows r = pitch*theta + drift and moves up and down with the sound
 # (hill-and-dale): cut depth = 1 + sound. Where the stylus is above the card
-# nothing is cut, so the surface is min(0, stylus) over the nearest arms.
+# nothing is cut, so the surface is min(0, stylus) over the nearest turns.
 # The sound is a function of theta (time: the card turns at a constant rate),
 # so a given frequency is cut longer on the outer turns (wavelength ~ r).
 
@@ -53,19 +53,18 @@ class Card:
         return np.interp(theta, self.sound_theta, self.sound_track)
 
     def cut_depth(self, theta):
-        r = self.spiral.pitch * theta
+        r = self.spiral.radius(theta)
         fade = self.params.edge_fade
         envelope = smoothstep((r - self.params.r_inner) / fade) * smoothstep((self.params.r_outer - r) / fade)
         return envelope * (1 + self.sound(theta))
 
     def arms_near(self, x, y):
-        # theta of the nearest arm and its two neighbours, and the radial distance to each groove
+        # theta of the nearest turn and its two neighbours, and the radial distance to each groove
         r, angle = polar(x, y, self.spiral.x, self.spiral.y)
-        angle = angle - self.spiral.phase
-        nearest = np.round((r / self.spiral.pitch - angle) / TAU)
+        nearest = np.round((self.spiral.theta_at(r) - angle) / TAU)
         for shift in (-1, 0, 1):
             theta = angle + TAU * (nearest + shift)
-            yield theta, r - self.spiral.pitch * theta - self.lateral_offset(theta)
+            yield theta, r - self.spiral.radius(theta) - self.lateral_offset(theta)
 
     def groove_height(self, x, y):
         curvature = 4 / (self.params.groove_width * self.spacing) ** 2
@@ -99,7 +98,7 @@ def make_card(params, seed):
     mark = Mark(mark_center[0], mark_center[1], params.r_inner * radius_errors[0], params.r_outer * radius_errors[1])
 
     margin = 6 * spacing
-    theta_grid = np.arange(max(1, (params.r_inner - margin) / pitch), (params.r_outer + margin) / pitch, 0.005)
+    theta_grid = np.arange(spiral.theta_at(max(pitch, params.r_inner - margin)), spiral.theta_at(params.r_outer + margin), 0.005)
     drift_wavelengths = tuple(TAU * turns for turns in params.drift_turns)
     drift = band_limited(rng, theta_grid, params.drift_rms, drift_wavelengths, n_waves=60)
     # sound wavelengths are given in px of groove at the mid radius; in theta

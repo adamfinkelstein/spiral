@@ -87,8 +87,7 @@ def detail_columns(run, count=16, wrong_spots=4):
     columns = []
     for k in range(count):
         target = theta[0] + (k + 0.5) / count * (theta[-1] - theta[0])
-        angle = target + run.strip.spiral.phase  # angle about the center, as in strip.refit_basis
-        target += wrap(k * golden - angle, TAU)
+        target += wrap(k * golden - target, TAU)  # theta is the angle about the center
         columns.append(int(np.clip(np.searchsorted(theta, target), 0, len(theta) - 1)))
     for k, (start, end) in enumerate(wrong_runs(run.score.wrong_groove)[:wrong_spots]):
         columns[count - 1 - k] = (start + end) // 2
@@ -143,15 +142,51 @@ def radial_profile(run, path):
     low, scale, card = run.low, run.low.scale, run.card
     size = low.spectrum.shape[0]
     radii = np.arange(60, 401)
-    figure = new_figure(1040, 520)
-    axes = figure.add_axes([0.05, 0.13, 0.93, 0.82])
+    figure = new_figure(1040, 560)
+    axes = figure.add_axes([0.05, 0.12, 0.93, 0.74])
     axes.axvspan(*low.window, color="white", alpha=0.12)
-    for spacing, style, color in ((card.params.spacing, "--", "white"), (card.spacing, "-", COLORS["geometry"]), (low.fft_spacing, "-", COLORS["low"])):
-        axes.axvline(size * scale / spacing, ls=style, color=color, lw=1.5)
+    axes.text(low.window[0] + 3, 0.03, "search region:\nexpected radius N/S$_0$ ± 50%", transform=axes.get_xaxis_transform(),
+              color="#ccc", fontsize=10, va="bottom")
+    # nominal, true and measured nearly coincide: the main plot shows only the
+    # nominal; the inset (a zoom on the peak) shows all three, the truth wide
+    # and faint underneath, the measurement thin on top
+    lines = ((card.spacing, "-", COLORS["geometry"], 9, 0.7), (card.params.spacing, "--", "white", 1.5, 1),
+             (low.fft_spacing, "-", COLORS["low"], 1.5, 1))
+    axes.axvline(size * scale / card.params.spacing, ls="--", color="white", lw=1.5)
     axes.plot(radii, low.profile[radii], color="#ddd", lw=1.5)
+    peak = size * scale / low.fft_spacing
+    # inset: the 5 bins of the sub-bin fit (step 2) minus the trough line, as
+    # the fit sees them, and its parabola, whose vertex is the measurement
+    from .lowres import trough_line
+    best = low.window[0] + int(np.argmax(low.profile[low.window[0]:low.window[1] + 1]))
+    offsets = np.arange(-2, 3)
+    line = trough_line(low.profile, best)
+    a, b, c = np.polyfit(offsets, low.profile[best + offsets] - line(best + offsets), 2)
+    fine = np.linspace(-2.5, 2.5, 200)
+    inset = axes.inset_axes([0.62, 0.56, 0.36, 0.42])
+    near = np.arange(best - 3, best + 4)
+    inset.plot(near, low.profile[near] - line(near), "-", color="#ddd", lw=1.2)
+    inset.plot(best + offsets, low.profile[best + offsets] - line(best + offsets), "o", color="#ddd", ms=4)
+    inset.plot(best + fine, np.polyval([a, b, c], fine), color=COLORS["low"], lw=1.2, ls=":")
+    for spacing, style, color, width, alpha in lines:
+        inset.axvline(size * scale / spacing, ls=style, color=color, lw=min(width, 4), alpha=alpha)
+    inset.set_xlim(best - 2.5, best + 2.5)
+    shown = np.concatenate([low.profile[best + offsets] - line(best + offsets), np.polyval([a, b, c], fine)])
+    inset.set_ylim(shown.min() - 0.1 * np.ptp(shown), shown.max() + 0.1 * np.ptp(shown))
+    inset.set_yticks([])
+    inset.set_xticks([])
+    inset.text(0.5, -0.04, "the fit: 5 bins minus the trough line,\nand the parabola (cyan dotted)",
+               transform=inset.transAxes, ha="center", va="top", fontsize=9.5, color="#ccc")
+    inset.set_facecolor("black")
+    top_bin = int(round(peak))
+    axes.annotate("", xy=(peak, low.profile[top_bin]), xytext=(0.62, 0.62), textcoords="axes fraction",
+                  arrowprops=dict(arrowstyle="->", color="#ccc", lw=1.2, shrinkA=0, shrinkB=4))
     ticks = [s for s in (80, 50, 35, 29, 25, 20, 15) if 60 <= size * scale / s <= 400]
     axes.set_xticks([size * scale / s for s in ticks], [str(s) for s in ticks])
-    axes.set_xlabel("spacing (full-res px) → finer to the right")
+    axes.set_xlabel("groove spacing (px in the full-res card image) → finer to the right")
+    axes.set_xlim(radii[0], radii[-1])
+    top = axes.secondary_xaxis("top")
+    top.set_xlabel("radius in the FFT (bins of the 1024² low-res transform)")
     axes.set_yticks([])
     save(figure, path)
 
@@ -326,7 +361,7 @@ def offsets_mod_spacing(run, path):
 
 
 def offsets_vs_truth(run, path):
-    # step f1 again, relative to the true spiral (pale green = 0, possible only
+    # step 4c again, relative to the true spiral (pale green = 0, possible only
     # on a simulated card): yellow = the refit's remaining error, green = the
     # groove's drift, grey = the wedges; below, yellow alone at +-1 px
     strip, spacing, card = run.strip, run.strip.spiral.spacing, run.card
@@ -435,12 +470,12 @@ def sound(run, path, turns=0.075):
 def rectangle_turns(run, path, turns=5, per_turn=4, sectors=40):
     # the unrolled rectangle along the low-res spiral: the same `per_turn`
     # wedges (same angles) of `turns` consecutive turns about the middle one,
-    # stacked outward up. Each turn's rows are exactly -S/2..S/2 about its arm,
+    # stacked outward up. Each turn's rows are exactly -S/2..S/2 about its turn,
     # so the stack tiles the card with no gap or overlap (the turn boundaries,
     # dotted violet, are pass 1's rows). Violet solid: pass 2's rows (one
     # period about the midway line); violet vertical lines: wedge edges; green
-    # (wide): the true groove; orange: the path. Turns are numbered from the
-    # spiral's center (r = turn x S).
+    # (wide): the true groove; orange: the path. Turn n = floor(theta / 2 pi),
+    # counted from the spiral's center, starts at 3 o'clock (r ~ (n - phi/2 pi) S).
     wedges = run.wedges
     unrolled, spacing = wedges.unrolled, wedges.unrolled.spacing
     theta, wedge = unrolled.theta, unrolled.wedge
@@ -550,7 +585,7 @@ def turns_rows(run, path, row_height=48, y_range=12, errors=False):
 
 def pass1_compare(run):
     # the full-res stage again with pass 1 on 1 px columns (before Nov 2026)
-    # and on the default 4 px (now), timed; for step f3
+    # and on the default 4 px (now), timed; for step 4e
     from time import perf_counter
     from dataclasses import replace
     from .scoring import center_error, rms, score_trace, spacing_error
@@ -569,7 +604,7 @@ def pass1_compare(run):
 
 
 def pass1_before_after(run, compare, path):
-    # step f3: pass 1 on 1 px columns (before) vs 4 px (now). Top: each pass-1
+    # step 4e: step 4 on every column (before) vs every 4th (now). Top: each
     # wedge's offset, 4 px minus 1 px (grey); middle: the refit's error against
     # the true spiral, before (wide, faint) and now (thin), yellow; bottom: the
     # path, now minus before (orange)
@@ -604,3 +639,225 @@ def pass1_before_after(run, compare, path):
         axes.tick_params(labelbottom=False)
     save(figure, path)
     return wedge_change
+
+
+def coherence_explainer(path):
+    # a cartoon of step 3 (procedure.html): a toy spiral (spacing S = 1, spiral phase
+    # phi), a candidate center c and a pixel p with the quantities in Z(c); the
+    # kernel (a spiral wave); and |Z| against the distance of c from the true
+    # center, |J0(2 pi e / S)|
+    from matplotlib.patches import Arc
+    from scipy.special import j0
+    pitch, phase = 1 / TAU, 0.6
+    groove, low, label, true_center = COLORS["true"], COLORS["low"], COLORS["label"], COLORS["geometry"]
+    figure = new_figure(900, 760)
+    axes = figure.add_axes([0.0, 0.29, 0.6, 0.71])
+    from matplotlib import patheffects
+    halo = [patheffects.withStroke(linewidth=4, foreground="black")]
+    text = lambda x, y, words, color, **kw: axes.text(x, y, words, color=color, fontsize=kw.pop("fontsize", 11.5),
+                                                     fontweight="bold", path_effects=halo, **kw)
+    t = np.linspace(0, 6 * TAU, 4000)  # continued all the way in to the true center
+    axes.plot(pitch * t * np.cos(t + phase), pitch * t * np.sin(t + phase), color=groove, lw=1.5, alpha=0.45)
+    axes.plot([0], [0], "+", color=true_center, ms=14, mew=2)
+    text(0, -0.75, "true center", true_center, ha="center")
+    # the spiral phase: the turns cross the ray at angle phi at r = S, 2S, ...
+    ray = np.array([0, 6.4])
+    axes.plot(ray * np.cos(phase), ray * np.sin(phase), "--", color=true_center, lw=1)
+    for n in range(1, 7):
+        axes.plot(n * np.cos(phase), n * np.sin(phase), "o", color=true_center, ms=4)
+    axes.add_patch(Arc((0, 0), 2.6, 2.6, theta1=0, theta2=np.degrees(phase), color=true_center, lw=1))
+    axes.plot([0, 1.8], [0, 0], color=true_center, lw=0.8)
+    text(1.45, 0.25, "φ", true_center, fontsize=14)
+    text(6.7, 4.75, "spiral phase φ: turns\ncross at r = S, 2S, …\n(θ = φ + 2πn)", true_center, fontsize=10, ha="right")
+    # the spacing S between two turns
+    a = np.radians(205)
+    r0 = pitch * ((a - phase) % TAU + 3 * TAU)
+    axes.annotate("", xy=((r0 + 1) * np.cos(a), (r0 + 1) * np.sin(a)), xytext=(r0 * np.cos(a), r0 * np.sin(a)),
+                  arrowprops=dict(arrowstyle="<->", color=label, lw=1.8))
+    text((r0 + 0.5) * np.cos(a) - 0.2, (r0 + 0.5) * np.sin(a) - 0.8, "S = 2πb", label, fontsize=12, ha="center")
+    # a candidate center c (above left of the true center) and a pixel p
+    c = np.array([-1.2, 1.0])
+    p = np.array([-2.6, 4.6])
+    axes.plot(*c, "+", color=low, ms=14, mew=2.5)
+    text(c[0] - 0.3, c[1] - 0.15, "c (candidate\ncenter)", low, ha="right", va="top")
+    axes.plot(*p, "o", color=label, ms=8)
+    text(p[0], p[1] + 0.35, "p (a pixel, value v(p))", label, ha="center")
+    axes.plot([c[0], p[0]], [c[1], p[1]], color=label, lw=1.8)
+    mid = (c + p) / 2
+    text(mid[0] - 0.25, mid[1], "|q|, q = p − c", label, ha="right")
+    axes.plot([c[0], c[0] + 1.8], [c[1], c[1]], color=label, lw=1)
+    angle = np.degrees(np.arctan2(p[1] - c[1], p[0] - c[0]))
+    axes.add_patch(Arc(tuple(c), 1.6, 1.6, theta1=0, theta2=angle, color=label, lw=1.2))
+    text(c[0] + 0.75, c[1] + 0.85, "α$_q$", label, fontsize=14)
+    axes.set_xlim(-6.8, 6.8)
+    axes.set_ylim(-6.6, 6.8)
+    axes.set_aspect("equal")
+    axes.set_axis_off()
+    # the kernel: Re e^{-i(|q|/b - alpha_q)}, a spiral wave of the same spacing
+    kernel_axes = figure.add_axes([0.62, 0.40, 0.36, 0.45])
+    q = np.linspace(-5, 5, 500)
+    qx, qy = np.meshgrid(q, q)
+    kernel = np.cos(np.hypot(qx, qy) / pitch - np.arctan2(qy, qx))
+    kernel_axes.imshow(kernel, cmap="gray", extent=(-5, 5, -5, 5), origin="lower")
+    kernel_axes.plot([0], [0], "+", color=low, ms=10, mew=2)
+    kernel_axes.set_axis_off()
+    kernel_axes.set_title("the kernel, centered on c:\nRe e$^{-iu}$, u = |q|/b − α$_q$", fontsize=10.5, color="#ccc")
+    # |Z| against the distance e of c from the true center
+    curve = figure.add_axes([0.09, 0.08, 0.88, 0.17])
+    e = np.linspace(0, 2.2, 600)
+    curve.plot(e, np.abs(j0(TAU * e)), color=COLORS["measured"], lw=2)
+    for zero in (2.405, 5.520, 8.654):
+        curve.axvline(zero / TAU, color=label, lw=0.8, ls=":")
+    curve.text(2.405 / TAU + 0.02, 0.8, "0.38 S", color=label, fontsize=10)
+    curve.set_xlim(0, 2.2)
+    curve.set_ylim(0, 1.05)
+    curve.set_xlabel("distance e of c from the true center, in spacings S")
+    curve.set_ylabel("|Z(c)| / |Z(true)|")
+    curve.text(1.0, 0.75, "|J$_0$(2π e / S)|: a bright spot, then rings half a spacing apart", color="#ccc", fontsize=10)
+    curve.grid(color="#333")
+    save(figure, path)
+
+
+def spiral_coordinate_plot(path):
+    # procedure.html step 3: the spiral coordinate u = |q|/b - alpha_q about
+    # the true center of a toy spiral (S = 1, spiral phase 0.6), alpha_q in [0, 2 pi)
+    # from 3 o'clock: along a ray a ramp, +2 pi per spacing; along the groove a
+    # staircase (flat within a turn, +2 pi where alpha_q wraps, at 3 o'clock;
+    # theta - phi = r / b = u + alpha_q, pale green, rises steadily);
+    # around a circle a sawtooth; turns (green) where u = 2 pi n - phi
+    pitch, phase = 1 / TAU, 0.6
+    groove, label = COLORS["true"], COLORS["label"]
+    wrapped = lambda a: a % TAU  # alpha_q in [0, 2 pi), from 3 o'clock
+    figure = new_figure(900, 320)
+    panels = [figure.add_axes([0.065 + k * 0.33, 0.19, 0.26, 0.6]) for k in range(3)]
+    ray, along, circle = panels
+    levels = [(TAU * n - phase) / TAU for n in range(-1, 9)]  # u / 2 pi on the turns
+    # along a ray at angle alpha
+    alpha = phase + 1.0
+    r = np.linspace(2, 6, 400)
+    u = r / pitch - alpha
+    ray.plot(r, u / TAU, color="#ddd", lw=1.8)
+    crossings = pitch * (alpha - phase + TAU * np.arange(2, 7))
+    for x in crossings[(crossings >= 2) & (crossings <= 6)]:
+        ray.axvline(x, color=groove, lw=2, alpha=0.8)
+    ray.set_xlabel("r = |q|, in spacings")
+    ray.set_title("along a ray: a ramp\n(+2π per spacing)", fontsize=10.5)
+    # along the groove for four turns, starting just past the wrap
+    turned = np.linspace(0, 4 * TAU - 0.02, 2000)
+    start_angle, first = 1e-3, 3
+    angle = start_angle + turned
+    radius_along = pitch * (angle - phase + TAU * first)
+    u_groove = radius_along / pitch - wrapped(angle)
+    jumps = np.flatnonzero(np.diff(u_groove) > np.pi) + 1
+    for piece in np.split(np.arange(len(turned)), jumps):
+        along.plot(turned[piece] / TAU, u_groove[piece] / TAU, color=groove, lw=2.5)
+    for k, edge in enumerate(np.concatenate([[0], turned[jumps], [turned[-1]]])[:-1]):
+        along.text(edge / TAU + 0.5, u_groove[min(len(turned) - 1, int(np.searchsorted(turned, edge)) + 5)] / TAU + 0.18,
+                   "n" if k == 0 else f"n+{k}", color=groove, ha="center", fontsize=9.5)
+    for edge in turned[jumps]:
+        along.axvline(edge / TAU, color=label, lw=0.9, ls=":")
+    theta = radius_along / pitch  # theta - phi = r / b = u + alpha_q on the groove
+    along.plot(turned / TAU, theta / TAU, color=COLORS["geometry"], lw=1.3, ls="--")
+    along.text(1.35, theta[0] / TAU + 1.75, "(θ − φ)/2π\n= r/S", color=COLORS["geometry"], fontsize=10, ha="right")
+    along.set_xlabel("turns along the groove")
+    along.set_title("along the groove: u a staircase\n(+2π at 3 o'clock); r/S a ramp", fontsize=10.5)
+    along.set_xticks([0, 1, 2, 3, 4])
+    # around a circle of radius 4.3 S, one revolution
+    radius = 4.3
+    around = np.linspace(0, TAU, 600)
+    u_circle = radius / pitch - wrapped(alpha + around)
+    jumps = np.flatnonzero(np.abs(np.diff(u_circle)) > np.pi) + 1
+    for piece in np.split(np.arange(len(around)), jumps):
+        circle.plot(np.degrees(around[piece]), u_circle[piece] / TAU, color="#ddd", lw=1.8)
+    for edge in around[jumps]:
+        circle.axvline(np.degrees(edge), color=label, lw=0.9, ls=":")
+    hits = (radius / pitch - alpha - (TAU * np.arange(-2, 10) - phase)) % TAU
+    for x in np.unique(np.round(hits, 9)):
+        circle.axvline(np.degrees(x), color=groove, lw=2, alpha=0.8)
+    circle.set_xlabel("angle around the circle, °")
+    circle.set_title("around a circle: a sawtooth\n(−2π per revolution)", fontsize=10.5)
+    circle.set_xticks([0, 90, 180, 270, 360])
+    for axes, values in ((ray, u), (along, np.concatenate([u_groove, theta])), (circle, u_circle)):
+        low, high = values.min() / TAU - 0.3, values.max() / TAU + 0.4
+        for level in levels:
+            if low <= level <= high:
+                axes.axhline(level, color=groove, lw=0.8, ls=":")
+        axes.set_ylim(low, high)
+        axes.grid(color="#333")
+    ray.set_ylabel("u / 2π")
+    along.set_ylabel("u / 2π,  r / S")
+    save(figure, path)
+
+
+def spiral_coordinate_map(path):
+    # procedure.html step 3: u = |q|/b - alpha_q at every pixel about the
+    # toy spiral's true center (S = 1, spiral phase 0.6): left u / 2 pi (rainbow;
+    # the jump across the ray to the right, 3 o'clock, is where alpha_q wraps), right
+    # u mod 2 pi (cyclic: no jump; all that e^{-iu} sees). Black: the turns.
+    pitch, phase = 1 / TAU, 0.6
+    extent = 4.5
+    q = np.linspace(-extent, extent, 700)
+    qx, qy = np.meshgrid(q, q)
+    u = np.hypot(qx, qy) / pitch - np.arctan2(qy, qx) % TAU  # alpha_q in [0, 2 pi)
+    t = np.linspace(0, 6 * TAU, 4000)
+    spiral_x, spiral_y = pitch * t * np.cos(t + phase), pitch * t * np.sin(t + phase)
+    figure = new_figure(900, 440)
+    maps = ((u / TAU, "turbo", "u / 2π: jumps at 3 o'clock", None),
+            ((u % TAU) / TAU, "hsv", "(u mod 2π) / 2π: no jump", (0, 1)))
+    for k, (values, cmap, title, limits) in enumerate(maps):
+        axes = figure.add_axes([0.02 + k * 0.5, 0.05, 0.38, 0.8])
+        shown = axes.imshow(values, cmap=cmap, extent=(-extent, extent, -extent, extent), origin="lower",
+                            vmin=None if limits is None else limits[0], vmax=None if limits is None else limits[1])
+        axes.plot(spiral_x, spiral_y, color="black", lw=2)
+        axes.plot([0], [0], "+", color="white", ms=10, mew=2)
+        axes.set_xlim(-extent, extent)
+        axes.set_ylim(-extent, extent)
+        axes.set_axis_off()
+        axes.set_title(title, fontsize=11)
+        bar = figure.colorbar(shown, ax=axes, fraction=0.046, pad=0.02)
+        bar.ax.tick_params(labelsize=9)
+    save(figure, path)
+
+
+def stretch_lobes(run, path, aspects=(1.0, 1.01, 1.02, 1.03), half_width=8):
+    # procedure.html step 3, "why symmetry": the coherence map |Z| near the
+    # true center of this card's low-res image stretched by x * aspect,
+    # y / aspect about the true center (a slightly non-circular scan). Marks:
+    # pale green + the true center, violet square the brightest pixel, cyan
+    # ring the center of point symmetry. half_width in spacings.
+    import cv2
+    from .lowres import LowResSettings, coherence_map as z_of, pitch_of, symmetry_center, map_peak
+    low, card, scale = run.low, run.card, run.low.scale
+    spacing = low.spiral.spacing / scale
+    truth = np.array([card.spiral.x, card.spiral.y]) / scale
+    settings = LowResSettings()
+    r_outer = card.mark.r_outer / scale
+    figure = new_figure(900, 300)
+    for k, aspect in enumerate(aspects):
+        # output pixel p comes from input (p - c) / (aspect, 1/aspect) + c, pixel centers at i + 0.5
+        matrix = np.array([[1 / aspect, 0, (truth[0] - 0.5) * (1 - 1 / aspect)], [0, aspect, (truth[1] - 0.5) * (1 - aspect)]])
+        image = low.image if aspect == 1 else cv2.warpAffine(
+            low.image.astype(np.float32), matrix, low.image.shape[::-1], flags=cv2.INTER_LINEAR | cv2.WARP_INVERSE_MAP,
+            borderMode=cv2.BORDER_REFLECT)
+        z_map = z_of(image, pitch_of(spacing), reach=int(np.ceil(r_outer + 2 * spacing)))
+        center = symmetry_center(z_map, settings.symmetry_window * r_outer, settings.symmetry_search)
+        peak = map_peak(z_map)
+        reach = half_width * spacing
+        lo = (truth - reach).astype(int)
+        hi = (truth + reach).astype(int) + 1
+        crop = np.abs(z_map[lo[1]:hi[1], lo[0]:hi[0]])
+        to_s = lambda point: (np.asarray(point) - truth) / spacing  # spacings from the true center
+        axes = figure.add_axes([0.01 + k * 0.25, 0.02, 0.23, 0.72])
+        axes.imshow(crop, cmap="inferno", interpolation="bicubic",
+                    extent=(*(to_s(lo) * [1, 0] + to_s(hi) * [0, 1])[[0]], to_s(hi)[0], to_s(hi)[1], to_s(lo)[1]))
+        axes.plot(*to_s(truth), "+", color=COLORS["geometry"], ms=12, mew=2)
+        axes.plot(*to_s(peak), "s", mfc="none", mec=COLORS["label"], ms=9, mew=1.8)
+        axes.plot(*to_s(center), "o", mfc="none", mec=COLORS["low"], ms=11, mew=1.8)
+        axes.set_xlim(-half_width, half_width)
+        axes.set_ylim(half_width, -half_width)
+        axes.set_axis_off()
+        off = np.hypot(*to_s(peak))
+        axes.set_title(f"{'not stretched' if aspect == 1 else f'stretched {100 * (aspect - 1):.0f}%'}\n"
+                       f"brightest pixel: {off:.1f} S off\nsymmetry center: {np.hypot(*to_s(center)) * spacing * scale:.1f} px off",
+                       fontsize=9.5)
+    save(figure, path)

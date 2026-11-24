@@ -63,7 +63,7 @@ Findings:
   from 10 to 80 sectors (4× more pixels per cell at 10), and on clean cards
   (no grain at all) it is still 0.17–0.18 px at every size. That floor is
   systematic, not random. A likely cause: each cell's band (±S/2 about its
-  arm) also takes in the edges of the neighbouring grooves, which drift
+  turn) also takes in the edges of the neighbouring grooves, which drift
   independently, so the band isn't one clean period of one groove.
 - Grain adds a little on top (strong cells 0.22 px typical vs 0.17 clean).
 - Weak cells (where the sound makes the groove shallow or absent) are rare
@@ -77,7 +77,7 @@ Findings:
   floor plus the weak cells: 0.28 px typical (ideal 0.05), 1.41 hard.
 
 Next to test: weight each cell's pixels across the band (e.g. cos² about the
-arm, as the strip does) or center the band on the groove itself, to remove
+turn, as the strip does) or center the band on the groove itself, to remove
 the neighbours' edges (clean cards would show it directly); and, for weak
 cells, borrow from neighbouring windows along the groove (adaptive windows)
 or weight the interpolation by |Z|.

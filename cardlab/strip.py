@@ -31,14 +31,15 @@ class Strip:
 
 def strip_columns(spiral, mark, step, turns=0):
     pitch, spacing = spiral.pitch, spiral.spacing
-    theta_first = (mark.r_inner + 1.5 * spacing) / pitch
-    theta_last = (mark.r_outer - 1.5 * spacing) / pitch
+    theta_first = spiral.theta_at(mark.r_inner + 1.5 * spacing)
+    theta_last = spiral.theta_at(mark.r_outer - 1.5 * spacing)
     if turns and (theta_last - theta_first) / TAU > turns:
         middle = (theta_first + theta_last) / 2
         theta_first, theta_last = middle - turns * np.pi, middle + turns * np.pi
-    # equal steps in arc length s = pitch * theta^2 / 2
-    arc = np.arange(pitch * theta_first**2 / 2, pitch * theta_last**2 / 2, step)
-    return np.sqrt(2 * arc / pitch)
+    # equal steps in arc length s = pitch * (theta - phase)^2 / 2
+    t0, t1 = theta_first - spiral.phase, theta_last - spiral.phase
+    arc = np.arange(pitch * t0**2 / 2, pitch * t1**2 / 2, step)
+    return np.sqrt(2 * arc / pitch) + spiral.phase
 
 
 def sample_at(image, x, y):
@@ -63,7 +64,7 @@ def row_offsets(spacing, half_width=1.0):
 
 def demodulate(samples, rows, spacing, half_width=1.0):
     # remove each column's linear trend, then correlate with e^{-2 pi i d / S}
-    # under a cos^2 window: a groove at offset o gives phase -2 pi o / S
+    # under a cos^2 window: a groove at offset o gives Z the angle -2 pi o / S
     trend = samples.mean(axis=0) + np.outer(rows, (rows @ samples) / (rows @ rows))
     window = np.cos(np.pi * rows / (2 * half_width * spacing)) ** 2 * (np.abs(rows) < half_width * spacing)
     carrier = window * np.exp(-1j * TAU * rows / spacing)
@@ -89,12 +90,12 @@ def build_strip(image, spiral, mark, settings):
 
 # ---------- Geometry refit ----------
 # Relative to the strip's spiral, a center error (ex, ey), a spacing error beta
-# and a phase error show up in the offsets as
+# and a spiral-phase error show up in the offsets as
 #   o(theta) = a + beta (theta - theta_0) + ex cos(alpha) + ey sin(alpha)   (mod S)
 
 
 def refit_basis(strip):
-    angle = strip.theta + strip.spiral.phase
+    angle = strip.theta
     return np.stack([np.ones_like(angle), strip.theta - strip.theta[0], np.cos(angle), np.sin(angle)], axis=1)
 
 
@@ -104,7 +105,7 @@ def circular_score(offsets, weights, model, spacing):
 
 def refit_start(strip, search, every=20):
     # grid over beta (+-2.5 %, steps moving the last turn by S/4) and the
-    # center error (+-search spacings, steps S/4); the constant comes out of the phase
+    # center error (+-search spacings, steps S/4); the constant comes out as the angle of the sum
     spacing, pitch = strip.spiral.spacing, strip.spiral.pitch
     basis = refit_basis(strip)[::every]
     offsets, weights = strip.offsets[::every], strip.confidence[::every]
@@ -131,8 +132,8 @@ def refit_geometry(strip, settings):
     fit = least_squares(residuals, refit_start(strip, settings.refit_search), loss="soft_l1", f_scale=0.1 * spacing)
     a, beta, ex, ey = fit.x
     pitch = strip.spiral.pitch + beta
-    phase = strip.spiral.phase - (a - beta * strip.theta[0]) / pitch
-    spiral = replace(strip.spiral, x=strip.spiral.x + ex, y=strip.spiral.y + ey, pitch=pitch, phase=phase)
+    phase = (strip.spiral.pitch * strip.spiral.phase - a + beta * strip.theta[0]) / pitch
+    spiral = replace(strip.spiral, x=strip.spiral.x + ex, y=strip.spiral.y - ey, pitch=pitch, phase=phase)  # ey is up
     return spiral, basis @ fit.x
 
 
