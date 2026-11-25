@@ -67,6 +67,12 @@ second (unknown here).
 
 ## What we learned, and what it suggests for the simulated cards
 
+Done (24 Nov 2026): cardlab's `ezra` preset (params.py) takes the sound
+level (0.3), a tone at 195 cycles/turn with 8% of the power (measured here:
+7–8% above the background in psd.npy), a depth trend (−10%), the drift
+(1.9 px = 0.064 S) and the geometry (~53 turns, mid radius 68 S); the slow
+surface variation was left out. Results: card.html and procedure.html step 0.
+
 - **Winding**: the real cards wind outward counterclockwise as displayed.
   Done: cardlab's angles (and the JS pages') are now counterclockwise from
   3 o'clock as displayed, so the simulated cards match.

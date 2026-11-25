@@ -19,6 +19,9 @@ class CardParams:
     edge_fade: float = 60
     sound_rms: float = 0.4
     sound_wavelengths: tuple = (15, 300)
+    tone_share: float = 0.0
+    tone_cycles: float = 195
+    depth_trend: float = 0.0
     grain: float = 0.52
     grain_size: float = 2.5
     drift_rms: float = 3.2
@@ -36,6 +39,10 @@ PRESETS = {
         drift_rms=5.0,
     ),
     "clean": replace(TYPICAL, label="Clean (no grain)", grain=0.0),
+    "ezra": replace(
+        TYPICAL, label="Ezra-like (quieter, a tone, more turns)", r_inner=1200, r_outer=2750,
+        sound_rms=0.3, tone_share=0.08, depth_trend=-0.1, drift_rms=1.9,
+    ),
 }
 
 # (name, unit, where the value comes from)
@@ -52,6 +59,9 @@ PARAM_NOTES = {
     "edge_fade": ("Depth fade at the ends", "px", "assumed"),
     "sound_rms": ("Sound: depth modulation (rms)", "× depth", "assumed; at −1 the stylus leaves the card"),
     "sound_wavelengths": ("Sound wavelengths along the groove at the mid radius", "px", "assumed; the sound is a function of the angle (the card turns at a constant rate), so a wavelength scales with the radius"),
+    "tone_share": ("Tone: share of the sound's power", "", "Ezra's card: a peak at 195 cycles/turn, 7–8% of the power above its background (ezra preset)"),
+    "tone_cycles": ("Tone frequency", "cycles/turn", "Ezra's card (the peak there is ~10 cycles/turn wide; here a pure sine)"),
+    "depth_trend": ("Depth trend, inner to outer turns", "× depth", "Ezra's card: mean depth per turn 25.5 → 22.6, −11% (ezra preset)"),
     "grain": ("Grain (rms)", "× groove rms", "measured: 2.6 vs. groove 5.0 rms (image 21)"),
     "grain_size": ("Grain size", "px", "measured ACF 0.5 at ~3–5 px"),
     "drift_rms": ("Groove drift from the spiral (rms)", "px", "measured 2.9 / 3.5 px rms per turn vs. Tomaz's fitted spiral (images 21 / 26)"),

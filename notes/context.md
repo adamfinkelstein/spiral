@@ -108,7 +108,8 @@ re-centering on the groove, per-wedge tilt): considered.html Part 3.
   40.2 vs 25.3 on Tomaz's groove mask). So since Nov 2026 cardlab and the
   JS pages measure angles counterclockwise from 3 o'clock as displayed (y
   up), and the simulated cards wind the same way.
-- Suggested for the simulated cards (not done yet): sound rms ~0.3 (the
+- Done 24 Nov 2026 as the `ezra` preset (CLAUDE.md Handoff; slow surface
+  height left out). Suggested then: sound rms ~0.3 (the
   card's relative depth modulation reads 0.29 vs ~0.46 for our typical
   card); a tonal component (~195 cycles/turn peak); maybe slow surface
   height variation (power below 50 cycles/turn) and an ~11% depth trend

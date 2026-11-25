@@ -11,6 +11,8 @@ from .geometry import TAU, Mark, Spiral, pitch_of, polar, smoothstep
 # nothing is cut, so the surface is min(0, stylus) over the nearest turns.
 # The sound is a function of theta (time: the card turns at a constant rate),
 # so a given frequency is cut longer on the outer turns (wavelength ~ r).
+# Optional (ezra preset): a tone in the sound, and a nominal depth that
+# changes slowly from the inner to the outer turns.
 
 
 def band_limited(rng, positions, rms, wavelengths, n_waves=40):
@@ -56,7 +58,12 @@ class Card:
         r = self.spiral.radius(theta)
         fade = self.params.edge_fade
         envelope = smoothstep((r - self.params.r_inner) / fade) * smoothstep((self.params.r_outer - r) / fade)
-        return envelope * (1 + self.sound(theta))
+        return envelope * self.depth_scale(r) * (1 + self.sound(theta))
+
+    def depth_scale(self, r):
+        # the nominal depth changes linearly by depth_trend from the inner to the outer radius, 1 at the middle
+        inner, outer = self.params.r_inner, self.params.r_outer
+        return 1 + self.params.depth_trend * ((r - inner) / (outer - inner) - 0.5)
 
     def arms_near(self, x, y):
         # theta of the nearest turn and its two neighbours, and the radial distance to each groove
@@ -106,7 +113,11 @@ def make_card(params, seed):
     mid_radius = (params.r_inner + params.r_outer) / 2
     sound_theta = np.arange(theta_grid[0], theta_grid[-1], 0.5 / (params.r_outer + margin))
     sound_wavelengths = tuple(length / mid_radius for length in params.sound_wavelengths)
-    sound_track = band_limited(rng, sound_theta, params.sound_rms, sound_wavelengths)
+    sound_track = band_limited(rng, sound_theta, params.sound_rms * np.sqrt(1 - params.tone_share), sound_wavelengths)
+    if params.tone_share > 0:
+        # a pure tone of tone_cycles per turn (theta is time), carrying tone_share of the sound's power
+        tone_rms = params.sound_rms * np.sqrt(params.tone_share)
+        sound_track += np.sqrt(2) * tone_rms * np.sin(params.tone_cycles * sound_theta + rng.random() * TAU)
     return Card(params, seed, spiral, mark, theta_grid, drift, sound_theta, sound_track)
 
 

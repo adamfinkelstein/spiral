@@ -26,9 +26,9 @@ cd ~/Desktop/cc/spiral && python3 -m venv .venv && .venv/bin/pip install -r requ
 * Rebuild card.html from the cached results (about a minute); `git status`
   should then show nothing, or only redrawn images:
   `.venv/bin/python build_card.py && git status --short`
-* View the pages: `.venv/bin/python -m http.server 8765`, then open
-  http://localhost:8765/procedure.html (or the live site,
-  https://adamfinkelstein.github.io/spiral/).
+* View the pages: open them straight from disk, e.g. `open index.html`
+  (no server needed), or the live site,
+  https://adamfinkelstein.github.io/spiral/.
 
 ## 4. Start Claude
 

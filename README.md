@@ -39,7 +39,9 @@ Estimate the ring spacing from the 2D Fourier transform.
   FFT correlation; the center is the map's center of point symmetry near its
   peak (self-convolution on a crop, robust to a stretched spiral), the phase
   the angle of Z there; live (~50 ms), shown with a zoom below the profile.
-- "Explain" opens a description of every control.
+- "Ring spacing: the controls" in the page menu (explain.html) describes every control.
+
+Every page has a menu at the top right listing all pages (`nav.js`).
 
 ## Center and phase (`center.html`)
 

@@ -31,14 +31,15 @@
   .muted { color: #999; }
   .w { color: #fff } .c { color: #4cf } .y { color: #fd3 } .o { color: #f93 } .g { color: #3e6 } .p { color: #a8f0b4 } .m { color: #f0f } .v { color: #b8f } .k { color: #aaa }
 </style>
+<script src="nav.js" defer></script>
 </head>
 <body>
 <h1>Spiral: procedure</h1>
 <p class="src">How we recover the sound from a scanned sonorine card, step by step. This page
-describes the method; <a href="card.html">card.html</a> runs it on simulated cards and shows
-every step's result and how well it works; <a href="considered.html">considered.html</a>
+describes the method; card.html runs it on simulated cards and shows
+every step's result and how well it works; considered.html
 collects the alternatives we tried and dropped, and the methods of the two earlier
-experiment pages (<a href="spacing.html">spacing</a>, <a href="center.html">center</a>).
+experiment pages (spacing, center).
 Code: <code>cardlab/</code> (Python); source:
 <a href="https://github.com/adamfinkelstein/spiral">github.com/adamfinkelstein/spiral</a>.</p>
 
@@ -56,7 +57,7 @@ into the groove's <i>depth</i> (hill-and-dale). Given a height map of the card:
 </ol>
 </div>
 
-<p class="muted">Colors, in every figure here and in <a href="card.html">card.html</a>:
+<p class="muted">Colors, in every figure here and in card.html:
 <span class="w">white</span> input (hand mark, nominal spacing) &middot;
 <span class="c">cyan</span> low-res estimates &middot; <span class="y">yellow</span> the corrected geometry (step 4) &middot;
 <span class="o">orange</span> the path and the sound read out &middot; <span class="g">green</span> the true groove and true sound &middot;
@@ -92,7 +93,10 @@ the card turns at a constant rate (wavelengths 15&ndash;300 px of groove at the 
 radius). A deeper cut is also wider; where a &lt; &minus;1 the stylus leaves the card
 and nothing is cut (0.5% of the groove). The hand mark is the truth plus
 noise. Presets: <b>typical</b>, <b>loud</b> (sound 0.7 rms), <b>hard</b> (grain doubled,
-drift 5 px, sound 0.6, worse hand mark), <b>clean</b> (no grain).</p>
+drift 5 px, sound 0.6, worse hand mark), <b>clean</b> (no grain), <b>ezra</b>
+(like Ezra's card: sound 0.3 rms of which 8% of the power is a tone at 195
+cycles per turn, a nominal depth 10% shallower on the outer turns than on the
+inner, drift 1.9 px, annulus 1200&ndash;2750 px, ~53 turns).</p>
 <div class="test"><p><b class="tag">Matched to the real card</b>
 Measured on sonorine_001 (Tomaz's images 21&ndash;22, 26): spacing 29.0 px; grain
 rms 0.52 &times; the groove's rms (2.6 vs. 5.0), grain cells ~3 px; the groove's
@@ -107,9 +111,18 @@ step 3 with both winding senses, 89.7 vs 11.1 and 40.2 vs 25.3 at the center
 relative to the map's median; <code>experiments/ezra_card/</code>). All
 angles here, in the code and in the figures, are measured counterclockwise
 from 3 o'clock as displayed, so the simulated cards wind the same way.
-Ezra's card also suggests a quieter sound (relative depth modulation 0.29
-rms), a slightly smaller drift (0.064 S) and a similar sound spectrum
-(most power at 100&ndash;400 cycles per turn); see its README.</p></div>
+Ezra's card (see its README) gave the <b>ezra</b> preset: relative depth
+modulation 0.29 rms read out; a narrow peak at 195 cycles per turn holding
+7&ndash;8% of the sound's power above its background (modeled as a pure sine,
+though the real peak is ~10 cycles per turn wide); mean depth per turn 25.5
+&rarr; 22.6 from the inner to the outer turns (&minus;11%); drift 0.064 S;
+inner/outer radius 0.42 and 52.5 turns (the preset keeps the outer radius and
+the mid radius in spacings, 68 S: ratio 0.44, 53 turns). Otherwise the spectrum
+matches the typical card's (most power at 100&ndash;400 cycles per turn). Left
+out: Ezra's power below 50 cycles per turn, probably shading in the rendering,
+not sound. Read out the same way, the ezra cards' sound is 0.39 rms (unsmoothed;
+0.33 after step 6's smoothing) for a true 0.30, still louder than Ezra's 0.29: the
+grain adds to it, and Ezra's card looks cleaner (coherence 0.75 vs. 0.64&ndash;0.69).</p></div>
 
 <!-- ===================================================================== -->
 <h2 id="step1">1. FFT of the masked card <span class="xref"><a href="card.html#step1">results &rarr;</a></span></h2>
@@ -126,7 +139,7 @@ and, because each turn is a narrow line rather than a smooth wave, fainter
 rings at its multiples 2&rho;<sub>1</sub>, 3&rho;<sub>1</sub>, &hellip;. Averaging the transform over each
 radius (the radial profile, step 2) turns those rings into peaks. A larger
 spacing puts the rings closer to the center:</p>
-<figure><img class="wide" src="procedure/fft_examples.png" alt=""><figcaption>The <a href="spacing.html">spacing page</a>'s default spiral (radius 50&ndash;200 px, line width 4 px, soft edges, 512&sup2;; rendered with its render.js) at spacing 7.5 px (top) and 15 px (bottom). Left: the spiral. Middle: log |FFT|, zero frequency in the middle; <span class="v">violet</span> dashed circles at N/S, 2N/S, 3N/S. Right: the radial profile, with the same radii dashed: peaks at 68.3, 136.5, 204.8 (S = 7.5) and 34.1, 68.3, 102.4, &hellip; (S = 15). Made by <code>procedure/make_fft_examples.py</code>.</figcaption></figure>
+<figure><img class="wide" src="procedure/fft_examples.png" alt=""><figcaption>The spacing page's default spiral (radius 50&ndash;200 px, line width 4 px, soft edges, 512&sup2;; rendered with its render.js) at spacing 7.5 px (top) and 15 px (bottom). Left: the spiral. Middle: log |FFT|, zero frequency in the middle; <span class="v">violet</span> dashed circles at N/S, 2N/S, 3N/S. Right: the radial profile, with the same radii dashed: peaks at 68.3, 136.5, 204.8 (S = 7.5) and 34.1, 68.3, 102.4, &hellip; (S = 15). Made by <code>procedure/make_fft_examples.py</code>.</figcaption></figure>
 <p><b>Weighting the turns.</b> On a card, each turn counts in the transform in
 proportion to its length, so the outer turns would dominate. The magnitude
 spectrum can't tell inner from outer turns, so the weighting is done in the
@@ -388,7 +401,8 @@ dropped.</p>
 <figure><img class="wide" src="card/img/f_check.png" alt=""><figcaption>The check at work (<a href="card.html#step4">card.html 4d</a>): the same card with a 30&deg; patch (60&ndash;90&deg;) whose grooves look clean but sit S/3 further out. Top: residuals after the plain fit; the patch's wedges (<span class="m">magenta</span>) are off at the same angle on every turn, and they pull the center 1.06 px. Middle: each sector's median residual against the final model; the band (<span class="v">violet</span>) is the median &plusmn; 3 MADs. The first round drops the three sectors inside the patch, the second the one it overlaps (54&ndash;63&deg;). Bottom: the final fit without them: the rest is flat, the center 0.05 px from the truth.</figcaption></figure>
 <div class="test"><p><b class="tag">Tested</b>
 On 20 cards the corrected center is 0.08&ndash;0.34 px from the truth (hard cards
-0.13&ndash;0.50 px), from 0.14&ndash;0.39 px after step 3, and the spacing within 0.04%.</p>
+0.13&ndash;0.50 px), from 0.14&ndash;0.39 px after step 3, and the spacing within 0.04%.
+On 5 ezra cards: 0.01&ndash;0.15 px, from 0.10&ndash;0.28 px.</p>
 <p>What is left is a random estimate error that the data can't remove: a
 one-turn wave or slope that is really in the measured offsets can't be told
 from a center or spacing error. Relative to the true spiral (possible only on
@@ -444,7 +458,7 @@ deviation from the perfect spiral, at every column.</p>
 <div class="test"><p><b class="tag">Tested</b>
 20 cards: the path is 0.14&ndash;0.22 px rms from the true groove centerline on
 typical cards (clean 0.06&ndash;0.12, loud 0.15&ndash;0.23, hard 0.45&ndash;1.51 px), no
-wrong groove except on hard cards (up to 0.2%).</p>
+wrong groove except on hard cards (up to 0.2%). Ezra cards: 0.13&ndash;0.14 px, none.</p>
 <p>Rows midway vs. rows centered on the groove vs. no second read (typical card
 1): 0.16 / 0.37 / 0.21 px; with the true offsets the midway rule gives 0.158 px,
 so it is near its limit. The groove must stay within S/2 = 14.5 px of the
@@ -463,7 +477,9 @@ columns are equal steps in &theta;, the sound comes out at a constant sample rat
 <figure><img class="wide" src="card/img/j_sound.png" alt=""><figcaption><span class="o">Orange</span>: the sound read out; <span class="g">green</span>: the true sound.</figcaption></figure>
 <div class="test"><p><b class="tag">Tested</b>
 Correlation with the true sound on 20 cards: typical 0.88&ndash;0.91, loud
-0.92&ndash;0.94, clean 0.95&ndash;0.97, hard 0.79&ndash;0.82. A better path didn't change it:
+0.92&ndash;0.94, clean 0.95&ndash;0.97, hard 0.79&ndash;0.82; ezra (5 cards)
+0.86&ndash;0.88: the same grain against a quieter sound (error 0.16&ndash;0.17
+rms vs. typical 0.19&ndash;0.22). A better path didn't change it:
 the readout and the grain limit it. Window &plusmn;1 / 2 / 3 / 4 px: 0.875 / 0.886 /
 0.896 / 0.902 (typical cards).</p>
 <p>Known limits (Nov 2026): the readout is ~5% louder than the truth, because
@@ -486,6 +502,5 @@ dust, damage).</li>
 stretch, but steps 4&ndash;5 would not cope with more than ~0.3%.</li>
 </ul>
 
-<p><a href="card.html">Results on simulated cards</a> &middot; <a href="considered.html">Considered and dropped</a> &middot; <a href="index.html">Experiments</a></p>
 </body>
 </html>

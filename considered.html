@@ -34,26 +34,27 @@
   .test p { margin: 4px 0; font-size: 14px; }
   .test b.tag { color: #aaa; font-weight: 600; text-transform: uppercase; font-size: 11.5px; letter-spacing: 0.06em; margin-right: 6px; }
 </style>
+<script src="nav.js" defer></script>
 </head>
 <body>
 <body>
 <h1>Spiral: considered and dropped</h1>
-<p class="src">The <a href="procedure.html">procedure</a> describes only what the pipeline
+<p class="src">The procedure describes only what the pipeline
 does now. This page keeps the rest: the methods behind the two earlier experiment pages,
 with what was tried there (Parts 1&ndash;2), and the alternatives tried for each step of the
 card pipeline and why they were dropped (Part 3). Results on simulated cards:
-<a href="card.html">card.html</a>. Source:
+card.html. Source:
 <a href="https://github.com/adamfinkelstein/spiral">github.com/adamfinkelstein/spiral</a>.</p>
 <ul class="toc">
-<li><a href="#part1"><b>Part 1 &mdash; Ring spacing</b></a> (<a href="spacing.html">spacing.html</a>): the spacing and center on drawn spirals; the same method as procedure steps 1&ndash;3, with the experiments behind it.</li>
-<li><a href="#part2"><b>Part 2 &mdash; Center and phase from chunks</b></a> (<a href="center.html">center.html</a>): the center and phase from pieces of a spiral; not used by the card pipeline.</li>
+<li><a href="#part1"><b>Part 1 &mdash; Ring spacing</b></a> (spacing.html): the spacing and center on drawn spirals; the same method as procedure steps 1&ndash;3, with the experiments behind it.</li>
+<li><a href="#part2"><b>Part 2 &mdash; Center and phase from chunks</b></a> (center.html): the center and phase from pieces of a spiral; not used by the card pipeline.</li>
 <li><a href="#part3"><b>Part 3 &mdash; The card pipeline: alternatives</b></a>: per procedure step, what else was tried.</li>
 </ul>
 
-<h1 class="part" id="part1">Part 1 &mdash; Ring spacing (<a href="spacing.html">spacing.html</a>)</h1>
+<h1 class="part" id="part1">Part 1 &mdash; Ring spacing (spacing.html)</h1>
 
 <div class="box">
-<b>In one paragraph.</b> As on the cards (<a href="procedure.html">procedure</a>), a hand mark (simulated
+<b>In one paragraph.</b> As on the cards (procedure), a hand mark (simulated
 here: the true center and radii plus small errors) gives the annulus that
 holds the spiral. Normalize the image inside that soft annulus mask, weight
 it by 1/&radic;r about the marked center so outer turns don't dominate, and
@@ -420,7 +421,7 @@ refit, which fits the spacing too.</p>
 a wider window for its larger spirals.</p>
 
 
-<h1 class="part" id="part2">Part 2 &mdash; Center and phase from chunks (<a href="center.html">center.html</a>)</h1>
+<h1 class="part" id="part2">Part 2 &mdash; Center and phase from chunks (center.html)</h1>
 
 <div class="box">
 <b>In one paragraph.</b> Only pieces ("chunks") of the spiral are visible,
@@ -644,7 +645,7 @@ bounded by ~&frac12; spacing to avoid slipping a turn).</li>
 
 <h2>P2.9 Next: toward real cards</h2>
 <p class="muted">The plan written at this point, kept for the record. It became
-the card pipeline (<a href="procedure.html">procedure</a>), in a simpler form: an idealized card (flat, grain only: no warp, dust,
+the card pipeline (procedure), in a simpler form: an idealized card (flat, grain only: no warp, dust,
 scratches, banding or damage yet), the sound cut into the depth rather than
 sideways, and a global pipeline as sketched below, without the patches.</p>
 <p>Real cards (e.g. the sonorine scans) differ from these chunks: the whole
@@ -674,10 +675,10 @@ turn.</li>
 
 
 <h1 class="part" id="part3">Part 3 &mdash; The card pipeline: alternatives tried and dropped</h1>
-<p class="src">For each step of the <a href="procedure.html">procedure</a>, what else we tried
-on the simulated cards (<a href="card.html">card.html</a>), and why it was dropped. The
+<p class="src">For each step of the procedure, what else we tried
+on the simulated cards (card.html), and why it was dropped. The
 earlier in-browser version of the whole pipeline is frozen at
-<a href="card_js.html">card_js.html</a>; it differs in the center search, the FFT window,
+card_js.html; it differs in the center search, the FFT window,
 the grain and the drift, and its full-res stage is the strip (below). Results files are
 in <code>experiments/</code>.</p>
 
@@ -784,6 +785,5 @@ Not done.</p>
 0.896 for &plusmn;3 px (typical cards). The JS version had measured 0.935 / 0.948 /
 0.956 for &plusmn;1&ndash;3 px, before the grain and drift changes.</p>
 
-<p><a href="procedure.html">Procedure</a> &middot; <a href="card.html">Card page</a> &middot; <a href="explain.html">Explain controls</a> &middot; <a href="spacing.html">Spacing page</a> &middot; <a href="center.html">Center page</a></p>
 </body>
 </html>

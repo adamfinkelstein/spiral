@@ -23,7 +23,16 @@ of this file. Moving to another computer: `SETUP.md`.
 
 ## Files
 
-- `index.html` — landing page linking to the three experiments.
+- `nav.js` — the page menu at the top right of every page (Nov 2026,
+  Adam): the list of pages lives only here; each page loads it with
+  `<script src="nav.js" defer></script>` in its head (card.html via
+  report.py). Pages no longer link to each other as whole pages (no
+  "← Experiments" / "Procedure" buttons, no nav footers, prose mentions of a
+  page are plain text); only links to a specific place stay (e.g.
+  procedure.html#step3, considered.html#part1). A new page: add it to
+  nav.js's list and the script tag to its head.
+- `index.html` — landing page: a short description of every page (no
+  links; the menu navigates).
 - `render.js` — shared by all pages: `N` (512, or `SPIRAL_N` if a page sets
   it first: card.html uses 1024), `erf`, `edgeStep`, `renderSpiral`,
   `gaussianBlur`, `toImageData`. Defines globals, so page scripts must not
@@ -50,8 +59,8 @@ of this file. Moving to another computer: `SETUP.md`.
   (σ = mark.rOuter / 8, center within 1.5σ of the peak; phase = arg Z at
   the center). No DOM. Bright turns, so Z has no minus sign (Python's
   grooves do). Same rules as cardlab's find_center.
-- `explain.html` — help page for `spacing.html` controls ("Explain"
-  button). Keep it in sync when its controls change.
+- `explain.html` — help page for `spacing.html` controls ("Ring spacing:
+  the controls" in the menu). Keep it in sync when its controls change.
 - Three documentation pages (Nov 2026 split, Adam's request):
   `procedure.html` — a clean description of the card pipeline as steps
   0–6 (input; FFT; spacing; center and phase; geometry correction on every
@@ -111,7 +120,7 @@ Pages serves them (nothing is built on GitHub).
 
 - Setup on the Mac: `python -m venv .venv && .venv/bin/pip install -r
   requirements.txt` (`.venv/` is gitignored). Build: `.venv/bin/python
-  build_card.py` (default: presets typical, loud, hard, clean × seeds 1–5,
+  build_card.py` (default: presets typical, loud, hard, clean, ezra × seeds 1–5,
   showcase typical:1; ~10 s per run). Summaries are cached in
   card/results.json, so only new preset:seed runs are computed; `--rerun`
   recomputes all (do that after any pipeline change). Options: `--presets`,
@@ -731,6 +740,19 @@ State (last commit 34a0e07 and after):
   center 0.08–0.34 px (hard 0.13–0.50), no sectors dropped on any.
   `python build_card.py --rerun` recomputes all (several minutes);
   without `--rerun` it uses card/results.json and only redraws the showcase.
+- Ezra-like preset `ezra` (24 Nov 2026, Adam chose a new preset over changing
+  typical; params.py `tone_share`, `tone_cycles`, `depth_trend`, all off
+  for the other presets, which are bit-identical): sound 0.3 rms with 8% of
+  its power a pure tone at 195 cycles/turn (Ezra: 7–8% above background,
+  measured from experiments/ezra_card/stats.py's psd.npy), nominal depth
+  −10% inner → outer (`Card.depth_scale`; Ezra −11%), drift 1.9 px
+  (0.064 S), annulus 1200–2750 px (~53 turns, mid radius 68 S as Ezra's).
+  Left out (Adam): slow surface height below 50 cycles/turn (likely
+  shading). 5 seeds: refit center 0.01–0.15 px, path 0.13–0.14 px, no wrong
+  groove, not cut 0.02–0.03% (Ezra 0.1%), coherence 0.64–0.69 (Ezra 0.75),
+  sound corr 0.86–0.88 (quieter sound, same grain). The readout says 0.39
+  rms unsmoothed for a true 0.30, vs Ezra's 0.29: so Ezra's true sound
+  is quieter still, or its grain lower.
 - The step-4 leftover error (~0.05–0.1 px, 4e) is wedge noise plus the
   groove's drift; nothing in the data can remove it, and the path follows
   the groove anyway.
@@ -739,9 +761,6 @@ State (last commit 34a0e07 and after):
   (Adam: "Leave the JS").
 
 Open ideas (not started; ask Adam before starting any):
-- Make the synthetic card more like Ezra's card (experiments/ezra_card/
-  README): sound rms ~0.3, a tonal component, a slow depth trend, its
-  geometry range.
 - Readout fixes: sample the land midway to the neighbouring grooves; gain
   correction.
 - Port the FFT weighting (1/√r, weights summing to 1, log(|F|+ε)) to the JS
@@ -756,5 +775,8 @@ in favor of the spiral coherence map; see "Gradient-based centers dropped"
 above.
 
 Setup on a new machine: `python3 -m venv .venv && .venv/bin/pip install -r
-requirements.txt`; view pages with `.venv/bin/python -m http.server` in this
-folder (the pages load images, so file:// may not show everything).
+requirements.txt`; view pages by opening them from disk (`open index.html`):
+plain scripts and images, no fetch or modules, so no server is needed
+(checked Nov 2026, headless Chrome on file://). Claude's in-app browser
+pane shows file:// pages as static snapshots without running scripts, so
+to check JS there, serve the folder temporarily.

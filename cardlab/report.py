@@ -196,10 +196,9 @@ def write_report(path, run, summary, results, image_folder, spots):
     drift = float(np.sqrt(np.mean(wrap(card.nearest_groove(*figures.spiral_points(run.strip.spiral, run.strip.theta))[0] - ideal, card.spacing) ** 2)))
     body = f"""
 <h1>Spiral: the procedure on a simulated card</h1>
-<p class="note">Each step of the <a href="procedure.html">procedure</a> run on an idealized, simulated card, with its result and how well it works over many cards.
+<p class="note">Each step of the procedure run on an idealized, simulated card, with its result and how well it works over many cards.
 Built by <code>python build_card.py</code> (cardlab/, Python) and committed as static images.
-Showcase: preset <b>{escape(card.params.label)}</b>, seed {card.seed}. <a href="index.html">← Experiments</a> ·
-<a href="procedure.html">Procedure</a> · <a href="considered.html#part3">Considered and dropped</a> · the earlier in-browser version: <a href="card_js.html">card_js.html</a></p>
+Showcase: preset <b>{escape(card.params.label)}</b>, seed {card.seed}. Alternatives tried for each step: <a href="considered.html#part3">Considered and dropped, Part 3</a>.</p>
 
 <p class="note key"><b>Colors, in every figure:</b> <span class='w'>white</span> input (hand mark, nominal spacing) ·
 <span class='c'>cyan</span> low-res estimate · <span class='y'>yellow</span> the corrected geometry (step 4) ·
@@ -294,4 +293,4 @@ Showcase: preset <b>{escape(card.params.label)}</b>, seed {card.seed}. <a href="
 {params_table(card.params)}
 {spot_script(spots, image_folder, selected)}
 """
-    path.write_text(f"<!doctype html><html lang='en'><head><meta charset='utf-8'><title>Spiral: the procedure on a simulated card</title><style>{STYLE}</style></head><body>{body}</body></html>")
+    path.write_text(f"<!doctype html><html lang='en'><head><meta charset='utf-8'><title>Spiral: the procedure on a simulated card</title><style>{STYLE}</style><script src='nav.js' defer></script></head><body>{body}</body></html>")

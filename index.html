@@ -8,40 +8,40 @@
   h1 { font-size: 22px; margin-bottom: 4px; }
   .src { color: #aaa; margin-top: 0; }
   a { color: #7ab0ff; }
-  a.card { display: block; margin: 16px 0; padding: 14px 16px; border: 1px solid #444; border-radius: 6px; background: #1a1a1a; color: #ddd; text-decoration: none; }
-  a.card:hover { background: #222; border-color: #777; }
-  a.card b { display: block; font-size: 17px; color: #fff; margin-bottom: 4px; }
-  a.card span { color: #aaa; }
+  .card { display: block; margin: 16px 0; padding: 14px 16px; border: 1px solid #444; border-radius: 6px; background: #1a1a1a; color: #ddd; text-decoration: none; }
+  .card > b { display: block; font-size: 17px; color: #fff; margin-bottom: 4px; }
+  .card span { color: #aaa; }
 </style>
+<script src="nav.js" defer></script>
 </head>
 <body>
 <h1>Spiral experiments</h1>
 <p class="src">Interactive experiments on images of an Archimedean spiral (or concentric rings).
 Source: <a href="https://github.com/adamfinkelstein/spiral">github.com/adamfinkelstein/spiral</a></p>
 
-<a class="card" href="spacing.html">
-  <b>Ring spacing from the FFT</b>
+<p class="src">Every page is in the menu at the top right.</p>
+
+<div class="card"><b>Procedure</b>
+  <span>The method, step by step: steps 0–6, from the scanned card to its sound.</span></div>
+<div class="card"><b>Simulated card: results</b>
+  <span>A simulated recording card (40 turns, 29 px groove spacing and paper
+  grain from the sonorine scans; the sound cut into the groove's depth) run
+  through every step of the procedure, scored against the truth over many
+  cards. Built in Python.</span></div>
+<div class="card"><b>Considered and dropped</b>
+  <span>Everything tried and dropped, and the methods of the spacing and
+  center pages.</span></div>
+<div class="card"><b>Ring spacing (FFT)</b>
   <span>The spiral, masked by a simulated hand mark, and the log magnitude of
   its 2D Fourier transform; the ring spacing is the peak of the radial profile,
   then the center and phase come from the spiral coherence map: the card
-  pipeline's low-res stage, live in the browser.</span>
-</a>
-
-
-<a class="card" href="center.html">
-  <b>Center and phase from chunks</b>
+  pipeline's low-res stage, live in the browser. Its controls are explained
+  on <b>Ring spacing: the controls</b>.</span></div>
+<div class="card"><b>Center from chunks</b>
   <span>The full spiral next to only a few random pieces of it, for exploring how
   well the center and phase can be recovered from partial data, given the ring
-  spacing.</span>
-</a>
-<a class="card" href="card.html">
-  <b>An idealized card, whole pipeline</b>
-  <span>A simulated recording card (40 turns, 29 px groove spacing and paper
-  grain from the sonorine scans; the sound cut into the groove's depth). From a
-  hand-marked center to the traced groove and its sound, every step shown and
-  scored against the truth over many runs. Built in Python; the earlier
-  in-browser version is <u>card_js.html</u>.</span>
-</a>
-<p style="color:#aaa">The method, step by step: <a href="procedure.html">Procedure</a> (steps 0–6, from the scanned card to its sound). Everything tried and dropped, and the methods of the spacing and center pages: <a href="considered.html">Considered</a>.</p>
+  spacing.</span></div>
+<div class="card"><b>Card in the browser (frozen)</b>
+  <span>The earlier in-browser version of the simulated card, kept as it was.</span></div>
 </body>
 </html>
