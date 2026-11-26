@@ -18,7 +18,7 @@ things live outside it, listed at the end.
 
 ```bash
 mkdir -p ~/Desktop/cc && cd ~/Desktop/cc && gh repo clone adamfinkelstein/spiral
-cd ~/Desktop/cc/spiral && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+cd ~/Desktop/cc/spiral && make setup
 ```
 
 ## 3. Check it works

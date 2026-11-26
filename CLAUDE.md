@@ -3,7 +3,11 @@
 Small static browser site of spiral experiments: `index.html` links to each
 experiment page. No build step, no dependencies — open `index.html` directly
 (`open index.html`). Pages are plain `<script>` tags (no ES modules) so they
-work from `file://`. Deployed to GitHub Pages on every push to `main`.
+work from `file://`. GitHub Pages deploys only on request (Adam, Nov 2026):
+`make deploy` (= `gh workflow run pages.yml`) deploys GitHub's `main`; a plain push
+doesn't. `Makefile`: `make` lists the tasks (setup, open, serve, card, rerun,
+check-js, deploy, deploy-status).
+Deploy only when Adam asks.
 
 New session? Read `notes/context.md` first: the project's story, goals,
 Adam's preferences and open questions; then the "Handoff" section at the end

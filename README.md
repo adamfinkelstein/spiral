@@ -4,8 +4,10 @@ Small browser experiments on images of an Archimedean spiral (r = bθ, with
 ring spacing 2πb). Open `index.html` in a browser — no build step, no
 dependencies — and pick an experiment.
 
-Live version: https://adamfinkelstein.github.io/spiral/ (deployed automatically
-by GitHub Actions on every push to `main`).
+Live version: https://adamfinkelstein.github.io/spiral/. A push to `main` does
+not deploy it; deploy the current `main` with `make deploy` (runs `gh workflow
+run pages.yml`, GitHub Actions). `make` lists the other common tasks (setup,
+open, serve, card, rerun, check-js, deploy-status).
 
 Setting up on a new computer (tools, Python environment for the card
 pipeline in `cardlab/`, what lives outside the repo): see `SETUP.md`.

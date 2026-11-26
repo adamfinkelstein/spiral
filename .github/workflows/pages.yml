@@ -1,9 +1,10 @@
-# Deploy the static site to GitHub Pages on every push to main.
+# Deploy the static site to GitHub Pages, only when asked: a push to main
+# does not deploy. To deploy the current main:
+#   gh workflow run pages.yml
+# (or Actions -> Deploy to GitHub Pages -> Run workflow on github.com).
 name: Deploy to GitHub Pages
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -16,16 +17,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  # Two jobs, as in GitHub's Jekyll starter: in one job, deploy-pages twice
+  # failed with "Found 0 artifact(s)" right after a successful upload.
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
           path: .
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - id: deployment
         uses: actions/deploy-pages@v4
