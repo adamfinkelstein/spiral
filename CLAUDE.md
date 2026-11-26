@@ -33,6 +33,30 @@ of this file. Moving to another computer: `SETUP.md`.
   nav.js's list and the script tag to its head.
 - `index.html` — landing page: a short description of every page (no
   links; the menu navigates).
+- `spotpicker.js` — the clickable detail spots over the low-res input,
+  shared by card.html (0a → 5a, path drawn) and procedure.html (step 0 →
+  a raw full-res zoom right under the input, `a_zoom_NN.png`). Reads
+  `card/spots.js` (`SPOTS`, `SPOT_SELECTED`, written by build_card.py /
+  `report.write_spots`); markup `<div class="pick" data-zoom data-prefix
+  data-info [data-wrong]>`. Static: plain scripts, works from file://.
+- procedure.html layout (Nov 2026 rewrite for a reader new to the
+  project): "The problem" (what a sonorine is, a real card's rendering
+  `data/cards/ezra_card.jpg`, the height map comes from a separate
+  photometric-stereo process, the goal: find the groove, read its depth;
+  the step list; words used throughout; the figures are simulated) → step
+  0 (input) → "Test data: simulated cards" (id `sim`: the model, matched
+  to the real card, Ezra) → steps 1–6, each ending with its output.
+- Notation on procedure.html (Nov 2026, Adam): subscript 0 = given in
+  advance (S₀ nominal spacing, ρ₀ = N/S₀, D₀ nominal depth). Center c,
+  candidate center c′ (Z(c′), q = p − c′, distance |c′ − c|); FFT
+  frequencies (k_x, k_y), u = spiral coordinate, v = image; K = annulus
+  pixel count (P is the radial profile); step 4 model γ + β(θ − θ_m) +
+  Δx cos θ + Δy sin θ (e is only Euler's); Z_w = −Σ w v e^{−2πid/S} with
+  the same minus sign as Z, so o = −S·arg(Z_w)/2π (the code's sign may
+  differ; same offsets), and the page derives Z_w as Z(c_L) over one
+  wedge (c_L, φ_L = the low-res spiral); turning by an angle δ; f only
+  in step 2 (peak at f·ρ₀). Reserved: ω = the card's rotation rate and
+  t = time (θ = ωt), for when the sound gets a rate in Hz.
 - `render.js` — shared by all pages: `N` (512, or `SPIRAL_N` if a page sets
   it first: card.html uses 1024), `erf`, `edgeStep`, `renderSpiral`,
   `gaussianBlur`, `toImageData`. Defines globals, so page scripts must not
@@ -761,6 +785,11 @@ State (last commit 34a0e07 and after):
   (Adam: "Leave the JS").
 
 Open ideas (not started; ask Adam before starting any):
+- Soon (Adam, 25 Nov 2026): the sound readout's smoothing (σ 3 px,
+  readout.ReadoutSettings.smoothing) has its half-power point at ~600
+  cycles/turn at the middle turn, but the test sound reaches ~900 (15 px
+  wavelength at the mid radius): check whether it cuts the high end and
+  costs correlation.
 - Readout fixes: sample the land midway to the neighbouring grooves; gain
   correction.
 - Port the FFT weighting (1/√r, weights summing to 1, log(|F|+ε)) to the JS

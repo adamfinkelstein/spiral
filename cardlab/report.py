@@ -26,11 +26,7 @@ th { color: #aaa; font-weight: 500; padding: 2px 8px; border-bottom: 1px solid #
 td { padding: 2px 8px; text-align: right; }
 th:first-child, td:first-child, td.src, th.src { text-align: left; }
 td.src { color: #888; }
-.pick { position: relative; width: 900px; border: 1px solid #333; line-height: 0; }
-.pick img { border: none; }
-.spot { position: absolute; box-sizing: border-box; border: 2px solid transparent; cursor: pointer; }
-.spot:hover { border-color: rgba(255,255,255,0.6); }
-.spot.on { border-color: #fff; }
+.pick { width: 900px; border: 1px solid #333; }
 a { color: #8cf; } .note { color: #888; font-size: 12px; max-width: 1300px; }
 .w { color: #fff } .c { color: #4cf } .y { color: #fd3 } .o { color: #f93 } .g { color: #3e6 } .p { color: #a8f0b4 } .m { color: #f0f } .v { color: #b8f } .k { color: #aaa }
 
@@ -135,6 +131,7 @@ def make_figures(run, folder, detail_size=256):
     }
     for k, spot in enumerate(spots):
         steps[f"e_detail_{k:02d}"] = lambda p, spot=spot: figures.detail(run, p, detail_size, (spot["x"], spot["y"]))
+        steps[f"a_zoom_{k:02d}"] = lambda p, spot=spot: figures.raw_detail(run, p, detail_size, (spot["x"], spot["y"]))
     for name, draw in steps.items():
         draw(folder / f"{name}.png")
     for k, spot in enumerate(spots):
@@ -142,31 +139,19 @@ def make_figures(run, folder, detail_size=256):
     return spots
 
 
-def picker_step(image, spots, selected, title, *paragraphs):
-    # step 0a with a clickable box over each detail spot
-    boxes = "".join(
-        f'<div class="spot{" on" if k == selected else ""}" data-k="{k}" title="spot {k + 1}" style="left:{100 * s["left"]:.3f}%;'
-        f'top:{100 * s["top"]:.3f}%;width:{100 * s["size"]:.3f}%;height:{100 * s["size"]:.3f}%"></div>'
-        for k, s in enumerate(spots))
+def picker_step(image, title, *paragraphs):
+    # step 0a: spotpicker.js puts a clickable box over each detail spot and shows it in 5a
     notes = "".join(f"<p>{p}</p>" for p in paragraphs)
-    return f'<div class="step"><div class="pick"><img src="{image}">{boxes}</div><div class="panel"><h4>{title}</h4>{notes}</div></div>'
+    return (f'<div class="step"><div class="pick" data-zoom="detail" data-prefix="{image.rsplit('/', 1)[0]}/e_detail_" data-info="detailInfo" data-wrong="1">'
+            f'<img src="{image}"></div><div class="panel"><h4>{title}</h4>{notes}</div></div>')
 
 
-def spot_script(spots, image_folder, selected):
-    data = [{"src": f"{image_folder}/{s['image']}.png", "turn": round(s["turn"], 1), "radius": round(s["radius"]),
-             "wrong": s["wrong"]} for s in spots]
-    return f"""<script>
-const spots = {json.dumps(data)};
-function showSpot(k) {{
-  const s = spots[k];
-  document.getElementById('detail').src = s.src;
-  document.getElementById('detailInfo').textContent = `Spot ${{k + 1}} of ${{spots.length}}: turn ${{s.turn}}, radius ${{s.radius}} px` +
-    (s.wrong ? `; ${{s.wrong}} trace columns here on the wrong groove.` : '; no wrong-groove columns here.');
-  document.querySelectorAll('.spot').forEach(e => e.classList.toggle('on', +e.dataset.k === k));
-}}
-document.querySelectorAll('.spot').forEach(e => e.addEventListener('click', () => showSpot(+e.dataset.k)));
-showSpot({selected});
-</script>"""
+def write_spots(path, spots, selected):
+    # card/spots.js, read by spotpicker.js on card.html and procedure.html (a plain script, so file:// works)
+    data = [{"left": round(s["left"], 5), "top": round(s["top"], 5), "size": round(s["size"], 5),
+             "turn": round(s["turn"], 1), "radius": round(s["radius"]), "wrong": s["wrong"]} for s in spots]
+    path.write_text("// written by build_card.py: the detail spots on the low-res input (fractions of the image)\n"
+                    f"var SPOTS = {json.dumps(data)};\nvar SPOT_SELECTED = {selected};\n")
 
 
 def pass1_step(image, run):
@@ -194,6 +179,7 @@ def write_report(path, run, summary, results, image_folder, spots):
     true_at = card.nearest_groove(*figures.spiral_points(run.strip.spiral, run.strip.theta))[0]
     wedge_noise = float(np.sqrt(np.mean(wrap(run.wedges.first.offsets - np.interp(run.wedges.first.theta, run.strip.theta, true_at), card.spacing) ** 2)))
     drift = float(np.sqrt(np.mean(wrap(card.nearest_groove(*figures.spiral_points(run.strip.spiral, run.strip.theta))[0] - ideal, card.spacing) ** 2)))
+    write_spots(path.parent / "card" / "spots.js", spots, selected)
     body = f"""
 <h1>Spiral: the procedure on a simulated card</h1>
 <p class="note">Each step of the procedure run on an idealized, simulated card, with its result and how well it works over many cards.
@@ -211,7 +197,7 @@ Showcase: preset <b>{escape(card.params.label)}</b>, seed {card.seed}. Alternati
 <p class="note">Errors against the simulated card's truth, full-resolution px. Ranges over the seeds listed. Step 3: the low-res spiral; step 4: the corrected one.</p>
 
 <h2 id="step0">0. Input <a class="xref" href="procedure.html#step0">procedure →</a></h2>
-{picker_step(img("a_input"), spots, selected, "0a. The low-res card, masked to the hand-marked annulus",
+{picker_step(img("a_input"), "0a. The low-res card, masked to the hand-marked annulus",
       f"The simulated card's height map ({card.params.label.lower().split(' (')[0]} preset; parameters at the end of the page), averaged down to 1024² (×{low.scale:.2f}), times a soft mask from the hand-marked circles (dashed), minus its mean, unit rms. An idealized card: flat, grain only.",
       f"<span class='w'>White +</span> hand mark, <span class='c'>cyan</span> step 3's center, <span class='y'>yellow</span> step 4's, <span class='p'>pale green +</span> true center. <span class='v'>Violet boxes</span>: the {len(spots)} detail spots of step 5a (spread evenly along the groove{', some where the path is on the wrong groove' if wrong_spots else ''}); <b>click one</b> to show it there.",
       f"<span class='num'>Hand mark {s['mark_error']:.1f} px from the true center.</span>")}
@@ -228,7 +214,7 @@ Showcase: preset <b>{escape(card.params.label)}</b>, seed {card.seed}. Alternati
 
 <h2 id="step3">3. Center and spiral phase: the spiral coherence map <a class="xref" href="procedure.html#step3">procedure →</a></h2>
 {step(img("d_coherence"), "3a. The spiral coherence map",
-      "Z(c) = −Σ v·e<sup>−i(|p−c|/b − angle(p−c))</sup> scores how well a spiral centered at c lines up with the grooves; one FFT correlation gives it at every pixel. Around the true center: a bright spot with fainter rings half a spacing apart.",
+      "Z(c′) = −Σ v·e<sup>−i(|p−c′|/b − angle(p−c′))</sup> scores how well a spiral centered at c′ lines up with the grooves; one FFT correlation gives it at every pixel. Around the true center: a bright spot with fainter rings half a spacing apart.",
       "The center is the map's center of point symmetry near its brightest pixel (robust to a slightly stretched scan, where the spot splits into lobes); the spiral phase is the angle of Z there.",
       f"<span class='num'>Shown: |Z| around the answer. Center {s['low_center_error']:.2f} px from the truth (hand mark {s['mark_error']:.1f} px); coherence {s['coherence']:.2f}.</span>")}
 
@@ -291,6 +277,5 @@ Showcase: preset <b>{escape(card.params.label)}</b>, seed {card.seed}. Alternati
 
 <h2>Card parameters ({escape(card.params.label)})</h2>
 {params_table(card.params)}
-{spot_script(spots, image_folder, selected)}
 """
-    path.write_text(f"<!doctype html><html lang='en'><head><meta charset='utf-8'><title>Spiral: the procedure on a simulated card</title><style>{STYLE}</style><script src='nav.js' defer></script></head><body>{body}</body></html>")
+    path.write_text(f"<!doctype html><html lang='en'><head><meta charset='utf-8'><title>Spiral: the procedure on a simulated card</title><style>{STYLE}</style><script src='nav.js' defer></script><script src='card/spots.js' defer></script><script src='spotpicker.js' defer></script></head><body>{body}</body></html>")

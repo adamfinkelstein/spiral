@@ -231,6 +231,17 @@ def detail(run, path, size, spot):
     save(figure, path)
 
 
+def raw_detail(run, path, size, spot):
+    # the full-res height map about a spot, nothing drawn on it (procedure.html step 0)
+    left, top = detail_box(run, spot, size)
+    figure = new_figure(900, 900)
+    axes = image_axes(figure)
+    show_grey(axes, run.image[top : top + size, left : left + size], extent=(left, left + size, top + size, top))
+    axes.set_xlim(left, left + size)
+    axes.set_ylim(top + size, top)
+    save(figure, path)
+
+
 def offsets_explainer(path):
     # a cartoon of the offsets the geometry fit reads (step 4): a toy card
     # (6 turns; the initial estimate, which the rectangle follows, has its
@@ -786,8 +797,8 @@ def pass1_before_after(run, compare, path):
 
 def coherence_explainer(path):
     # a cartoon of step 3 (procedure.html): a toy spiral (spacing S = 1, spiral phase
-    # phi), a candidate center c and a pixel p with the quantities in Z(c); the
-    # kernel (a spiral wave); and |Z| against the distance of c from the true
+    # phi), a candidate center c′ and a pixel p with the quantities in Z(c′); the
+    # kernel (a spiral wave); and |Z| against the distance of c′ from the true
     # center, |J0(2 pi e / S)|
     from matplotlib.patches import Arc
     from scipy.special import j0
@@ -802,7 +813,7 @@ def coherence_explainer(path):
     t = np.linspace(0, 6 * TAU, 4000)  # continued all the way in to the true center
     axes.plot(pitch * t * np.cos(t + phase), pitch * t * np.sin(t + phase), color=groove, lw=1.5, alpha=0.45)
     axes.plot([0], [0], "+", color=true_center, ms=14, mew=2)
-    text(0, -0.75, "true center", true_center, ha="center")
+    text(0, -0.75, "true center c", true_center, ha="center")
     # the spiral phase: the turns cross the ray at angle phi at r = S, 2S, ...
     ray = np.array([0, 6.4])
     axes.plot(ray * np.cos(phase), ray * np.sin(phase), "--", color=true_center, lw=1)
@@ -822,12 +833,12 @@ def coherence_explainer(path):
     c = np.array([-1.2, 1.0])
     p = np.array([-2.6, 4.6])
     axes.plot(*c, "+", color=low, ms=14, mew=2.5)
-    text(c[0] - 0.3, c[1] - 0.15, "c (candidate\ncenter)", low, ha="right", va="top")
+    text(c[0] - 0.3, c[1] - 0.15, "c′ (candidate\ncenter)", low, ha="right", va="top")
     axes.plot(*p, "o", color=label, ms=8)
     text(p[0], p[1] + 0.35, "p (a pixel, value v(p))", label, ha="center")
     axes.plot([c[0], p[0]], [c[1], p[1]], color=label, lw=1.8)
     mid = (c + p) / 2
-    text(mid[0] - 0.25, mid[1], "|q|, q = p − c", label, ha="right")
+    text(mid[0] - 0.25, mid[1], "|q|, q = p − c′", label, ha="right")
     axes.plot([c[0], c[0] + 1.8], [c[1], c[1]], color=label, lw=1)
     angle = np.degrees(np.arctan2(p[1] - c[1], p[0] - c[0]))
     axes.add_patch(Arc(tuple(c), 1.6, 1.6, theta1=0, theta2=angle, color=label, lw=1.2))
@@ -844,8 +855,8 @@ def coherence_explainer(path):
     kernel_axes.imshow(kernel, cmap="gray", extent=(-5, 5, -5, 5), origin="lower")
     kernel_axes.plot([0], [0], "+", color=low, ms=10, mew=2)
     kernel_axes.set_axis_off()
-    kernel_axes.set_title("the kernel, centered on c:\nRe e$^{-iu}$, u = |q|/b − α$_q$", fontsize=10.5, color="#ccc")
-    # |Z| against the distance e of c from the true center
+    kernel_axes.set_title("the kernel, centered on c′:\nRe e$^{-iu}$, u = |q|/b − α$_q$", fontsize=10.5, color="#ccc")
+    # |Z| against the distance |c′ − c| from the true center c
     curve = figure.add_axes([0.09, 0.08, 0.88, 0.17])
     e = np.linspace(0, 2.2, 600)
     curve.plot(e, np.abs(j0(TAU * e)), color=COLORS["measured"], lw=2)
@@ -854,9 +865,9 @@ def coherence_explainer(path):
     curve.text(2.405 / TAU + 0.02, 0.8, "0.38 S", color=label, fontsize=10)
     curve.set_xlim(0, 2.2)
     curve.set_ylim(0, 1.05)
-    curve.set_xlabel("distance e of c from the true center, in spacings S")
-    curve.set_ylabel("|Z(c)| / |Z(true)|")
-    curve.text(1.0, 0.75, "|J$_0$(2π e / S)|: a bright spot, then rings half a spacing apart", color="#ccc", fontsize=10)
+    curve.set_xlabel("distance |c′ − c| from the true center c, in spacings S")
+    curve.set_ylabel("|Z(c′)| / |Z(c)|")
+    curve.text(1.0, 0.75, "|J$_0$(2π|c′ − c|/S)|: a bright spot, then rings half a spacing apart", color="#ccc", fontsize=10)
     curve.grid(color="#333")
     save(figure, path)
 
